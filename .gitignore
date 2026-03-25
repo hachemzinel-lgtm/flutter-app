@@ -1,0 +1,27 @@
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+pubspec.lock
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Firebase
+google-services.json
+GoogleService-Info.plist
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Dependencies
+.pub-cache/
+.pub/
+ios/Pods/
