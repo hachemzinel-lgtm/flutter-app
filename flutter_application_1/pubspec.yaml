@@ -29,6 +29,8 @@ dependencies:
   timeago: ^3.7.0
   dash_chat_2: ^0.0.19
   firebase_app_check: ^0.4.2
+  geocoding: ^4.0.0
+  flutter_map_marker_cluster: ^8.2.2
 
 dev_dependencies:
   flutter_test:

@@ -8,6 +8,9 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/widgets/primary_button.dart';
+import '../../../core/services/location_service.dart';
+import '../../../core/services/geocoding_service.dart';
+import '../../../core/services/distance_service.dart';
 import '../providers/home_provider.dart';
 import '../widgets/map_marker_widget.dart';
 import '../widgets/provider_popup_card.dart';
@@ -19,7 +22,7 @@ class HomeMapScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeMapScreen> createState() => _HomeMapScreenState();
 }
 
-class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
+class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProviderStateMixin {
   final MapController _mapController = MapController();
   
   LatLng _currentGpsLocation = const LatLng(36.8065, 10.1815); // Default (Tunis)
@@ -28,6 +31,8 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
   
   double _searchRadiusKm = 10.0;
   String _selectedCategory = 'All';
+  String _locationDisplayName = 'My Location';
+  final TextEditingController _locationSearchController = TextEditingController();
 
   @override
   void initState() {
@@ -38,47 +43,53 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    _locationSearchController.dispose();
+    super.dispose();
+  }
+
   LatLng get _activeLocation => _useCustomLocation && _selectedLocation != null 
       ? _selectedLocation! 
       : _currentGpsLocation;
 
   Future<void> _determinePosition() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    try {
-      serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return;
-
-      permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return;
-      }
-      if (permission == LocationPermission.deniedForever) return;
-
-      final position = await Geolocator.getLastKnownPosition() ??
-          await Geolocator.getCurrentPosition(
-            timeLimit: const Duration(seconds: 5),
-          );
-
-      if (mounted) {
-        setState(() {
-          _currentGpsLocation = LatLng(position.latitude, position.longitude);
-        });
-        
-        // Move map only if not using custom location
+    final position = await LocationService().getCurrentLocation();
+    if (position != null && mounted) {
+      setState(() {
+        _currentGpsLocation = LatLng(position.latitude, position.longitude);
         if (!_useCustomLocation) {
-          try {
-            _mapController.move(_currentGpsLocation, 13);
-          } catch (e) {
-            debugPrint('MapController not ready yet: $e');
-          }
+          _locationDisplayName = 'My Location';
         }
+      });
+      if (!_useCustomLocation) {
+        _animatedMapMove(_currentGpsLocation, 13);
       }
-    } catch (e) {
-      debugPrint('Error getting location: $e');
     }
+  }
+
+  void _animatedMapMove(LatLng destLocation, double destZoom) {
+    final latTween = Tween<double>(begin: _mapController.camera.center.latitude, end: destLocation.latitude);
+    final lngTween = Tween<double>(begin: _mapController.camera.center.longitude, end: destLocation.longitude);
+    final zoomTween = Tween<double>(begin: _mapController.camera.zoom, end: destZoom);
+
+    final animationController = AnimationController(duration: const Duration(milliseconds: 300), vsync: this);
+    final animation = CurvedAnimation(parent: animationController, curve: Curves.fastOutSlowIn);
+
+    animationController.addListener(() {
+      _mapController.move(
+        LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
+        zoomTween.evaluate(animation),
+      );
+    });
+
+    animation.addStatusListener((status) {
+      if (status == AnimationStatus.completed || status == AnimationStatus.dismissed) {
+        animationController.dispose();
+      }
+    });
+
+    animationController.forward();
   }
 
   void _onMapTap(TapPosition tapPosition, LatLng point) {
@@ -100,7 +111,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
             Center(
               child: Container(
                 width: 40, height: 4,
-                decoration: BoxDecoration(color: AppColors.softGray.withOpacity(0.3), borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(color: AppColors.softGray.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
               ),
             ),
             const SizedBox(height: AppSpacing.l),
@@ -162,7 +173,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
             Center(
               child: Container(
                 width: 40, height: 4,
-                decoration: BoxDecoration(color: AppColors.softGray.withOpacity(0.3), borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(color: AppColors.softGray.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
               ),
             ),
             const SizedBox(height: AppSpacing.l),
@@ -211,7 +222,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: AppColors.accentBlue.withOpacity(0.1), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: AppColors.accentBlue.withValues(alpha: 0.1), shape: BoxShape.circle),
               child: Icon(icon, color: AppColors.accentBlue, size: 28),
             ),
             const SizedBox(width: AppSpacing.m),
@@ -243,8 +254,78 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
   }
 
   double _distanceKm(double lat, double lng) {
-    const distance = Distance();
-    return distance.as(LengthUnit.Kilometer, _activeLocation, LatLng(lat, lng));
+    return DistanceService().calculateDistance(lat, lng, _activeLocation.latitude, _activeLocation.longitude);
+  }
+
+  void _showAddressSearchModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          left: AppSpacing.l,
+          right: AppSpacing.l,
+          top: AppSpacing.l,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(color: AppColors.softGray.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.l),
+            TextField(
+              controller: _locationSearchController,
+              decoration: InputDecoration(
+                hintText: 'Search location or enter address',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () => _locationSearchController.clear(),
+                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onSubmitted: (value) async {
+                if (value.isNotEmpty) {
+                  final loc = await GeocodingService().geocodeAddress(value);
+                  if (loc != null) {
+                    setState(() {
+                      _selectedLocation = LatLng(loc.latitude, loc.longitude);
+                      _useCustomLocation = true;
+                      _locationDisplayName = value;
+                    });
+                    
+                    _animatedMapMove(_selectedLocation!, 13);
+                    
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('📍 Searching near $value')),
+                      );
+                      Navigator.pop(ctx);
+                    }
+                  } else {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Address not found')),
+                      );
+                    }
+                  }
+                }
+              },
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -274,8 +355,8 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
                   circles: [
                     CircleMarker(
                       point: _selectedLocation!,
-                      color: AppColors.accentBlue.withOpacity(0.15),
-                      borderColor: AppColors.accentBlue.withOpacity(0.5),
+                      color: AppColors.accentBlue.withValues(alpha: 0.15),
+                      borderColor: AppColors.accentBlue.withValues(alpha: 0.5),
                       borderStrokeWidth: 2,
                       useRadiusInMeter: true,
                       radius: _searchRadiusKm * 1000, 
@@ -286,9 +367,12 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
               // Providers markers
               providersAsync.when(
                 data: (allProviders) {
-                  final filtered = _selectedCategory == 'All'
-                      ? allProviders
+                  List<Map<String, dynamic>> filtered = _selectedCategory == 'All'
+                      ? List.from(allProviders)
                       : allProviders.where((p) => (p['category'] ?? p['profession'] ?? '') == _selectedCategory).toList();
+                  
+                  // Sort by distance
+                  filtered = DistanceService().sortWorkersByDistance(filtered, _activeLocation.latitude, _activeLocation.longitude);
 
                   return MarkerLayer(
                     markers: filtered.where((p) => p['lat'] != null && p['lng'] != null).map((provider) {
@@ -301,6 +385,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
                         width: 60, height: 60,
                         child: MapMarkerWidget(
                           rating: (provider['rating'] as num?)?.toDouble() ?? 4.5,
+                          category: provider['profession'] ?? provider['category'] ?? '',
                           onTap: () => _showProviderPopup(context, provider),
                         ),
                       );
@@ -323,7 +408,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
                         color: AppColors.accentBlue,
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 3),
-                        boxShadow: [BoxShadow(color: AppColors.accentBlue.withOpacity(0.4), blurRadius: 8)],
+                        boxShadow: [BoxShadow(color: AppColors.accentBlue.withValues(alpha: 0.4), blurRadius: 8)],
                       ),
                     ),
                   ),
@@ -345,36 +430,45 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
           SafeArea(
             child: Column(
               children: [
-                // Location Mode Indicator
-                if (_useCustomLocation)
-                  Container(
-                    margin: const EdgeInsets.only(top: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                // Location Search & Display Banner
+                GestureDetector(
+                  onTap: _showAddressSearchModal,
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 8, left: 16, right: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)],
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10)],
                     ),
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.my_location, size: 16, color: AppColors.accentBlue),
+                        const Icon(Icons.location_on, color: AppColors.accentBlue),
                         const SizedBox(width: 8),
-                        Text('Custom Location', style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.w700)),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _useCustomLocation = false;
-                              _selectedLocation = null;
-                            });
-                            _mapController.move(_currentGpsLocation, 13);
-                          },
-                          child: const Icon(Icons.close, size: 16, color: AppColors.softGray),
+                        Expanded(
+                          child: Text(
+                            _useCustomLocation ? '📍 $_locationDisplayName' : '📍 My Location',
+                            style: AppTextStyles.headingSmall.copyWith(fontSize: 14),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
+                        if (_useCustomLocation)
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _useCustomLocation = false;
+                                _selectedLocation = null;
+                                _locationDisplayName = 'My Location';
+                              });
+                              _animatedMapMove(_currentGpsLocation, 13);
+                            },
+                            child: const Icon(Icons.close, size: 20, color: AppColors.softGray),
+                          ),
                       ],
                     ),
                   ),
+                ),
 
                 // --- SEARCH BAR (Read-only Button) ---
                 Padding(
@@ -387,7 +481,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4))],
                       ),
                       child: Row(
                         children: [
@@ -430,10 +524,13 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
             _selectedLocation = null;
           });
           _determinePosition();
-          _mapController.move(_currentGpsLocation, 13);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('📍 Centered on your location')),
+          );
         },
-        backgroundColor: Colors.white,
-        child: const Icon(Icons.my_location, color: AppColors.accentBlue),
+        backgroundColor: AppColors.accentBlue,
+        shape: const CircleBorder(),
+        child: const Icon(Icons.my_location, color: Colors.white),
       ),
     );
   }
@@ -477,7 +574,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
                   color: isSelected ? AppColors.accentBlue : Colors.white,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: isSelected ? AppColors.accentBlue : AppColors.borderLight),
-                  boxShadow: isSelected ? [BoxShadow(color: AppColors.accentBlue.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))] : null,
+                  boxShadow: isSelected ? [BoxShadow(color: AppColors.accentBlue.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4))] : null,
                 ),
                 child: Row(
                   children: [
@@ -506,7 +603,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> {
       height: 80,
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -4))],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,

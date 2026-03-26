@@ -5,17 +5,29 @@ import '../../../core/constants/app_text_styles.dart';
 class MapMarkerWidget extends StatelessWidget {
   final double rating;
   final String? imageUrl;
+  final String category;
   final VoidCallback onTap;
 
   const MapMarkerWidget({
     super.key,
     required this.rating,
     this.imageUrl,
+    this.category = '',
     required this.onTap,
   });
 
+  Color get _markerColor {
+    final lowerCat = category.toLowerCase();
+    if (lowerCat.contains('plumber')) return const Color(0xFF007AFF);
+    if (lowerCat.contains('electrician')) return const Color(0xFFFFCC00);
+    if (lowerCat.isNotEmpty && lowerCat != 'unknown') return const Color(0xFF34C759);
+    return const Color(0xFFFF3B30); // Default Red
+  }
+
   @override
   Widget build(BuildContext context) {
+    final color = _markerColor;
+
     return GestureDetector(
       onTap: onTap,
       child: Stack(
@@ -27,23 +39,30 @@ class MapMarkerWidget extends StatelessWidget {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: AppColors.accentBlue.withOpacity(0.2),
+              color: color.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
           ),
-          // Profile Photo
+          // Profile Photo or pin dot
           Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: color, // Usually white, but using color for distinction
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.accentBlue, width: 2),
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                )
+              ],
             ),
             child: ClipOval(
               child: imageUrl != null
                   ? Image.network(imageUrl!, fit: BoxFit.cover)
-                  : const Icon(Icons.person, color: AppColors.softGray),
+                  : const Icon(Icons.person, color: Colors.white, size: 24),
             ),
           ),
           // Rating Badge

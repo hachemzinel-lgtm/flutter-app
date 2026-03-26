@@ -116,7 +116,7 @@ class ProviderPopupCard extends StatelessWidget {
     );
   }
 
-  Widget _infoChip(IconData icon, String label) {
+  Widget _infoChip(IconData icon, String label, {Color? textColor}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -128,7 +128,7 @@ class ProviderPopupCard extends StatelessWidget {
         children: [
           Icon(icon, size: 14, color: AppColors.accentBlue),
           const SizedBox(width: 4),
-          Text(label, style: AppTextStyles.caption.copyWith(color: AppColors.textDark)),
+          Text(label, style: const TextStyle(fontSize: 13, color: Color(0xFF007AFF), fontWeight: FontWeight.normal)),
         ],
       ),
     );
