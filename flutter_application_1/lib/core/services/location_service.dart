@@ -30,7 +30,9 @@ class LocationService {
 
       if (permission == LocationPermission.deniedForever) {
         // Permissions are denied forever, handle appropriately.
-        debugPrint('Location permissions are permanently denied, we cannot request permissions.');
+        debugPrint(
+          'Location permissions are permanently denied, we cannot request permissions.',
+        );
         return null;
       }
 

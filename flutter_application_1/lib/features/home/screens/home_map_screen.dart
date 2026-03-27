@@ -517,20 +517,35 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
         ],
       ),
       bottomNavigationBar: _buildBottomNav(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          setState(() {
-            _useCustomLocation = false;
-            _selectedLocation = null;
-          });
-          _determinePosition();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('📍 Centered on your location')),
-          );
-        },
-        backgroundColor: AppColors.accentBlue,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.my_location, color: Colors.white),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton.extended(
+            heroTag: 'ai_chatbot',
+            onPressed: () => context.push('/chat-bot'),
+            backgroundColor: AppColors.accentBlue,
+            icon: const Icon(Icons.chat_bubble, color: Colors.white),
+            label: const Text('AI Helper', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(height: 16),
+          FloatingActionButton(
+            heroTag: 'my_location',
+            onPressed: () {
+              setState(() {
+                _useCustomLocation = false;
+                _selectedLocation = null;
+              });
+              _determinePosition();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('📍 Centered on your location')),
+              );
+            },
+            backgroundColor: AppColors.accentBlue,
+            shape: const CircleBorder(),
+            child: const Icon(Icons.my_location, color: Colors.white),
+          ),
+        ],
       ),
     );
   }

@@ -6,6 +6,10 @@
 	<string>We need your location to show nearby service providers.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>We need your location to show nearby service providers.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>We need speech recognition to accurately convert your voice messages to text.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>We need your microphone to record voice messages for the AI Assistant.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

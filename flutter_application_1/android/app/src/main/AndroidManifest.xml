@@ -2,6 +2,8 @@
     <!-- Permissions for Geolocator plugin -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Permission for Speech-to-Text Voice Inputs -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
         android:label="flutter_application_1"

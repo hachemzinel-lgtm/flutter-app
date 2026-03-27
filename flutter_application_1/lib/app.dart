@@ -24,6 +24,7 @@ import 'features/favorites/screens/favorites_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
 import 'features/settings/screens/language_selector_screen.dart';
 import 'features/settings/screens/availability_screen.dart';
+import 'features/chatbot/screens/chatbot_screen.dart';
 
 class NearWorkApp extends ConsumerWidget {
   const NearWorkApp({super.key});
@@ -135,6 +136,10 @@ class NearWorkApp extends ConsumerWidget {
         GoRoute(
           path: '/availability',
           builder: (context, state) => const AvailabilityScreen(),
+        ),
+        GoRoute(
+          path: '/chat-bot',
+          builder: (context, state) => const ChatbotPage(),
         ),
       ],
       // TODO: Implement redirect logic based on Auth State
