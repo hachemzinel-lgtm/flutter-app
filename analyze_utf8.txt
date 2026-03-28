@@ -1,0 +1,29 @@
+﻿Analyzing home_map_screen.dart...                               
+
+warning - Unused import: 'package:geolocator/geolocator.dart' - lib\features\home\screens\home_map_screen.dart:4:8 - unused_import
+warning - Unused import: '../../../core/widgets/primary_button.dart' - lib\features\home\screens\home_map_screen.dart:10:8 - unused_import
+warning - Unused import: '../providers/home_provider.dart' - lib\features\home\screens\home_map_screen.dart:11:8 - unused_import
+warning - Unused import: '../widgets/map_marker_widget.dart' - lib\features\home\screens\home_map_screen.dart:12:8 - unused_import
+warning - Unused import: '../../../core/services/distance_service.dart' - lib\features\home\screens\home_map_screen.dart:16:8 - unused_import
+  error - Missing concrete implementation of 'State.build' - lib\features\home\screens\home_map_screen.dart:25:7 - non_abstract_class_inherits_abstract_member
+   info - The private field _searchRadiusKm could be 'final' - lib\features\home\screens\home_map_screen.dart:32:10 - prefer_final_fields
+warning - The value of the field '_searchRadiusKm' isn't used - lib\features\home\screens\home_map_screen.dart:32:10 - unused_field
+warning - The value of the field '_locationDisplayName' isn't used - lib\features\home\screens\home_map_screen.dart:35:10 - unused_field
+warning - The declaration '_activeLocation' isn't referenced - lib\features\home\screens\home_map_screen.dart:54:14 - unused_element
+warning - The declaration '_showAddressSearchModal' isn't referenced - lib\features\home\screens\home_map_screen.dart:98:8 - unused_element
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\screens\home_map_screen.dart:119:69 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\home\screens\home_map_screen.dart:151:37 - use_build_context_synchronously
+warning - The declaration '_onMapTap' isn't referenced - lib\features\home\screens\home_map_screen.dart:171:8 - unused_element
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\screens\home_map_screen.dart:190:69 - deprecated_member_use
+  error - The named parameter 'backgroundColor' isn't defined - lib\features\home\screens\home_map_screen.dart:218:9 - undefined_named_parameter
+  error - The named parameter 'shape' isn't defined - lib\features\home\screens\home_map_screen.dart:219:9 - undefined_named_parameter
+  error - Expected to find ')' - lib\features\home\screens\home_map_screen.dart:223:6 - expected_token
+  error - Expected to find ']' - lib\features\home\screens\home_map_screen.dart:223:6 - expected_token
+warning - The declaration '_buildCategoryFilters' isn't referenced - lib\features\home\screens\home_map_screen.dart:226:10 - unused_element
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\screens\home_map_screen.dart:265:82 - deprecated_member_use
+warning - The declaration '_buildBottomNav' isn't referenced - lib\features\home\screens\home_map_screen.dart:289:10 - unused_element
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\screens\home_map_screen.dart:294:51 - deprecated_member_use
+  error - The method '_onBottomNavTapped' isn't defined for the type '_HomeMapScreenState' - lib\features\home\screens\home_map_screen.dart:311:20 - undefined_method
+warning - The declaration '_showProviderPopup' isn't referenced - lib\features\home\screens\home_map_screen.dart:331:8 - unused_element
+  error - The method '_distanceKm' isn't defined for the type '_HomeMapScreenState' - lib\features\home\screens\home_map_screen.dart:334:23 - undefined_method
+

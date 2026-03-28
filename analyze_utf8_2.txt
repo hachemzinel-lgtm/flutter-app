@@ -1,0 +1,6 @@
+﻿Analyzing home_map_screen.dart...                               
+
+warning - Unused import: 'package:geolocator/geolocator.dart' - lib\features\home\screens\home_map_screen.dart:4:8 - unused_import
+   info - The private field _searchRadiusKm could be 'final' - lib\features\home\screens\home_map_screen.dart:32:10 - prefer_final_fields
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\home\screens\home_map_screen.dart:312:37 - use_build_context_synchronously
+
