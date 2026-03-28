@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/constants/app_colors.dart';
+import 'core/models/user_model.dart';
 import 'features/auth/screens/splash_screen.dart';
 import 'features/auth/screens/account_type_screen.dart';
 import 'features/auth/screens/signup_screen.dart';
@@ -45,7 +46,7 @@ class NearWorkApp extends ConsumerWidget {
         GoRoute(
           path: '/signup/:type',
           builder: (context, state) => SignUpScreen(
-            accountType: state.pathParameters['type'] ?? 'client',
+            userType: UserModel.parseUserType(state.pathParameters['type'] ?? 'client'),
           ),
         ),
         GoRoute(

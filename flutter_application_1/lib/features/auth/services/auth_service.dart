@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../core/models/user_model.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -12,7 +13,7 @@ class AuthService {
     required String email,
     required String phone,
     required String password,
-    required String accountType,
+    required UserType userType,
   }) async {
     final userCredential = await _auth.createUserWithEmailAndPassword(
       email: email,
@@ -21,16 +22,16 @@ class AuthService {
 
     final uid = userCredential.user!.uid;
 
+    final newUser = UserModel(
+      id: uid,
+      email: email,
+      name: name,
+      phone: phone,
+      userType: userType,
+    );
+
     // Create user document in Firestore
-    await _firestore.collection('users').doc(uid).set({
-      'uid': uid,
-      'name': name,
-      'email': email,
-      'phone': phone,
-      'accountType': accountType,
-      'createdAt': FieldValue.serverTimestamp(),
-      'photoUrl': null,
-    });
+    await _firestore.collection('users').doc(uid).set(newUser.toJson());
 
     // Send email verification
     await userCredential.user!.sendEmailVerification();
@@ -51,8 +52,10 @@ class AuthService {
     await _auth.sendPasswordResetEmail(email: email);
   }
 
-  Future<String?> getAccountType(String uid) async {
+  Future<UserType> getUserType(String uid) async {
     final doc = await _firestore.collection('users').doc(uid).get();
-    return doc.data()?['accountType'] as String?;
+    if (!doc.exists || doc.data() == null) return UserType.client;
+    final data = doc.data()!;
+    return UserModel.parseUserType(data['userType'] ?? data['accountType'] ?? 'client');
   }
 }

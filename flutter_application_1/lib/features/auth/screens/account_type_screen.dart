@@ -4,6 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/widgets/primary_button.dart';
+import '../../../core/models/user_model.dart';
 
 class AccountTypeScreen extends StatefulWidget {
   const AccountTypeScreen({super.key});
@@ -13,7 +14,7 @@ class AccountTypeScreen extends StatefulWidget {
 }
 
 class _AccountTypeScreenState extends State<AccountTypeScreen> {
-  String _selectedType = 'client';
+  UserType _selectedType = UserType.client;
 
   @override
   Widget build(BuildContext context) {
@@ -42,22 +43,22 @@ class _AccountTypeScreenState extends State<AccountTypeScreen> {
               title: 'Client',
               subtitle: 'I WANT TO HIRE',
               icon: Icons.person_outline,
-              isSelected: _selectedType == 'client',
-              onTap: () => setState(() => _selectedType = 'client'),
+              isSelected: _selectedType == UserType.client,
+              onTap: () => setState(() => _selectedType = UserType.client),
             ),
             _TypeCard(
               title: 'Service Provider',
               subtitle: 'I WANT TO WORK',
               icon: Icons.handyman_outlined,
-              isSelected: _selectedType == 'provider',
-              onTap: () => setState(() => _selectedType = 'provider'),
+              isSelected: _selectedType == UserType.serviceProvider,
+              onTap: () => setState(() => _selectedType = UserType.serviceProvider),
             ),
             _TypeCard(
               title: 'Merchant',
               subtitle: 'I WANT TO SELL',
               icon: Icons.storefront_outlined,
-              isSelected: _selectedType == 'merchant',
-              onTap: () => setState(() => _selectedType = 'merchant'),
+              isSelected: _selectedType == UserType.marketplace,
+              onTap: () => setState(() => _selectedType = UserType.marketplace),
             ),
             const Spacer(),
             Container(
@@ -82,7 +83,7 @@ class _AccountTypeScreenState extends State<AccountTypeScreen> {
             const SizedBox(height: AppSpacing.l),
             PrimaryButton(
               text: 'Next',
-              onPressed: () => context.push('/signup/$_selectedType'),
+              onPressed: () => context.push('/signup/${_selectedType.name}'),
             ),
           ],
         ),

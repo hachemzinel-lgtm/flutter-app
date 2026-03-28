@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../models/message_model.dart';
 
 class AIService {
@@ -39,11 +41,20 @@ Always:
 
 If user asks about something unrelated to home services, politely redirect: 'I'm here to help with home repair issues. Is there something home-related I can help with?'""";
 
-  Future<MessageModel?> sendMessage(List<MessageModel> history) async {
+  Future<bool> _hasInternetConnection() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    return !connectivityResult.contains(ConnectivityResult.none);
+  }
+
+  Future<MessageModel> sendMessage(List<MessageModel> history) async {
+    // 1. Check Internet Connection
+    if (!await _hasInternetConnection()) {
+      throw Exception('No internet connection. Please check your network and try again.');
+    }
+
     final apiKey = dotenv.env['GOOGLE_GEMINI_API_KEY'];
     if (apiKey == null || apiKey.isEmpty) {
-      debugPrint('Error: GOOGLE_GEMINI_API_KEY is missing in .env configurations.');
-      return null;
+      throw Exception('API Configuration Error: GOOGLE_GEMINI_API_KEY is missing.');
     }
 
     try {
@@ -79,7 +90,7 @@ If user asks about something unrelated to home services, politely redirect: 'I'm
         }
       }
 
-      // Merge sequential user messages if they happen to exist consecutively (Gemini requirement)
+      // Merge sequential messages of the same role (Gemini requirement)
       final List<Content> compressedHistory = [];
       for (var c in chatHistory) {
         if (compressedHistory.isNotEmpty && compressedHistory.last.role == c.role) {
@@ -89,17 +100,29 @@ If user asks about something unrelated to home services, politely redirect: 'I'm
         }
       }
 
-      final response = await model.generateContent(compressedHistory);
+      // 2. Execute with 30-second timeout
+      final response = await model.generateContent(compressedHistory).timeout(
+        const Duration(seconds: 30),
+      );
 
-      if (response.text != null) {
-        return MessageModel(
-          role: 'assistant',
-          content: response.text!,
-        );
+      final text = response.text;
+      if (text == null || text.trim().isEmpty) {
+        throw Exception('Received empty response from AI.');
       }
+
+      return MessageModel(
+        role: 'assistant',
+        content: text,
+      );
+
+    } on TimeoutException {
+      throw Exception('Request took too long. Please try again.');
+    } on GenerativeAIException catch (e) {
+      debugPrint('Gemini API Error: $e');
+      throw Exception('AI Service Error: Please try again in a moment.');
     } catch (e) {
-      debugPrint('Exception in Gemini AIService: $e');
+      debugPrint('Unexpected AI Error: $e');
+      throw Exception('Unexpected error occurred: ${e.toString()}');
     }
-    return null;
   }
 }

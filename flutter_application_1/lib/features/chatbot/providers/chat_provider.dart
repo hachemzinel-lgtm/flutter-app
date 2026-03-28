@@ -68,20 +68,25 @@ class ChatProvider extends ChangeNotifier {
     // Save history immediately after user message per PRD persistence bounds
     await _saveHistory();
 
-    final response = await _aiService.sendMessage(_messages);
-    
-    _isLoading = false;
-    if (response != null) {
+    try {
+      final response = await _aiService.sendMessage(_messages);
       _messages.add(response);
-    } else {
+    } catch (e) {
+      String errorMessage = "Something went wrong. Try again in a moment.";
+      if (e is Exception) {
+        // Strip the "Exception: " prefix if present to keep the UI clean
+        errorMessage = e.toString().replaceFirst('Exception: ', '');
+      }
+      
       _messages.add(MessageModel(
         role: 'system', 
-        content: "Something went wrong. Try again in a moment.",
+        content: errorMessage,
       ));
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+      await _saveHistory();
     }
-    
-    notifyListeners();
-    await _saveHistory();
   }
 
   Future<void> clearHistory() async {

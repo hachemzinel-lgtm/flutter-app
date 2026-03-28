@@ -248,8 +248,9 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
     switch (index) {
       case 1: context.push('/search-results'); break;
       case 2: context.push('/conversations'); break;
-      case 3: context.push('/notifications'); break;
-      case 4: context.push('/edit-profile'); break;
+      case 3: context.push('/chat-bot'); break; // AI Helper Tab
+      case 4: context.push('/notifications'); break;
+      case 5: context.push('/edit-profile'); break;
     }
   }
 
@@ -517,35 +518,21 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
         ],
       ),
       bottomNavigationBar: _buildBottomNav(),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          FloatingActionButton.extended(
-            heroTag: 'ai_chatbot',
-            onPressed: () => context.push('/chat-bot'),
-            backgroundColor: AppColors.accentBlue,
-            icon: const Icon(Icons.chat_bubble, color: Colors.white),
-            label: const Text('AI Helper', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(height: 16),
-          FloatingActionButton(
-            heroTag: 'my_location',
-            onPressed: () {
-              setState(() {
-                _useCustomLocation = false;
-                _selectedLocation = null;
-              });
-              _determinePosition();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('📍 Centered on your location')),
-              );
-            },
-            backgroundColor: AppColors.accentBlue,
-            shape: const CircleBorder(),
-            child: const Icon(Icons.my_location, color: Colors.white),
-          ),
-        ],
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'my_location',
+        onPressed: () {
+          setState(() {
+            _useCustomLocation = false;
+            _selectedLocation = null;
+          });
+          _determinePosition();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('📍 Centered on your location')),
+          );
+        },
+        backgroundColor: AppColors.accentBlue,
+        shape: const CircleBorder(),
+        child: const Icon(Icons.my_location, color: Colors.white),
       ),
     );
   }
@@ -626,8 +613,9 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
           _navItem(Icons.explore, 'EXPLORE', true, 0),
           _navItem(Icons.search, 'SEARCH', false, 1),
           _navItem(Icons.chat_bubble_outline, 'CHAT', false, 2),
-          _navItem(Icons.notifications_none, 'ALERTS', false, 3),
-          _navItem(Icons.person_outline, 'PROFILE', false, 4),
+          _navItem(Icons.smart_toy, 'ASK AI', false, 3), // NEW AI Tab
+          _navItem(Icons.notifications_none, 'ALERTS', false, 4),
+          _navItem(Icons.person_outline, 'PROFILE', false, 5),
         ],
       ),
     );

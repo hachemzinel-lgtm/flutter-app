@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 
@@ -61,7 +62,7 @@ class MapMarkerWidget extends StatelessWidget {
             ),
             child: ClipOval(
               child: imageUrl != null
-                  ? Image.network(imageUrl!, fit: BoxFit.cover)
+                  ? CachedNetworkImage(imageUrl: imageUrl!, fit: BoxFit.cover)
                   : const Icon(Icons.person, color: Colors.white, size: 24),
             ),
           ),

@@ -5,14 +5,15 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/widgets/primary_button.dart';
+import '../../../core/models/user_model.dart';
 import '../providers/auth_provider.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
-  final String accountType;
+  final UserType userType;
 
   const SignUpScreen({
     super.key,
-    required this.accountType,
+    required this.userType,
   });
 
   @override
@@ -44,7 +45,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           email: _emailController.text.trim(),
           phone: _phoneController.text.trim(),
           password: _passwordController.text,
-          accountType: widget.accountType,
+          userType: widget.userType,
         );
         if (mounted) {
           context.go('/email-verification');
@@ -80,7 +81,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               ),
               const SizedBox(height: AppSpacing.s),
               Text(
-                'Join NearWork as a ${widget.accountType}',
+                'Join NearWork as a ${widget.userType.displayName}',
                 style: AppTextStyles.bodyMedium,
               ),
               const SizedBox(height: AppSpacing.xxl),

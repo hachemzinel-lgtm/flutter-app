@@ -7,6 +7,7 @@ final providersStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref)
   return FirebaseFirestore.instance
       .collection('providers')
       .where('isAvailable', isEqualTo: true)
+      .limit(20)
       .snapshots()
       .map((snapshot) => snapshot.docs.map((doc) {
             final data = Map<String, dynamic>.from(doc.data());
