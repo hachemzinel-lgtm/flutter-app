@@ -8,8 +8,12 @@
 	<string>We need your location to show nearby service providers.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>We need speech recognition to accurately convert your voice messages to text.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>We need camera access so you can take photos of your home issues</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need photo library access so you can share photos of your home issues</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>We need your microphone to record voice messages for the AI Assistant.</string>
+	<string>We need microphone access so you can send voice messages about your home issues</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

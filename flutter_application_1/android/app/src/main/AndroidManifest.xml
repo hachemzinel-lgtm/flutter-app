@@ -2,8 +2,14 @@
     <!-- Permissions for Geolocator plugin -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <!-- Permission for Speech-to-Text Voice Inputs -->
+    <!-- Audio recording for voice messages -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Camera and storage for photo messages -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!-- Network -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:label="flutter_application_1"

@@ -1,103 +1,134 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../../../core/models/message_model.dart';
-import '../../../core/services/ai_service.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'dart:convert';
+import '../../../services/groq_chat_service.dart';
 
 class ChatProvider extends ChangeNotifier {
-  final AIService _aiService = AIService();
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
-  
+  final GroqChatService _groqService = GroqChatService();
+
   List<MessageModel> _messages = [];
   bool _isLoading = false;
 
   List<MessageModel> get messages => _messages;
   bool get isLoading => _isLoading;
 
+  static const String _welcomeMessage =
+      "Hi there! 👋 I'm FixIt AI, your home repair assistant!\n\n"
+      "I can help you with:\n"
+      "🔧 Plumbing issues (leaks, clogged drains, toilet problems)\n"
+      "⚡ Electrical problems (outlets, switches, lighting)\n"
+      "🎨 Painting and wall repairs\n"
+      "🪚 Carpentry and furniture fixes\n"
+      "🏠 General home maintenance tips\n\n"
+      "You can type, send a photo 📷, or record a voice message 🎤\n\n"
+      "Describe your problem and I'll help you figure out if you can fix it yourself or if you need a professional!";
+
   ChatProvider() {
-    _loadHistory();
+    _initializeNewConversation();
   }
 
-  Future<void> _loadHistory() async {
-    try {
-      final String? storedHistory = await _storage.read(key: 'chat_history');
-      if (storedHistory != null) {
-        final List<dynamic> decoded = jsonDecode(storedHistory);
-        _messages = decoded.map((e) => MessageModel.fromJson(e)).toList();
-      } else {
-        _messages = [
-          MessageModel(
-            role: 'assistant',
-            content: "Hi there! 👋 I'm your AI service advisor. \n\nI can help you with:\n- 🔧 Identifying home repair issues\n- 📸 Analyzing photos of problems\n- 🎤 Recording voice descriptions\n- ✅ Determining if you need professional help\n\nJust describe your problem or send me a photo/voice message and I'll help!",
-          )
-        ];
-      }
-      notifyListeners();
-    } catch (e) {
-      debugPrint("Error loading history: $e");
-    }
+  void _initializeNewConversation() {
+    _messages = [
+      MessageModel(
+        role: 'assistant',
+        content: _welcomeMessage,
+      ),
+    ];
+    notifyListeners();
   }
 
-  Future<void> _saveHistory() async {
-    try {
-      // Limit to last 50 messages to save space
-      final List<MessageModel> messagesToSave = _messages.length > 50 
-          ? _messages.sublist(_messages.length - 50) 
-          : _messages;
-      final encoded = jsonEncode(messagesToSave.map((m) => m.toJson()).toList());
-      await _storage.write(key: 'chat_history', value: encoded);
-    } catch (e) {
-      debugPrint("Error saving history: $e");
-    }
+  void startNewConversation() {
+    _groqService.clearHistory();
+    _initializeNewConversation();
+    _isLoading = false;
   }
 
-  Future<void> sendMessage(String content, {String? imageBase64, String? audioBase64}) async {
-    if (content.isEmpty && imageBase64 == null && audioBase64 == null) return;
-    
-    final userMessage = MessageModel(
-      role: 'user', 
-      content: content, 
-      imageBase64: imageBase64,
-      audioBase64: audioBase64,
-    );
-    
-    _messages.add(userMessage);
+  Future<void> sendTextMessage(String text) async {
+    if (text.trim().isEmpty) return;
+
+    _messages.add(MessageModel(role: 'user', content: text));
     _isLoading = true;
     notifyListeners();
-    
-    // Save history immediately after user message per PRD persistence bounds
-    await _saveHistory();
 
     try {
-      final response = await _aiService.sendMessage(_messages);
-      _messages.add(response);
+      final reply = await _groqService.sendMessage(text);
+      _messages.add(MessageModel(role: 'assistant', content: reply));
     } catch (e) {
-      String errorMessage = "Something went wrong. Try again in a moment.";
-      if (e is Exception) {
-        // Strip the "Exception: " prefix if present to keep the UI clean
-        errorMessage = e.toString().replaceFirst('Exception: ', '');
-      }
-      
       _messages.add(MessageModel(
-        role: 'system', 
-        content: errorMessage,
+        role: 'system',
+        content: 'Something went wrong. Please try again.',
       ));
     } finally {
       _isLoading = false;
       notifyListeners();
-      await _saveHistory();
+    }
+  }
+
+  Future<void> sendImageMessage(File imageFile, {String? caption}) async {
+    // Add user message bubble with the image
+    _messages.add(MessageModel(
+      role: 'user',
+      content: caption ?? '',
+      type: MessageType.image,
+      imageFile: imageFile,
+    ));
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final reply = await _groqService.sendImageMessage(imageFile, additionalText: caption);
+      _messages.add(MessageModel(role: 'assistant', content: reply));
+    } catch (e) {
+      _messages.add(MessageModel(
+        role: 'system',
+        content: 'Failed to analyze the image. Please try again.',
+      ));
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> sendVoiceMessage(File audioFile) async {
+    // Placeholder user bubble while processing
+    _messages.add(MessageModel(
+      role: 'user',
+      content: '🎤 Voice message',
+      type: MessageType.voice,
+    ));
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final result = await _groqService.sendVoiceMessage(audioFile);
+      final transcription = result['transcription'] ?? '';
+      final reply = result['response'] ?? '';
+
+      // Update the last user bubble with the transcription
+      final idx = _messages.lastIndexWhere((m) => m.role == 'user' && m.type == MessageType.voice);
+      if (idx != -1) {
+        _messages[idx] = MessageModel(
+          role: 'user',
+          content: '🎤 Voice message',
+          type: MessageType.voice,
+          transcription: transcription,
+          timestamp: _messages[idx].timestamp,
+        );
+      }
+
+      _messages.add(MessageModel(role: 'assistant', content: reply));
+    } catch (e) {
+      _messages.add(MessageModel(
+        role: 'system',
+        content: 'Failed to process voice message. Please try again.',
+      ));
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
   Future<void> clearHistory() async {
-    _messages.clear();
-    await _storage.delete(key: 'chat_history');
-    _messages = [
-      MessageModel(
-        role: 'assistant',
-        content: "Hi there! 👋 I'm your AI service advisor. \n\nI can help you with:\n- 🔧 Identifying home repair issues\n- 📸 Analyzing photos of problems\n- 🎤 Recording voice descriptions\n- ✅ Determining if you need professional help\n\nJust describe your problem or send me a photo/voice message and I'll help!",
-      )
-    ];
-    notifyListeners();
+    startNewConversation();
   }
 }

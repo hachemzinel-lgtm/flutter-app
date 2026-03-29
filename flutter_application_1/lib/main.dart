@@ -9,12 +9,8 @@ import 'firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables robustly
-  try {
-    await dotenv.load(fileName: ".env");
-  } catch (e) {
-    debugPrint("Could not load .env file: $e");
-  }
+  // Load environment variables before running the app
+  await dotenv.load(fileName: ".env");
 
   // Initialize Firebase
   // Note: Replace with your actual configurations or use flutterfire configure
