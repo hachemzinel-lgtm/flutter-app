@@ -5,16 +5,10 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/widgets/primary_button.dart';
-import '../../../core/models/user_model.dart';
 import '../providers/auth_provider.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
-  final UserType userType;
-
-  const SignUpScreen({
-    super.key,
-    required this.userType,
-  });
+  const SignUpScreen({super.key});
 
   @override
   ConsumerState<SignUpScreen> createState() => _SignUpScreenState();
@@ -22,17 +16,13 @@ class SignUpScreen extends ConsumerStatefulWidget {
 
 class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
 
   @override
   void dispose() {
-    _nameController.dispose();
     _emailController.dispose();
-    _phoneController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -40,20 +30,23 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   Future<void> _handleSignUp() async {
     if (_formKey.currentState!.validate()) {
       try {
+        debugPrint('--- [SIGNUP SCREEN] Signup button pressed ---');
         await ref.read(authServiceProvider).signUp(
-          name: _nameController.text.trim(),
           email: _emailController.text.trim(),
-          phone: _phoneController.text.trim(),
           password: _passwordController.text,
-          userType: widget.userType,
         );
-        if (mounted) {
-          context.go('/email-verification');
-        }
+        debugPrint('--- [SIGNUP SCREEN] Signup successful, navigation should be handled by router ---');
+        
+        // No need to context.go('/email-verification') if router handles it via refreshListenable
       } catch (e) {
+        debugPrint('--- [SIGNUP SCREEN] Signup FAILED: $e ---');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(e.toString()), backgroundColor: AppColors.errorRed),
+            SnackBar(
+              content: Text(e.toString()), 
+              backgroundColor: AppColors.errorRed,
+              behavior: SnackBarBehavior.floating,
+            ),
           );
         }
       }
@@ -81,18 +74,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               ),
               const SizedBox(height: AppSpacing.s),
               Text(
-                'Join NearWork as a ${widget.userType.displayName}',
+                'Join NearWork with your email address',
                 style: AppTextStyles.bodyMedium,
               ),
               const SizedBox(height: AppSpacing.xxl),
-              
-              _buildLabel('FULL NAME'),
-              TextFormField(
-                controller: _nameController,
-                decoration: _inputDecoration('Enter your full name', Icons.person_outline),
-                validator: (val) => val == null || val.isEmpty ? 'Name is required' : null,
-              ),
-              const SizedBox(height: AppSpacing.l),
               
               _buildLabel('EMAIL ADDRESS'),
               TextFormField(
@@ -100,15 +85,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 keyboardType: TextInputType.emailAddress,
                 decoration: _inputDecoration('name@example.com', Icons.email_outlined),
                 validator: (val) => val == null || !val.contains('@') ? 'Invalid email' : null,
-              ),
-              const SizedBox(height: AppSpacing.l),
-
-              _buildLabel('PHONE NUMBER'),
-              TextFormField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: _inputDecoration('+216 -- --- ---', Icons.phone_outlined),
-                validator: (val) => val == null || val.isEmpty ? 'Phone is required' : null,
               ),
               const SizedBox(height: AppSpacing.l),
               
@@ -137,7 +113,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               
               Center(
                 child: GestureDetector(
-                  onTap: () => context.push('/login'),
+                  onTap: () => context.go('/login'),
                   child: RichText(
                     text: TextSpan(
                       text: "Already have an account? ",

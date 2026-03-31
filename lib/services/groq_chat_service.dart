@@ -157,6 +157,13 @@ Your job is to:
   }
 
   void clearHistory() {
-    _conversationHistory.removeRange(1, _conversationHistory.length);
+    if (_conversationHistory.length > 1) {
+      _conversationHistory.removeRange(1, _conversationHistory.length);
+    }
+  }
+
+  void setHistory(List<Map<String, dynamic>> pastMessages) {
+    clearHistory();
+    _conversationHistory.addAll(pastMessages);
   }
 }

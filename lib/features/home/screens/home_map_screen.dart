@@ -9,7 +9,6 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/services/location_service.dart';
-import '../../../core/services/geocoding_service.dart';
 import '../../../core/services/distance_service.dart';
 import '../providers/home_provider.dart';
 import '../widgets/map_marker_widget.dart';
@@ -31,7 +30,6 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
   
   double _searchRadiusKm = 10.0;
   String _selectedCategory = 'All';
-  String _locationDisplayName = 'My Location';
   final TextEditingController _locationSearchController = TextEditingController();
 
   @override
@@ -59,7 +57,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
       setState(() {
         _currentGpsLocation = LatLng(position.latitude, position.longitude);
         if (!_useCustomLocation) {
-          _locationDisplayName = 'My Location';
+          // Default logic
         }
       });
       if (!_useCustomLocation) {
@@ -243,91 +241,13 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
     );
   }
 
-  void _onBottomNavTapped(int index) {
-    if (index == 0) return;
-    switch (index) {
-      case 1: context.push('/search-results'); break;
-      case 2: context.push('/conversations'); break;
-      case 3: context.push('/chat-bot'); break; // AI Helper Tab
-      case 4: context.push('/notifications'); break;
-      case 5: context.push('/edit-profile'); break;
-    }
-  }
+
 
   double _distanceKm(double lat, double lng) {
     return DistanceService().calculateDistance(lat, lng, _activeLocation.latitude, _activeLocation.longitude);
   }
 
-  void _showAddressSearchModal() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).viewInsets.bottom,
-          left: AppSpacing.l,
-          right: AppSpacing.l,
-          top: AppSpacing.l,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Center(
-              child: Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(color: AppColors.softGray.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.l),
-            TextField(
-              controller: _locationSearchController,
-              decoration: InputDecoration(
-                hintText: 'Search location or enter address',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () => _locationSearchController.clear(),
-                ),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              onSubmitted: (value) async {
-                if (value.isNotEmpty) {
-                  final loc = await GeocodingService().geocodeAddress(value);
-                  if (loc != null) {
-                    setState(() {
-                      _selectedLocation = LatLng(loc.latitude, loc.longitude);
-                      _useCustomLocation = true;
-                      _locationDisplayName = value;
-                    });
-                    
-                    _animatedMapMove(_selectedLocation!, 13);
-                    
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('📍 Searching near $value')),
-                      );
-                      Navigator.pop(ctx);
-                    }
-                  } else {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Address not found')),
-                      );
-                    }
-                  }
-                }
-              },
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -351,19 +271,18 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
               ),
               
               // Radius Circle
-              if (_useCustomLocation && _selectedLocation != null)
-                CircleLayer(
-                  circles: [
-                    CircleMarker(
-                      point: _selectedLocation!,
-                      color: AppColors.accentBlue.withValues(alpha: 0.15),
-                      borderColor: AppColors.accentBlue.withValues(alpha: 0.5),
-                      borderStrokeWidth: 2,
-                      useRadiusInMeter: true,
-                      radius: _searchRadiusKm * 1000, 
-                    ),
-                  ],
-                ),
+              CircleLayer(
+                circles: [
+                  CircleMarker(
+                    point: _activeLocation,
+                    color: AppColors.accentBlue.withValues(alpha: 0.1),
+                    borderColor: AppColors.accentBlue.withValues(alpha: 0.3),
+                    borderStrokeWidth: 1,
+                    useRadiusInMeter: true,
+                    radius: _searchRadiusKm * 1000, 
+                  ),
+                ],
+              ),
 
               // Providers markers
               providersAsync.when(
@@ -385,8 +304,10 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                         point: LatLng(lat, lng),
                         width: 60, height: 60,
                         child: MapMarkerWidget(
+                          imageUrl: provider['profile_picture'] ?? provider['photo_url'] ?? provider['image_url'],
                           rating: (provider['rating'] as num?)?.toDouble() ?? 4.5,
                           category: provider['profession'] ?? provider['category'] ?? '',
+                          isVerified: provider['verificationStatus'] == 'approved',
                           onTap: () => _showProviderPopup(context, provider),
                         ),
                       );
@@ -431,45 +352,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
           SafeArea(
             child: Column(
               children: [
-                // Location Search & Display Banner
-                GestureDetector(
-                  onTap: _showAddressSearchModal,
-                  child: Container(
-                    margin: const EdgeInsets.only(top: 8, left: 16, right: 16),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10)],
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.location_on, color: AppColors.accentBlue),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _useCustomLocation ? '📍 $_locationDisplayName' : '📍 My Location',
-                            style: AppTextStyles.headingSmall.copyWith(fontSize: 14),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (_useCustomLocation)
-                          GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _useCustomLocation = false;
-                                _selectedLocation = null;
-                                _locationDisplayName = 'My Location';
-                              });
-                              _animatedMapMove(_currentGpsLocation, 13);
-                            },
-                            child: const Icon(Icons.close, size: 20, color: AppColors.softGray),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
+                // Removed Location Search & Display Banner per requirements
 
                 // --- SEARCH BAR (Read-only Button) ---
                 Padding(
@@ -504,6 +387,39 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                     ),
                   ),
                 ),
+
+                // --- TOP RIGHT ACTIONS ---
+                Positioned(
+                  top: AppSpacing.m,
+                  right: AppSpacing.m,
+                  child: Row(
+                    children: [
+                      _mapActionButton(
+                        icon: Icons.tune,
+                        onTap: () => context.push('/search-results'), // In real app, this opens filter sheet
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // --- ZOOM CONTROLS ---
+          Positioned(
+            right: 16,
+            bottom: 180,
+            child: Column(
+              children: [
+                _mapActionButton(
+                  icon: Icons.add,
+                  onTap: () => _mapController.move(_mapController.camera.center, _mapController.camera.zoom + 1),
+                ),
+                const SizedBox(height: 8),
+                _mapActionButton(
+                  icon: Icons.remove,
+                  onTap: () => _mapController.move(_mapController.camera.center, _mapController.camera.zoom - 1),
+                ),
               ],
             ),
           ),
@@ -517,7 +433,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
           ),
         ],
       ),
-      bottomNavigationBar: _buildBottomNav(),
+      // Using ShellRoute for Navigation, so bottomNavigationBar is removed from here.
       floatingActionButton: FloatingActionButton(
         heroTag: 'my_location',
         onPressed: () {
@@ -533,6 +449,20 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
         backgroundColor: AppColors.accentBlue,
         shape: const CircleBorder(),
         child: const Icon(Icons.my_location, color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _mapActionButton({required IconData icon, required VoidCallback onTap}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: AppColors.accentBlue),
+        onPressed: onTap,
       ),
     );
   }
@@ -600,48 +530,6 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
     );
   }
 
-  Widget _buildBottomNav() {
-    return Container(
-      height: 80,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -4))],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _navItem(Icons.explore, 'EXPLORE', true, 0),
-          _navItem(Icons.search, 'SEARCH', false, 1),
-          _navItem(Icons.chat_bubble_outline, 'CHAT', false, 2),
-          _navItem(Icons.smart_toy, 'ASK AI', false, 3), // NEW AI Tab
-          _navItem(Icons.notifications_none, 'ALERTS', false, 4),
-          _navItem(Icons.person_outline, 'PROFILE', false, 5),
-        ],
-      ),
-    );
-  }
-
-  Widget _navItem(IconData icon, String label, bool isSelected, int index) {
-    return GestureDetector(
-      onTap: () => _onBottomNavTapped(index),
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: isSelected ? AppColors.accentBlue : AppColors.softGray),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: AppTextStyles.caption.copyWith(
-              color: isSelected ? AppColors.accentBlue : AppColors.softGray,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              fontSize: 9,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showProviderPopup(BuildContext context, Map<String, dynamic> provider) {
     final double lat = (provider['lat'] as num?)?.toDouble() ?? _currentGpsLocation.latitude;

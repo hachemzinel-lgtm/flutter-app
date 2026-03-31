@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/widgets/verified_badge.dart';
 
 class MapMarkerWidget extends StatelessWidget {
   final double rating;
@@ -9,12 +10,15 @@ class MapMarkerWidget extends StatelessWidget {
   final String category;
   final VoidCallback onTap;
 
+  final bool isVerified;
+
   const MapMarkerWidget({
     super.key,
     required this.rating,
     this.imageUrl,
     this.category = '',
     required this.onTap,
+    this.isVerified = false,
   });
 
   Color get _markerColor {
@@ -91,6 +95,13 @@ class MapMarkerWidget extends StatelessWidget {
               ),
             ),
           ),
+          // Verified Badge
+          if (isVerified)
+            Positioned(
+              bottom: -4,
+              right: -4,
+              child: const VerifiedBadge(size: 16),
+            ),
         ],
       ),
     );

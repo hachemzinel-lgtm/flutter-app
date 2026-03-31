@@ -1,0 +1,43 @@
+import 'dart:io';
+import 'package:firebase_storage/firebase_storage.dart';
+
+class StorageService {
+  static final _storage = FirebaseStorage.instance;
+
+  static Future<String> uploadProfilePicture(String uid, File file) async {
+    final ref = _storage.ref('users/$uid/profile/profile.jpg');
+    await ref.putFile(file);
+    return await ref.getDownloadURL();
+  }
+
+  static Future<String> uploadDocument(String uid, File file, String name) async {
+    final ref = _storage.ref('users/$uid/documents/$name');
+    await ref.putFile(file);
+    return await ref.getDownloadURL();
+  }
+
+  static Future<String> uploadPortfolioPhoto(String uid, File file, String photoId) async {
+    final ref = _storage.ref('users/$uid/portfolio/$photoId.jpg');
+    await ref.putFile(file);
+    return await ref.getDownloadURL();
+  }
+
+  static Future<String> uploadMarketplacePhoto(String uid, File file, String photoId) async {
+    final ref = _storage.ref('users/$uid/marketplace_photos/$photoId.jpg');
+    await ref.putFile(file);
+    return await ref.getDownloadURL();
+  }
+
+  static Future<String> uploadMessageMedia(String conversationId, String messageId, File file, String ext) async {
+    final ref = _storage.ref('messages/$conversationId/$messageId.$ext');
+    await ref.putFile(file);
+    return await ref.getDownloadURL();
+  }
+
+  static Future<void> deleteFile(String url) async {
+    try {
+      final ref = _storage.refFromURL(url);
+      await ref.delete();
+    } catch (_) {}
+  }
+}

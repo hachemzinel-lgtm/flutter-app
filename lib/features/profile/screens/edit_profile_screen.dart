@@ -19,8 +19,8 @@ class EditProfileScreen extends ConsumerWidget {
         data: (userType) {
           if (userType == UserType.client) {
             return const ClientEditProfileScreen();
-          } else if (userType == UserType.serviceProvider) {
-            return const BuilderEditProfileScreen();
+          } else if (userType == UserType.workProvider) {
+            return const ProviderEditProfileScreen();
           } else if (userType == UserType.marketplace) {
             return const MarketplaceEditProfileScreen();
           }

@@ -12,7 +12,8 @@ class ReviewService {
   }) async {
     final batch = _firestore.batch();
     
-    final reviewRef = _firestore.collection('providers').doc(providerId).collection('reviews').doc();
+    // Store review in a subcollection of the target user (provider/merchant)
+    final reviewRef = _firestore.collection('users').doc(providerId).collection('reviews').doc();
     batch.set(reviewRef, {
       'reviewerId': reviewerId,
       'reviewerName': reviewerName,
@@ -21,11 +22,14 @@ class ReviewService {
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-    // Update aggregate rating (simplified version)
-    // In a real app, use a Cloud Function for this
-    final providerRef = _firestore.collection('providers').doc(providerId);
-    batch.update(providerRef, {
-      'rating': rating, // This would be an average in reality
+    // Update aggregate rating on the target user document
+    final targetRef = _firestore.collection('users').doc(providerId);
+    
+    // Using increment for count is easy. 
+    // For average rating, we'd typically use specialized Firestore logic or Cloud Functions,
+    // but for now we'll do a simple update to the 'rating' field as well.
+    batch.update(targetRef, {
+      'rating': rating, // This would be more complex in real PRD (running average)
       'reviewCount': FieldValue.increment(1),
     });
 
@@ -34,7 +38,7 @@ class ReviewService {
 
   Stream<QuerySnapshot> getReviews(String providerId) {
     return _firestore
-        .collection('providers')
+        .collection('users')
         .doc(providerId)
         .collection('reviews')
         .orderBy('createdAt', descending: true)

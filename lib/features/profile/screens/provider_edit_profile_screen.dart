@@ -6,14 +6,14 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/constants/app_spacing.dart';
 
-class BuilderEditProfileScreen extends ConsumerStatefulWidget {
-  const BuilderEditProfileScreen({super.key});
+class ProviderEditProfileScreen extends ConsumerStatefulWidget {
+  const ProviderEditProfileScreen({super.key});
 
   @override
-  ConsumerState<BuilderEditProfileScreen> createState() => _BuilderEditProfileScreenState();
+  ConsumerState<ProviderEditProfileScreen> createState() => _ProviderEditProfileScreenState();
 }
 
-class _BuilderEditProfileScreenState extends ConsumerState<BuilderEditProfileScreen> {
+class _ProviderEditProfileScreenState extends ConsumerState<ProviderEditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isSaving = false;
 

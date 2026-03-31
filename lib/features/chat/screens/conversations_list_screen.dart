@@ -38,6 +38,11 @@ class ConversationsListScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final doc = snapshot.docs[index];
               final data = doc.data() as Map<String, dynamic>;
+              final participants = List<String>.from(data['participants'] ?? []);
+              final otherUid = participants.firstWhere((id) => id != user.uid, orElse: () => '');
+              final names = Map<String, dynamic>.from(data['participantNames'] ?? {});
+              final otherName = names[otherUid] as String? ?? 'User';
+              
               final lastMessageAt = (data['lastMessageAt'] as Timestamp?)?.toDate() ?? DateTime.now();
               final int unreadCount = (data['unreadCount'] as num?)?.toInt() ?? 0;
 
@@ -59,16 +64,16 @@ class ConversationsListScreen extends ConsumerWidget {
                     radius: 28,
                     backgroundColor: AppColors.accentBlue.withOpacity(0.12),
                     child: Text(
-                      (data['otherParticipantName'] as String? ?? 'U')[0].toUpperCase(),
+                      otherName[0].toUpperCase(),
                       style: AppTextStyles.headingSmall.copyWith(color: AppColors.accentBlue),
                     ),
                   ),
                   title: Text(
-                    data['otherParticipantName'] as String? ?? 'Service Provider',
+                    otherName,
                     style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w700),
                   ),
                   subtitle: Text(
-                    data['lastMessage'] as String? ?? '',
+                    data['lastMessage'] as String? ?? 'No messages yet',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.bodyMedium,
@@ -97,7 +102,7 @@ class ConversationsListScreen extends ConsumerWidget {
                       ],
                     ],
                   ),
-                  onTap: () => context.push('/chat/${doc.id}'),
+                  onTap: () => context.push('/chat/${doc.id}?otherName=$otherName'),
                 ),
               );
             },
