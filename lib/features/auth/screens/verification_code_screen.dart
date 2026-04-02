@@ -138,7 +138,7 @@ class _VerificationCodeScreenState extends ConsumerState<VerificationCodeScreen>
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: AppColors.accentBlue.withOpacity(0.1),
+                  color: AppColors.accentBlue.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.security_rounded, size: 48, color: AppColors.accentBlue),
@@ -219,7 +219,7 @@ class _VerificationCodeScreenState extends ConsumerState<VerificationCodeScreen>
       width: 48,
       height: 56,
       decoration: BoxDecoration(
-        color: AppColors.softGray.withOpacity(0.1),
+        color: AppColors.softGray.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: _focusNodes[index].hasFocus ? AppColors.accentBlue : Colors.transparent,

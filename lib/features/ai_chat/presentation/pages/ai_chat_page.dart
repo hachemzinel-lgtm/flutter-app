@@ -81,7 +81,8 @@ class _AIChatPageState extends ConsumerState<AIChatPage> {
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Recording failed')));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Recording failed')));
     }
   }
 
@@ -167,7 +168,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, -4),
           ),
@@ -254,7 +255,7 @@ class _MessageBubble extends StatelessWidget {
               topRight: Radius.circular(16),
               bottomRight: Radius.circular(16),
             ),
-            border: Border.all(color: Colors.grey.withOpacity(0.2)),
+            border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
           ),
           child: Text(
             message.content,

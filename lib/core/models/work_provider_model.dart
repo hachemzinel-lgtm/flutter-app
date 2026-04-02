@@ -32,6 +32,8 @@ class WorkProviderModel extends UserModel {
   final Map<String, String>? documents; // { 'diplomaURL': '...', 'idURL': '...' }
   final String verificationStatus; // 'pending' | 'approved' | 'rejected'
   final String? verificationReason;
+  final bool customQuoteEnabled;
+  final List<String> portfolio;
 
   WorkProviderModel({
     required super.id,
@@ -46,6 +48,8 @@ class WorkProviderModel extends UserModel {
     super.rating,
     super.reviewCount,
     super.isBanned,
+    super.notificationsEnabled,
+    super.profileCompleted,
     this.profession,
     this.yearsExperience,
     this.bio,
@@ -55,6 +59,8 @@ class WorkProviderModel extends UserModel {
     this.documents,
     this.verificationStatus = 'pending',
     this.verificationReason,
+    this.customQuoteEnabled = false,
+    this.portfolio = const [],
   }) : super(userType: UserType.workProvider);
 
   factory WorkProviderModel.fromMap(String id, Map<String, dynamic> data) {
@@ -71,6 +77,8 @@ class WorkProviderModel extends UserModel {
       rating: (data['rating'] ?? 0).toDouble(),
       reviewCount: data['reviewCount'] ?? 0,
       isBanned: data['isBanned'] ?? false,
+      notificationsEnabled: data['notificationsEnabled'] ?? true,
+      profileCompleted: data['profileCompleted'] ?? true,
       profession: data['profession'],
       yearsExperience: data['yearsExperience'],
       bio: data['bio'],
@@ -83,6 +91,8 @@ class WorkProviderModel extends UserModel {
       documents: data['documents'] != null ? Map<String, String>.from(data['documents']) : null,
       verificationStatus: data['verificationStatus'] ?? 'pending',
       verificationReason: data['verificationReason'],
+      customQuoteEnabled: data['customQuoteEnabled'] ?? false,
+      portfolio: (data['portfolio'] as List<dynamic>?)?.map((item) => item.toString()).toList() ?? const [],
     );
   }
 
@@ -99,6 +109,9 @@ class WorkProviderModel extends UserModel {
       'documents': documents,
       'verificationStatus': verificationStatus,
       'verificationReason': verificationReason,
+      'customQuoteEnabled': customQuoteEnabled,
+      'portfolio': portfolio,
+      'isVerified': verificationStatus == VerificationStatus.approved.name,
     });
     return base;
   }

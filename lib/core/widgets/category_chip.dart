@@ -30,12 +30,12 @@ class CategoryChip extends StatelessWidget {
           color: isSelected ? AppColors.accentBlue : AppColors.cardSurface,
           borderRadius: BorderRadius.circular(100),
           border: Border.all(
-            color: isSelected ? AppColors.accentBlue : AppColors.softGray.withOpacity(0.2),
+            color: isSelected ? AppColors.accentBlue : AppColors.softGray.withValues(alpha: 0.2),
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppColors.accentBlue.withOpacity(0.3),
+                    color: AppColors.accentBlue.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   )

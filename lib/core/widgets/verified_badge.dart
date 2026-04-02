@@ -22,7 +22,7 @@ class VerifiedBadge extends StatelessWidget {
         border: Border.all(color: Colors.white, width: size * 0.08),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.3),
+            color: color.withValues(alpha: 0.3),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),

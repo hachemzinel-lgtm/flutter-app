@@ -1,131 +1,125 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/models/work_provider_model.dart';
-import '../../../core/models/review_model.dart';
 import '../../../services/review_service.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../chat/providers/chat_provider.dart';
 
-class ProviderProfileScreen extends ConsumerStatefulWidget {
+class ProviderProfileScreen extends ConsumerWidget {
+  const ProviderProfileScreen({
+    super.key,
+    required this.uid,
+  });
+
   final String uid;
-  const ProviderProfileScreen({super.key, required this.uid});
 
   @override
-  ConsumerState<ProviderProfileScreen> createState() => _ProviderProfileScreenState();
-}
-
-class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  final ScrollController _scrollController = ScrollController();
-  bool _isCollapsed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 4, vsync: this);
-    _scrollController.addListener(() {
-      if (_scrollController.hasClients && _scrollController.offset > 200 && !_isCollapsed) {
-        setState(() => _isCollapsed = true);
-      } else if (_scrollController.hasClients && _scrollController.offset <= 200 && _isCollapsed) {
-        setState(() => _isCollapsed = false);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance.collection('users').doc(widget.uid).snapshots(),
+  Widget build(BuildContext context, WidgetRef ref) {
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.hasError) return const Scaffold(body: Center(child: Text('Error loading profile')));
-        if (!snapshot.hasData) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        if (snapshot.hasError) {
+          return const Scaffold(
+            body: Center(child: Text('Unable to load profile.')),
+          );
+        }
+        if (!snapshot.hasData || snapshot.data?.data() == null) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
 
-        final provider = WorkProviderModel.fromMap(widget.uid, snapshot.data!.data() as Map<String, dynamic>);
+        final provider = WorkProviderModel.fromMap(uid, snapshot.data!.data()!);
+        final shortLocation = _shortLocation(provider.address);
 
         return Scaffold(
-          body: NestedScrollView(
-            controller: _scrollController,
-            headerSliverBuilder: (context, innerBoxIsScrolled) => [
+          body: CustomScrollView(
+            slivers: [
               SliverAppBar(
-                expandedHeight: 350,
+                expandedHeight: 320,
                 pinned: true,
-                stretch: true,
-                leading: Container(
-                  margin: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.black),
-                    onPressed: () => context.pop(),
-                  ),
-                ),
-                actions: [
-                  Container(
-                    margin: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                    child: IconButton(
-                      icon: const Icon(Icons.report_gmailerrorred_rounded, color: Colors.redAccent),
-                      onPressed: () => _showReportDialog(context),
-                    ),
-                  ),
-                ],
+                backgroundColor: AppColors.primaryNavy,
                 flexibleSpace: FlexibleSpaceBar(
                   background: Stack(
                     fit: StackFit.expand,
                     children: [
-                      provider.photoUrl != null
-                          ? CachedNetworkImage(imageUrl: provider.photoUrl!, fit: BoxFit.cover)
-                          : Container(color: AppColors.accentBlue.withOpacity(0.2), child: const Icon(Icons.person, size: 100, color: AppColors.accentBlue)),
-                      Container(
+                      if (provider.photoUrl != null)
+                        Image.network(provider.photoUrl!, fit: BoxFit.cover)
+                      else
+                        Container(color: AppColors.primaryNavy),
+                      DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.topCenter,
-                            colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              AppColors.primaryNavy.withValues(alpha: 0.82),
+                            ],
                           ),
                         ),
                       ),
-                      Positioned(
-                        bottom: AppSpacing.l,
-                        left: AppSpacing.l,
-                        right: AppSpacing.l,
+                      Padding(
+                        padding: const EdgeInsets.all(AppSpacing.l),
                         child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
-                                Text(provider.name, style: AppTextStyles.headingLarge.copyWith(color: Colors.white)),
-                                if (provider.verificationStatus == 'approved') ...[
-                                  const SizedBox(width: 8),
-                                  const Icon(Icons.verified_rounded, color: AppColors.starGold, size: 24),
-                                ],
+                                Expanded(
+                                  child: Text(
+                                    provider.name,
+                                    style: AppTextStyles.headingLarge.copyWith(
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                if (provider.verificationStatus == 'approved')
+                                  const Icon(
+                                    Icons.verified_rounded,
+                                    color: AppColors.starGold,
+                                    size: 24,
+                                  ),
                               ],
                             ),
-                            Text(provider.profession ?? 'Specialist', style: AppTextStyles.bodyLarge.copyWith(color: Colors.white70)),
-                            const SizedBox(height: 8),
-                            Row(
+                            const SizedBox(height: 4),
+                            Text(
+                              provider.profession ?? 'Work Provider',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.accentBlue,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.m),
+                            Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
                               children: [
-                                const Icon(Icons.star_rounded, color: AppColors.starGold, size: 20),
-                                const SizedBox(width: 4),
-                                Text(provider.rating.toStringAsFixed(1), style: AppTextStyles.bodyLarge.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
-                                Text(' (${provider.reviewCount} reviews)', style: AppTextStyles.caption.copyWith(color: Colors.white70)),
-                                const Spacer(),
+                                _InfoBadge(
+                                  icon: Icons.star_rounded,
+                                  label: provider.rating == 0
+                                      ? 'New'
+                                      : '${provider.rating.toStringAsFixed(1)} (${provider.reviewCount})',
+                                  color: AppColors.starGold,
+                                ),
+                                if (shortLocation.isNotEmpty)
+                                  _InfoBadge(
+                                    icon: Icons.location_on_outlined,
+                                    label: shortLocation,
+                                    color: AppColors.accentBlue,
+                                  ),
                                 if (provider.isAvailableNow)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                    decoration: BoxDecoration(color: AppColors.availableGreen, borderRadius: BorderRadius.circular(20)),
-                                    child: const Text('Available Now', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                                  const _InfoBadge(
+                                    icon: Icons.flash_on_rounded,
+                                    label: 'Available Now',
+                                    color: AppColors.availableGreen,
                                   ),
                               ],
                             ),
@@ -136,231 +130,552 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> w
                   ),
                 ),
               ),
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _SliverAppBarDelegate(
-                  TabBar(
-                    controller: _tabController,
-                    labelColor: AppColors.accentBlue,
-                    unselectedLabelColor: AppColors.softGray,
-                    indicatorColor: AppColors.accentBlue,
-                    indicatorWeight: 3,
-                    tabs: const [
-                      Tab(text: 'About'),
-                      Tab(text: 'Services'),
-                      Tab(text: 'Portfolio'),
-                      Tab(text: 'Reviews'),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: AppSpacing.pagePadding,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => _startChat(context, ref, provider),
+                              icon: const Icon(Icons.chat_bubble_outline_rounded),
+                              label: const Text('Message'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.accentBlue,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.m),
+                          OutlinedButton.icon(
+                            onPressed: () => _shareProfile(context, provider),
+                            icon: const Icon(Icons.share_outlined),
+                            label: const Text('Share'),
+                          ),
+                          const SizedBox(width: AppSpacing.s),
+                          OutlinedButton.icon(
+                            onPressed: () => _reportProfile(context, ref, provider.id),
+                            icon: const Icon(Icons.flag_outlined),
+                            label: const Text('Report'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      _Section(
+                        title: 'About',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              provider.bio?.trim().isNotEmpty == true
+                                  ? provider.bio!
+                                  : 'No bio shared yet.',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.primaryNavy,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.l),
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 12,
+                              children: [
+                                _DetailTile(
+                                  label: 'Experience',
+                                  value:
+                                      '${provider.yearsExperience ?? 0} years',
+                                ),
+                                _DetailTile(
+                                  label: 'Language',
+                                  value: _languageName(provider.language),
+                                ),
+                                _DetailTile(
+                                  label: 'Location',
+                                  value: shortLocation.isEmpty
+                                      ? 'Not shared'
+                                      : shortLocation,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.l),
+                      _Section(
+                        title: 'Pricing',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (provider.hourlyRate != null)
+                              _PriceRow(
+                                label: 'Hourly rate',
+                                value:
+                                    provider.hourlyRate!.toStringAsFixed(2),
+                              ),
+                            if (provider.services.isNotEmpty)
+                              ...provider.services.map(
+                                (service) => _PriceRow(
+                                  label: service.name,
+                                  value: service.price.toStringAsFixed(2),
+                                ),
+                              ),
+                            if (provider.customQuoteEnabled)
+                              Text(
+                                'Custom quote available',
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: AppColors.accentBlue,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            if (provider.hourlyRate == null &&
+                                provider.services.isEmpty &&
+                                !provider.customQuoteEnabled)
+                              Text(
+                                'Pricing details are not shared yet.',
+                                style: AppTextStyles.bodyMedium,
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.l),
+                      _Section(
+                        title: 'Portfolio',
+                        trailing: provider.portfolio.isNotEmpty
+                            ? Text(
+                                '${provider.portfolio.length} photos',
+                                style: AppTextStyles.caption,
+                              )
+                            : null,
+                        child: provider.portfolio.isEmpty
+                            ? Text(
+                                'No portfolio photos yet.',
+                                style: AppTextStyles.bodyMedium,
+                              )
+                            : GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: provider.portfolio.length,
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 3,
+                                  crossAxisSpacing: 10,
+                                  mainAxisSpacing: 10,
+                                ),
+                                itemBuilder: (context, index) {
+                                  final image = provider.portfolio[index];
+                                  return InkWell(
+                                    onTap: () => _openGallery(context, image),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(14),
+                                      child: Image.network(image, fit: BoxFit.cover),
+                                    ),
+                                  );
+                                },
+                              ),
+                      ),
+                      const SizedBox(height: AppSpacing.l),
+                      _Section(
+                        title: 'Reviews',
+                        trailing: TextButton(
+                          onPressed: () => context.push('/reviews/${provider.id}'),
+                          child: const Text('See all'),
+                        ),
+                        child: StreamBuilder(
+                          stream: ReviewService().getReviews(provider.id),
+                          builder: (context, snapshot) {
+                            if (!snapshot.hasData) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+                            final reviews = snapshot.data!;
+                            if (reviews.isEmpty) {
+                              return Text(
+                                'No reviews yet.',
+                                style: AppTextStyles.bodyMedium,
+                              );
+                            }
+
+                            return Column(
+                              children: reviews.take(5).map((review) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(
+                                    bottom: AppSpacing.m,
+                                  ),
+                                  child: _ReviewCard(
+                                    name: review.reviewerName,
+                                    photoUrl: review.reviewerPhoto,
+                                    rating: review.rating,
+                                    text: review.text,
+                                    date: review.createdAt,
+                                  ),
+                                );
+                              }).toList(),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xxl),
                     ],
                   ),
                 ),
               ),
             ],
-            body: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildAboutTab(provider),
-                _buildServicesTab(provider),
-                _buildPortfolioTab(provider),
-                _buildReviewsTab(provider),
-              ],
-            ),
-          ),
-          bottomNavigationBar: Container(
-            padding: const EdgeInsets.all(AppSpacing.l),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _startChat(context, provider),
-                    icon: const Icon(Icons.chat_bubble_rounded),
-                    label: const Text('Message Now'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentBlue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.m),
-                Container(
-                  decoration: BoxDecoration(color: AppColors.softGray.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                  child: IconButton(
-                    icon: const Icon(Icons.share_rounded, color: AppColors.accentBlue),
-                    onPressed: () {},
-                  ),
-                ),
-              ],
-            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildAboutTab(WorkProviderModel provider) {
-    return SingleChildScrollView(
+  Future<void> _startChat(
+    BuildContext context,
+    WidgetRef ref,
+    WorkProviderModel provider,
+  ) async {
+    final currentUser = ref.read(currentUserDocProvider).value;
+    if (currentUser == null) {
+      return;
+    }
+    try {
+      final conversation = await ref.read(chatServiceProvider).getOrCreateConversation(
+        currentUser: currentUser,
+        otherUser: provider,
+      );
+      if (!context.mounted) {
+        return;
+      }
+      context.push(
+        '/messages/${conversation.id}?otherName=${Uri.encodeComponent(provider.name)}',
+      );
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          backgroundColor: AppColors.errorRed,
+        ),
+      );
+    }
+  }
+
+  Future<void> _shareProfile(
+    BuildContext context,
+    WorkProviderModel provider,
+  ) async {
+    final link = 'nearwork://provider/${provider.id}';
+    await Clipboard.setData(ClipboardData(text: link));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile link copied to clipboard.'),
+          backgroundColor: AppColors.availableGreen,
+        ),
+      );
+    }
+  }
+
+  Future<void> _reportProfile(
+    BuildContext context,
+    WidgetRef ref,
+    String reportedUserId,
+  ) async {
+    final controller = TextEditingController();
+    final reporterId = ref.read(authServiceProvider).currentUser?.uid;
+    if (reporterId == null) {
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Report profile'),
+          content: TextField(
+            controller: controller,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              hintText: 'Tell us what is wrong with this profile.',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                await FirebaseFirestore.instance.collection('reports').add({
+                  'reporterId': reporterId,
+                  'reportedUserId': reportedUserId,
+                  'reason': controller.text.trim(),
+                  'status': 'pending',
+                  'createdAt': FieldValue.serverTimestamp(),
+                });
+                if (dialogContext.mounted) {
+                  Navigator.of(dialogContext).pop();
+                }
+              },
+              child: const Text('Submit'),
+            ),
+          ],
+        );
+      },
+    );
+
+    controller.dispose();
+  }
+}
+
+class _Section extends StatelessWidget {
+  const _Section({
+    required this.title,
+    required this.child,
+    this.trailing,
+  });
+
+  final String title;
+  final Widget child;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.l),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Bio', style: AppTextStyles.headingSmall),
-          const SizedBox(height: 8),
-          Text(provider.bio ?? 'No description provided.', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textDark.withOpacity(0.8))),
-          const SizedBox(height: AppSpacing.xl),
-          _infoTile(Icons.work_history_outlined, 'Experience', '${provider.yearsExperience ?? 0} years'),
-          _infoTile(Icons.language_outlined, 'Languages', provider.language ?? 'English'),
-          _infoTile(Icons.location_on_outlined, 'Location', provider.address ?? 'Detected Area'),
-        ],
-      ),
-    );
-  }
-
-  Widget _infoTile(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.m),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: AppColors.accentBlue.withOpacity(0.05), shape: BoxShape.circle),
-            child: Icon(icon, color: AppColors.accentBlue, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              Text(label, style: AppTextStyles.caption.copyWith(color: AppColors.softGray)),
-              Text(value, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+              Expanded(
+                child: Text(title, style: AppTextStyles.headingSmall),
+              ),
+              ?trailing,
             ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildServicesTab(WorkProviderModel provider) {
-    if (provider.services.isEmpty) {
-      return const Center(child: Text('No fixed prices provided. Custom quote available.'));
-    }
-    return ListView.separated(
-      padding: const EdgeInsets.all(AppSpacing.l),
-      itemCount: provider.services.length,
-      separatorBuilder: (_, __) => const Divider(height: 32),
-      itemBuilder: (ctx, i) => Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(provider.services[i].name, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-          Text('${provider.services[i].price.toStringAsFixed(0)} DZD', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.accentBlue, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPortfolioTab(WorkProviderModel provider) {
-    // Portfolio images stored in provider.toJson()['portfolio'] or subcollection
-    // For now, let's look in the photos/portfolio list if it existed (wasn't explicitly in model but in prompt)
-    // Actually, prompt says up to 10 photos stored in Firestore.
-    return GridView.builder(
-      padding: const EdgeInsets.all(AppSpacing.m),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12),
-      itemCount: 4, // Mock for now
-      itemBuilder: (ctx, i) => ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Container(color: AppColors.softGray.withOpacity(0.2), child: const Icon(Icons.image_outlined)),
-      ),
-    );
-  }
-
-  Widget _buildReviewsTab(WorkProviderModel provider) {
-    return StreamBuilder<List<ReviewModel>>(
-      stream: ReviewService().getReviews(widget.uid),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-        final reviews = snapshot.data!;
-        if (reviews.isEmpty) return const Center(child: Text('No reviews yet.'));
-
-        return ListView.separated(
-          padding: const EdgeInsets.all(AppSpacing.l),
-          itemCount: reviews.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 16),
-          itemBuilder: (ctx, i) {
-            final r = reviews[i];
-            return Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: AppColors.softGray.withOpacity(0.05), borderRadius: BorderRadius.circular(12)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      CircleAvatar(radius: 12, backgroundImage: r.reviewerPhoto.isNotEmpty ? NetworkImage(r.reviewerPhoto) : null),
-                      const SizedBox(width: 8),
-                      Text(r.reviewerName, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-                      const Spacer(),
-                      const Icon(Icons.star_rounded, color: AppColors.starGold, size: 14),
-                      Text(r.rating.toString(), style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(r.text, style: AppTextStyles.bodyMedium),
-                  const SizedBox(height: 4),
-                  Text(r.createdAt.toString().split(' ')[0], style: AppTextStyles.caption.copyWith(color: AppColors.softGray),),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _startChat(BuildContext context, WorkProviderModel provider) {
-    final myUid = ref.read(authServiceProvider).currentUser?.uid;
-    if (myUid == null) return;
-    final conversationId = myUid.compareTo(provider.id) < 0 ? '${myUid}_${provider.id}' : '${provider.id}_$myUid';
-    context.push('/chat/$conversationId?otherName=${provider.name}');
-  }
-
-  void _showReportDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Report Profile'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Is there something wrong with this profile?'),
-            TextField(decoration: InputDecoration(hintText: 'Reason for reporting...')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          TextButton(onPressed: () { 
-            Navigator.pop(ctx);
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Report submitted. Admin will review.')));
-          }, child: const Text('Submit', style: TextStyle(color: Colors.red))),
+          const SizedBox(height: AppSpacing.m),
+          child,
         ],
       ),
     );
   }
 }
 
-class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
-  _SliverAppBarDelegate(this._tabBar);
-  final TabBar _tabBar;
+class _InfoBadge extends StatelessWidget {
+  const _InfoBadge({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
   @override
-  double get minExtent => _tabBar.preferredSize.height;
-  @override
-  double get maxExtent => _tabBar.preferredSize.height;
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(color: Colors.white, child: _tabBar);
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: AppTextStyles.caption.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
   }
+}
+
+class _DetailTile extends StatelessWidget {
+  const _DetailTile({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
   @override
-  bool shouldRebuild(_SliverAppBarDelegate oldDelegate) => false;
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.m),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundSecondary,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: AppTextStyles.caption),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: AppTextStyles.bodyMedium.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.primaryNavy,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PriceRow extends StatelessWidget {
+  const _PriceRow({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.m),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(child: Text(label, style: AppTextStyles.bodyMedium)),
+          Text(
+            value,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.accentBlue,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReviewCard extends StatelessWidget {
+  const _ReviewCard({
+    required this.name,
+    required this.photoUrl,
+    required this.rating,
+    required this.text,
+    required this.date,
+  });
+
+  final String name;
+  final String photoUrl;
+  final double rating;
+  final String text;
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.m),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundSecondary,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: AppColors.accentBlue.withValues(alpha: 0.12),
+                backgroundImage: photoUrl.isEmpty ? null : NetworkImage(photoUrl),
+                child: photoUrl.isEmpty
+                    ? Text(
+                        name.substring(0, 1).toUpperCase(),
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.accentBlue,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: AppSpacing.m),
+              Expanded(
+                child: Text(
+                  name,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primaryNavy,
+                  ),
+                ),
+              ),
+              const Icon(Icons.star_rounded, color: AppColors.starGold, size: 16),
+              const SizedBox(width: 4),
+              Text(rating.toStringAsFixed(1), style: AppTextStyles.caption),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s),
+          Text(
+            text.isEmpty ? 'No written review.' : text,
+            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primaryNavy),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            date.toIso8601String().split('T').first,
+            style: AppTextStyles.caption,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _shortLocation(String? address) {
+  if (address == null || address.trim().isEmpty) {
+    return '';
+  }
+  return address.split(',').first.trim();
+}
+
+String _languageName(String? code) {
+  switch (code) {
+    case 'fr':
+      return 'French';
+    case 'ar':
+      return 'Arabic';
+    default:
+      return 'English';
+  }
+}
+
+void _openGallery(BuildContext context, String imageUrl) {
+  showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return Dialog(
+        insetPadding: const EdgeInsets.all(AppSpacing.l),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: InteractiveViewer(
+            child: Image.network(imageUrl, fit: BoxFit.contain),
+          ),
+        ),
+      );
+    },
+  );
 }

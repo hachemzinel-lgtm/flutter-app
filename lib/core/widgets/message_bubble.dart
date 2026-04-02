@@ -41,7 +41,7 @@ class MessageBubble extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 5,
               offset: const Offset(0, 2),
             ),
@@ -67,7 +67,7 @@ class MessageBubble extends StatelessWidget {
             Text(
               DateFormat.jm().format(timestamp),
               style: AppTextStyles.caption.copyWith(
-                color: isMe ? Colors.white.withOpacity(0.7) : AppColors.textLight,
+                color: isMe ? Colors.white.withValues(alpha: 0.7) : AppColors.textLight,
                 fontSize: 10,
               ),
             ),

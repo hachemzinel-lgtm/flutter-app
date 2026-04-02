@@ -158,9 +158,9 @@ class _AccountTypeScreenState extends ConsumerState<AccountTypeScreen>
                 child: Container(
                   padding: const EdgeInsets.all(AppSpacing.m),
                   decoration: BoxDecoration(
-                    color: AppColors.accentBlue.withOpacity(0.06),
+                    color: AppColors.accentBlue.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.accentBlue.withOpacity(0.15)),
+                    border: Border.all(color: AppColors.accentBlue.withValues(alpha: 0.15)),
                   ),
                   child: Row(
                     children: [
@@ -246,17 +246,17 @@ class _AccountTypeCard extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.l),
         decoration: BoxDecoration(
           color: isSelected
-              ? gradientColors[0].withOpacity(0.08)
+              ? gradientColors[0].withValues(alpha: 0.08)
               : AppColors.cardSurface,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isSelected ? gradientColors[0] : AppColors.softGray.withOpacity(0.15),
+            color: isSelected ? gradientColors[0] : AppColors.softGray.withValues(alpha: 0.15),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: gradientColors[0].withOpacity(0.15),
+                    color: gradientColors[0].withValues(alpha: 0.15),
                     blurRadius: 20,
                     offset: const Offset(0, 6),
                   )
@@ -274,7 +274,7 @@ class _AccountTypeCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: gradientColors[0].withOpacity(0.3),
+                    color: gradientColors[0].withValues(alpha: 0.3),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -311,7 +311,7 @@ class _AccountTypeCard extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: isSelected ? gradientColors[0] : Colors.transparent,
                 border: Border.all(
-                  color: isSelected ? gradientColors[0] : AppColors.softGray.withOpacity(0.3),
+                  color: isSelected ? gradientColors[0] : AppColors.softGray.withValues(alpha: 0.3),
                   width: 2,
                 ),
               ),

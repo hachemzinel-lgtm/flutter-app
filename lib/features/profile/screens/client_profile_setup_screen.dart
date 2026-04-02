@@ -1,26 +1,31 @@
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_text_styles.dart';
 import '../../../core/constants/app_spacing.dart';
+import '../../../core/constants/app_text_styles.dart';
+import '../../../core/constants/marketplace_taxonomy.dart';
 import '../../../core/models/client_model.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../../../services/storage_service.dart';
 import '../../../core/widgets/map_preview_widget.dart';
+import '../../../services/storage_service.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class ClientProfileSetupScreen extends ConsumerStatefulWidget {
   const ClientProfileSetupScreen({super.key});
 
   @override
-  ConsumerState<ClientProfileSetupScreen> createState() => _ClientProfileSetupScreenState();
+  ConsumerState<ClientProfileSetupScreen> createState() =>
+      _ClientProfileSetupScreenState();
 }
 
-class _ClientProfileSetupScreenState extends ConsumerState<ClientProfileSetupScreen> {
+class _ClientProfileSetupScreenState
+    extends ConsumerState<ClientProfileSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -28,10 +33,10 @@ class _ClientProfileSetupScreenState extends ConsumerState<ClientProfileSetupScr
 
   File? _profileImage;
   GeoPoint? _location;
-  String _selectedLanguage = 'en';
-  bool _isLoading = false;
-  bool _isLoadingLocation = false;
+  String _language = MarketplaceTaxonomy.supportedLanguages.first;
   bool _notificationsEnabled = true;
+  bool _detectingLocation = false;
+  bool _submitting = false;
 
   @override
   void dispose() {
@@ -42,48 +47,59 @@ class _ClientProfileSetupScreenState extends ConsumerState<ClientProfileSetupScr
   }
 
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
     if (picked != null) {
       setState(() => _profileImage = File(picked.path));
     }
   }
 
   Future<void> _detectLocation() async {
-    setState(() => _isLoadingLocation = true);
+    setState(() => _detectingLocation = true);
     try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) throw Exception('Location services are disabled.');
-      LocationPermission permission = await Geolocator.checkPermission();
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw Exception('Location services are disabled.');
+      }
+
+      var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw Exception('Location permissions denied.');
-        }
       }
-      final pos = await Geolocator.getCurrentPosition();
+      if (permission == LocationPermission.deniedForever ||
+          permission == LocationPermission.denied) {
+        throw Exception('Location permission is required.');
+      }
+
+      final position = await Geolocator.getCurrentPosition();
       setState(() {
-        _location = GeoPoint(pos.latitude, pos.longitude);
+        _location = GeoPoint(position.latitude, position.longitude);
       });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location detected!'), backgroundColor: AppColors.availableGreen),
-        );
+    } catch (error) {
+      if (!mounted) {
+        return;
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.errorRed),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          backgroundColor: AppColors.errorRed,
+        ),
+      );
     } finally {
-      if (mounted) setState(() => _isLoadingLocation = false);
+      if (mounted) {
+        setState(() => _detectingLocation = false);
+      }
     }
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() => _submitting = true);
     try {
       final authService = ref.read(authServiceProvider);
       final uid = authService.currentUser!.uid;
@@ -101,21 +117,32 @@ class _ClientProfileSetupScreenState extends ConsumerState<ClientProfileSetupScr
         phone: _phoneController.text.trim(),
         photoUrl: photoUrl,
         location: _location,
-        address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
-        language: _selectedLanguage,
+        address: _addressController.text.trim().isEmpty
+            ? null
+            : _addressController.text.trim(),
+        language: _language,
         createdAt: DateTime.now(),
+        notificationsEnabled: _notificationsEnabled,
       );
 
       await authService.setupProfile(client);
-      if (mounted) context.go('/home');
-    } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.errorRed),
-        );
+        context.go('/home');
       }
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          backgroundColor: AppColors.errorRed,
+        ),
+      );
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
     }
   }
 
@@ -124,188 +151,126 @@ class _ClientProfileSetupScreenState extends ConsumerState<ClientProfileSetupScr
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: AppSpacing.pagePadding,
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: AppSpacing.l),
-                  // Progress indicator
-                  _buildProgress(3, 3),
-                  const SizedBox(height: AppSpacing.xl),
-                  Text('Set Up Your Profile', style: AppTextStyles.headingLarge.copyWith(fontSize: 28)),
-                  const SizedBox(height: AppSpacing.s),
-                  Text('As a Client', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.accentBlue, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: AppSpacing.xxl),
-
-                  // Profile photo
-                  Center(
-                    child: GestureDetector(
-                      onTap: _pickImage,
-                      child: Stack(
-                        children: [
-                          Container(
-                            width: 100,
-                            height: 100,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppColors.accentBlue.withOpacity(0.08),
-                              border: Border.all(color: AppColors.accentBlue.withOpacity(0.3), width: 2),
-                              image: _profileImage != null
-                                  ? DecorationImage(image: FileImage(_profileImage!), fit: BoxFit.cover)
-                                  : null,
-                            ),
-                            child: _profileImage == null
-                                ? const Icon(Icons.person_outline, size: 40, color: AppColors.accentBlue)
-                                : null,
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: const BoxDecoration(
-                                color: AppColors.accentBlue,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 16),
-                            ),
-                          ),
-                        ],
-                      ),
+          padding: AppSpacing.pagePadding,
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Set up your client profile', style: AppTextStyles.headingLarge),
+                const SizedBox(height: AppSpacing.s),
+                Text(
+                  'Add your contact details, language, and saved location.',
+                  style: AppTextStyles.bodyMedium,
+                ),
+                const SizedBox(height: AppSpacing.xxl),
+                Center(
+                  child: GestureDetector(
+                    onTap: _pickImage,
+                    child: CircleAvatar(
+                      radius: 50,
+                      backgroundColor: AppColors.accentBlue.withValues(alpha: 0.12),
+                      backgroundImage:
+                          _profileImage == null ? null : FileImage(_profileImage!),
+                      child: _profileImage == null
+                          ? const Icon(
+                              Icons.person_outline,
+                              size: 40,
+                              color: AppColors.accentBlue,
+                            )
+                          : null,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Center(child: Text('Optional', style: AppTextStyles.caption.copyWith(color: AppColors.softGray))),
-                  const SizedBox(height: AppSpacing.xxl),
-
-                  _buildLabel('FULL NAME *'),
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: _inputDecoration('Your full name', Icons.person_outline),
-                    validator: (v) => v == null || v.isEmpty ? 'Name is required' : null,
+                ),
+                const SizedBox(height: AppSpacing.s),
+                Center(
+                  child: Text(
+                    'Profile picture is optional',
+                    style: AppTextStyles.caption,
                   ),
-                  const SizedBox(height: AppSpacing.l),
-
-                  _buildLabel('PHONE NUMBER *'),
-                  TextFormField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    decoration: _inputDecoration('+213 --- --- ---', Icons.phone_outlined),
-                    validator: (v) => v == null || v.isEmpty ? 'Phone is required' : null,
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                _label('FULL NAME'),
+                TextFormField(
+                  controller: _nameController,
+                  validator: _requiredValidator,
+                  decoration: _inputDecoration('Your full name', Icons.person_outline),
+                ),
+                const SizedBox(height: AppSpacing.l),
+                _label('PHONE NUMBER'),
+                TextFormField(
+                  controller: _phoneController,
+                  validator: _requiredValidator,
+                  keyboardType: TextInputType.phone,
+                  decoration: _inputDecoration('+234...', Icons.phone_outlined),
+                ),
+                const SizedBox(height: AppSpacing.l),
+                _label('ADDRESS'),
+                TextFormField(
+                  controller: _addressController,
+                  decoration: _inputDecoration(
+                    'Street, city, postal code',
+                    Icons.location_on_outlined,
                   ),
-                  const SizedBox(height: AppSpacing.l),
-
-                  _buildLabel('LOCATION'),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _addressController,
-                          decoration: _inputDecoration('Enter your address', Icons.location_on_outlined),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      _isLoadingLocation
-                          ? const SizedBox(width: 56, height: 56, child: Center(child: CircularProgressIndicator(strokeWidth: 2)))
-                          : Container(
-                              width: 56,
-                              height: 56,
-                              decoration: BoxDecoration(
-                                color: _location != null ? AppColors.availableGreen.withOpacity(0.1) : AppColors.accentBlue.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: _location != null ? AppColors.availableGreen : AppColors.accentBlue.withOpacity(0.3),
-                                ),
-                              ),
-                              child: IconButton(
-                                icon: Icon(
-                                  _location != null ? Icons.my_location_rounded : Icons.gps_fixed_rounded,
-                                  color: _location != null ? AppColors.availableGreen : AppColors.accentBlue,
-                                ),
-                                onPressed: _detectLocation,
-                              ),
-                            ),
-                    ],
+                ),
+                const SizedBox(height: AppSpacing.m),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _detectingLocation ? null : _detectLocation,
+                    icon: _detectingLocation
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.my_location_outlined),
+                    label: const Text('Use my current location'),
                   ),
-                  if (_location != null) ...[
-                    const SizedBox(height: AppSpacing.m),
-                    MapPreviewWidget(
-                      latitude: _location!.latitude,
-                      longitude: _location!.longitude,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.check_circle, color: AppColors.availableGreen, size: 14),
-                          const SizedBox(width: 4),
-                          Text('Location confirmed', style: AppTextStyles.caption.copyWith(color: AppColors.availableGreen)),
-                        ],
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: AppSpacing.l),
-
-                  _buildLabel('PREFERRED LANGUAGE'),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: AppColors.softGray.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        isExpanded: true,
-                        value: _selectedLanguage,
-                        items: const [
-                          DropdownMenuItem(value: 'en', child: Text('English')),
-                          DropdownMenuItem(value: 'fr', child: Text('Français')),
-                          DropdownMenuItem(value: 'ar', child: Text('العربية')),
-                        ],
-                        onChanged: (v) => setState(() => _selectedLanguage = v!),
-                      ),
-                    ),
+                ),
+                if (_location != null) ...[
+                  const SizedBox(height: AppSpacing.m),
+                  MapPreviewWidget(
+                    latitude: _location!.latitude,
+                    longitude: _location!.longitude,
                   ),
-                  const SizedBox(height: AppSpacing.l),
-
-                  // Notifications
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.softGray.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: SwitchListTile(
-                      title: Text('Enable Push Notifications', style: AppTextStyles.bodyMedium),
-                      value: _notificationsEnabled,
-                      onChanged: (v) => setState(() => _notificationsEnabled = v),
-                      activeColor: AppColors.accentBlue,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xxl),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 58,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accentBlue,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
-                        ),
-                      ),
-                      onPressed: _isLoading ? null : _submit,
-                      child: _isLoading
-                          ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)
-                          : const Text('Create Account', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xxl),
                 ],
-              ),
+                const SizedBox(height: AppSpacing.l),
+                _label('PREFERRED LANGUAGE'),
+                _languageDropdown(),
+                const SizedBox(height: AppSpacing.m),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  activeThumbColor: AppColors.accentBlue,
+                  title: const Text('Enable push notifications'),
+                  value: _notificationsEnabled,
+                  onChanged: (value) {
+                    setState(() => _notificationsEnabled = value);
+                  },
+                ),
+                const SizedBox(height: AppSpacing.xxl),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _submitting ? null : _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryNavy,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                    ),
+                    child: _submitting
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.4,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('Create account'),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -313,43 +278,58 @@ class _ClientProfileSetupScreenState extends ConsumerState<ClientProfileSetupScr
     );
   }
 
-  Widget _buildProgress(int current, int total) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Step $current of $total', style: AppTextStyles.caption),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: current / total,
-            backgroundColor: AppColors.softGray.withOpacity(0.15),
-            valueColor: const AlwaysStoppedAnimation(AppColors.accentBlue),
-            minHeight: 4,
-          ),
+  Widget _languageDropdown() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: AppColors.softGray.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          value: _language,
+          items: const [
+            DropdownMenuItem(value: 'en', child: Text('English')),
+            DropdownMenuItem(value: 'fr', child: Text('French')),
+            DropdownMenuItem(value: 'ar', child: Text('Arabic')),
+          ],
+          onChanged: (value) => setState(() => _language = value!),
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildLabel(String label) {
+  Widget _label(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Text(label, style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.8)),
+      child: Text(
+        text,
+        style: AppTextStyles.labelSmall.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1,
+        ),
+      ),
     );
+  }
+
+  String? _requiredValidator(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'This field is required';
+    }
+    return null;
   }
 
   InputDecoration _inputDecoration(String hint, IconData icon) {
     return InputDecoration(
       hintText: hint,
-      prefixIcon: Icon(icon, color: AppColors.softGray, size: 20),
+      prefixIcon: Icon(icon, color: AppColors.softGray),
       filled: true,
-      fillColor: AppColors.softGray.withOpacity(0.05),
+      fillColor: AppColors.softGray.withValues(alpha: 0.05),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
         borderSide: BorderSide.none,
       ),
-      contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
     );
   }
 }

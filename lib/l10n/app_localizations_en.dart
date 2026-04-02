@@ -54,7 +54,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get yearsExperience => 'Years of experience';
 
   @override
-  String get bio => 'Bio/Description';
+  String get bio => 'Bio / Description';
 
   @override
   String get portfolio => 'Portfolio';
@@ -79,4 +79,47 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reviews => 'Reviews';
+
+  @override
+  String get emailVerificationTitle =>
+      'Please check your email and verify your account';
+
+  @override
+  String get emailVerificationCta => 'I\'ve verified, continue';
+
+  @override
+  String get emailVerificationResend => 'Resend verification email';
+
+  @override
+  String get accountTypeTitle => 'Choose your account type';
+
+  @override
+  String get clientDescription => 'Looking for services or products';
+
+  @override
+  String get providerDescription => 'I offer professional services';
+
+  @override
+  String get marketplaceDescription => 'I own a local business';
+
+  @override
+  String get profileSetupTitle => 'Set up your profile';
+
+  @override
+  String get documentVerificationTitle => 'Document verification';
+
+  @override
+  String get verificationPending => 'Verification pending';
+
+  @override
+  String get bestProviders => 'Best Providers';
+
+  @override
+  String get messages => 'Messages';
+
+  @override
+  String get profile => 'Profile';
+
+  @override
+  String get aiChat => 'AI Chat';
 }

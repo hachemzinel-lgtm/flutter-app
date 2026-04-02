@@ -4,19 +4,19 @@ import 'app_colors.dart';
 
 class AppTextStyles {
   static TextStyle headingLarge = GoogleFonts.inter(
-    fontSize: 24,
-    fontWeight: FontWeight.w700,
+    fontSize: 28,
+    fontWeight: FontWeight.w800,
     color: AppColors.textDark,
   );
 
   static TextStyle headingMedium = GoogleFonts.inter(
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: FontWeight.w700,
     color: AppColors.textDark,
   );
 
   static TextStyle headingSmall = GoogleFonts.inter(
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: FontWeight.w600,
     color: AppColors.textDark,
   );

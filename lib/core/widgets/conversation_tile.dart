@@ -33,7 +33,7 @@ class ConversationTile extends StatelessWidget {
       ),
       leading: CircleAvatar(
         radius: 28,
-        backgroundColor: AppColors.softGray.withOpacity(0.2),
+        backgroundColor: AppColors.softGray.withValues(alpha: 0.2),
         backgroundImage: photoUrl != null
             ? CachedNetworkImageProvider(photoUrl!)
             : null,

@@ -25,7 +25,7 @@ class SectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.cardSurface,
         borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
-        border: Border.all(color: AppColors.softGray.withOpacity(0.1)),
+        border: Border.all(color: AppColors.softGray.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

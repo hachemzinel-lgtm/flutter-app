@@ -21,6 +21,8 @@ class MarketplaceModel extends UserModel {
     super.rating,
     super.reviewCount,
     super.isBanned,
+    super.notificationsEnabled,
+    super.profileCompleted,
     this.businessName,
     this.category,
     this.description,
@@ -42,6 +44,8 @@ class MarketplaceModel extends UserModel {
       rating: (data['rating'] ?? 0).toDouble(),
       reviewCount: data['reviewCount'] ?? 0,
       isBanned: data['isBanned'] ?? false,
+      notificationsEnabled: data['notificationsEnabled'] ?? true,
+      profileCompleted: data['profileCompleted'] ?? true,
       businessName: data['businessName'],
       category: data['category'],
       description: data['description'] ?? data['bio'], // Fallback if old code

@@ -23,7 +23,7 @@ class MapPreviewWidget extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.accentBlue.withOpacity(0.3)),
+        border: Border.all(color: AppColors.accentBlue.withValues(alpha: 0.3)),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(15),

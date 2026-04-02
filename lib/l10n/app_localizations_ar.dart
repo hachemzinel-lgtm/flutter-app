@@ -15,10 +15,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get login => 'تسجيل الدخول';
 
   @override
-  String get signup => 'اشترك';
+  String get signup => 'إنشاء حساب';
 
   @override
-  String get welcome => 'أهلاً بك';
+  String get welcome => 'أهلاً بعودتك';
 
   @override
   String get client => 'عميل';
@@ -27,22 +27,22 @@ class AppLocalizationsAr extends AppLocalizations {
   String get provider => 'مقدم خدمة';
 
   @override
-  String get marketplace => 'متجر';
+  String get marketplace => 'سوق محلي';
 
   @override
-  String get searchHint => 'عن ماذا تبحث؟';
+  String get searchHint => 'ماذا تبحث عنه؟';
 
   @override
   String get availableNow => 'متاح الآن';
 
   @override
-  String get createAccount => 'إنشاء حساب';
+  String get createAccount => 'إنشاء الحساب';
 
   @override
   String get location => 'الموقع';
 
   @override
-  String get notifications => 'تفعيل التنبيهات';
+  String get notifications => 'تفعيل الإشعارات';
 
   @override
   String get language => 'اللغة المفضلة';
@@ -54,16 +54,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get yearsExperience => 'سنوات الخبرة';
 
   @override
-  String get bio => 'السيرة الذاتية';
+  String get bio => 'نبذة / وصف';
 
   @override
-  String get portfolio => 'الأعمال';
+  String get portfolio => 'معرض الأعمال';
 
   @override
-  String get verified => 'موثوق';
+  String get verified => 'موثق';
 
   @override
-  String get message => 'رسالة';
+  String get message => 'مراسلة';
 
   @override
   String get share => 'مشاركة';
@@ -79,4 +79,47 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get reviews => 'المراجعات';
+
+  @override
+  String get emailVerificationTitle =>
+      'يرجى التحقق من بريدك الإلكتروني للمتابعة';
+
+  @override
+  String get emailVerificationCta => 'لقد قمت بالتحقق، متابعة';
+
+  @override
+  String get emailVerificationResend => 'إعادة إرسال رسالة التحقق';
+
+  @override
+  String get accountTypeTitle => 'اختر نوع الحساب';
+
+  @override
+  String get clientDescription => 'أبحث عن خدمات أو منتجات';
+
+  @override
+  String get providerDescription => 'أقدم خدمات مهنية';
+
+  @override
+  String get marketplaceDescription => 'أملك نشاطاً تجارياً محلياً';
+
+  @override
+  String get profileSetupTitle => 'إعداد الملف الشخصي';
+
+  @override
+  String get documentVerificationTitle => 'التحقق من المستندات';
+
+  @override
+  String get verificationPending => 'التحقق قيد المراجعة';
+
+  @override
+  String get bestProviders => 'أفضل المزودين';
+
+  @override
+  String get messages => 'الرسائل';
+
+  @override
+  String get profile => 'الملف الشخصي';
+
+  @override
+  String get aiChat => 'محادثة الذكاء الاصطناعي';
 }

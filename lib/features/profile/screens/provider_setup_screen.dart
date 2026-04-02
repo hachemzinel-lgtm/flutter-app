@@ -1,32 +1,23 @@
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_text_styles.dart';
-import '../../../core/constants/app_spacing.dart';
-import '../../../core/models/work_provider_model.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../../../services/storage_service.dart';
-import '../../../services/document_verification_service.dart';
-import '../../../core/widgets/map_preview_widget.dart';
-import 'package:file_picker/file_picker.dart';
 
-const _professions = [
-  'Plumber (Plombier)',
-  'Electrician (Élictrien)',
-  'Cleaner (Nettoyeur)',
-  'Carpenter (Menuisier)',
-  'Painter (Peintre)',
-  'Gardener (Jardinier)',
-  'Mechanic (Mécanicien)',
-  'Tutor (Tuteur)',
-  'Photographer (Photographe)',
-  'Other (specify)',
-];
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_spacing.dart';
+import '../../../core/constants/app_text_styles.dart';
+import '../../../core/constants/marketplace_taxonomy.dart';
+import '../../../core/models/work_provider_model.dart';
+import '../../../core/widgets/map_preview_widget.dart';
+import '../../../services/document_verification_service.dart';
+import '../../../services/storage_service.dart';
+import '../../../core/models/user_model.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class ProviderProfileSetupScreen extends ConsumerStatefulWidget {
   const ProviderProfileSetupScreen({super.key});
@@ -43,24 +34,23 @@ class _ProviderProfileSetupScreenState
   final _phoneController = TextEditingController();
   final _bioController = TextEditingController();
   final _hourlyRateController = TextEditingController();
-  final _yearsExpController = TextEditingController();
+  final _yearsExperienceController = TextEditingController();
+  final _addressController = TextEditingController();
+
+  final List<ServicePrice> _services = [];
+  final List<File> _portfolioPhotos = [];
 
   File? _profileImage;
-  File? _diplomaFile;
-  File? _idFile;
+  File? _professionalDocument;
+  File? _identityDocument;
   GeoPoint? _location;
-
-  String _selectedProfession = _professions.first;
-  String _selectedLanguage = 'en';
-  bool _isAvailableNow = true;
-  bool _prefersCustomQuote = false;
-  bool _isLoading = false;
-  bool _isLoadingLocation = false;
+  String _profession = MarketplaceTaxonomy.workProviderCategories.first;
+  String _language = MarketplaceTaxonomy.supportedLanguages.first;
   bool _notificationsEnabled = true;
-  int _currentStep = 0;
-
-  final List<Map<String, dynamic>> _services = [];
-  final List<File> _portfolioPhotos = [];
+  bool _availableNow = true;
+  bool _customQuoteEnabled = false;
+  bool _submitting = false;
+  bool _detectingLocation = false;
 
   @override
   void dispose() {
@@ -68,95 +58,139 @@ class _ProviderProfileSetupScreenState
     _phoneController.dispose();
     _bioController.dispose();
     _hourlyRateController.dispose();
-    _yearsExpController.dispose();
+    _yearsExperienceController.dispose();
+    _addressController.dispose();
     super.dispose();
   }
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
-    if (picked != null) setState(() => _profileImage = File(picked.path));
+  Future<void> _pickProfileImage() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 82,
+    );
+    if (picked != null) {
+      setState(() => _profileImage = File(picked.path));
+    }
   }
 
-  Future<void> _pickDocument(bool isDiploma) async {
+  Future<void> _pickPortfolioImages() async {
+    final picked = await ImagePicker().pickMultiImage(imageQuality: 76);
+    if (picked.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      for (final item in picked) {
+        if (_portfolioPhotos.length >= 10) {
+          break;
+        }
+        _portfolioPhotos.add(File(item.path));
+      }
+    });
+  }
+
+  Future<void> _pickPdf({required bool professional}) async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
+      allowedExtensions: const ['pdf'],
     );
 
-    if (result != null && result.files.single.path != null) {
-      setState(() {
-        if (isDiploma) {
-          _diplomaFile = File(result.files.single.path!);
-        } else {
-          _idFile = File(result.files.single.path!);
-        }
-      });
+    final path = result?.files.single.path;
+    if (path == null) {
+      return;
     }
-  }
 
-  Future<void> _pickPortfolioPhotos() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickMultiImage(imageQuality: 70);
-    if (picked.isNotEmpty) {
-      setState(() {
-        for (var f in picked) {
-          if (_portfolioPhotos.length < 10) {
-            _portfolioPhotos.add(File(f.path));
-          }
-        }
-      });
-    }
+    setState(() {
+      if (professional) {
+        _professionalDocument = File(path);
+      } else {
+        _identityDocument = File(path);
+      }
+    });
   }
 
   Future<void> _detectLocation() async {
-    setState(() => _isLoadingLocation = true);
+    setState(() => _detectingLocation = true);
     try {
-      LocationPermission permission = await Geolocator.checkPermission();
+      final enabled = await Geolocator.isLocationServiceEnabled();
+      if (!enabled) {
+        throw Exception('Location services are disabled.');
+      }
+
+      var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-      final pos = await Geolocator.getCurrentPosition();
-      setState(() => _location = GeoPoint(pos.latitude, pos.longitude));
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location detected!'), backgroundColor: AppColors.availableGreen),
-        );
+      if (permission == LocationPermission.deniedForever ||
+          permission == LocationPermission.denied) {
+        throw Exception('Location permission is required to use GPS.');
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.errorRed),
-        );
+
+      final position = await Geolocator.getCurrentPosition();
+      setState(() {
+        _location = GeoPoint(position.latitude, position.longitude);
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
       }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          backgroundColor: AppColors.errorRed,
+        ),
+      );
     } finally {
-      if (mounted) setState(() => _isLoadingLocation = false);
+      if (mounted) {
+        setState(() => _detectingLocation = false);
+      }
     }
   }
 
-  void _addService() {
-    showDialog(
+  Future<void> _addFixedService() async {
+    final nameController = TextEditingController();
+    final priceController = TextEditingController();
+
+    await showDialog<void>(
       context: context,
-      builder: (_) {
-        final nameCtrl = TextEditingController();
-        final priceCtrl = TextEditingController();
+      builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Add Service'),
+          title: const Text('Add fixed service'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Service Name')),
-              TextField(controller: priceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Price (DZD)')),
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Service name'),
+              ),
+              TextField(
+                controller: priceController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Price'),
+              ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
             ElevatedButton(
               onPressed: () {
-                if (nameCtrl.text.isNotEmpty && priceCtrl.text.isNotEmpty) {
-                  setState(() => _services.add({'name': nameCtrl.text, 'price': double.tryParse(priceCtrl.text) ?? 0}));
-                  Navigator.pop(context);
+                final price = double.tryParse(priceController.text.trim());
+                if (nameController.text.trim().isEmpty || price == null) {
+                  return;
                 }
+
+                setState(() {
+                  _services.add(
+                    ServicePrice(
+                      name: nameController.text.trim(),
+                      price: price,
+                    ),
+                  );
+                });
+                Navigator.of(dialogContext).pop();
               },
               child: const Text('Add'),
             ),
@@ -164,108 +198,129 @@ class _ProviderProfileSetupScreenState
         );
       },
     );
+
+    nameController.dispose();
+    priceController.dispose();
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_profileImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile picture is required'), backgroundColor: AppColors.errorRed),
-      );
+    if (!_formKey.currentState!.validate()) {
       return;
     }
-    if (_diplomaFile == null || _idFile == null) {
+    if (_profileImage == null ||
+        _professionalDocument == null ||
+        _identityDocument == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Both documents are required'), backgroundColor: AppColors.errorRed),
+        const SnackBar(
+          content: Text(
+            'Profile photo, professional certificate, and ID document are required.',
+          ),
+          backgroundColor: AppColors.errorRed,
+        ),
       );
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() => _submitting = true);
+
+    if (mounted) {
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const _VerificationProgressDialog(),
+      );
+    }
+
     try {
       final authService = ref.read(authServiceProvider);
       final uid = authService.currentUser!.uid;
       final email = authService.currentUser!.email!;
 
-      // Show verification progress dialog
-      if (mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => const _VerificationProgressDialog(),
+      final profileUrl = await StorageService.uploadProfilePicture(
+        uid,
+        _profileImage!,
+      );
+      final diplomaUrl = await StorageService.uploadDocument(
+        uid,
+        _professionalDocument!,
+        'diploma',
+      );
+      final idUrl = await StorageService.uploadDocument(
+        uid,
+        _identityDocument!,
+        'id_card',
+      );
+
+      final portfolioUrls = <String>[];
+      for (var index = 0; index < _portfolioPhotos.length; index++) {
+        final photoUrl = await StorageService.uploadPortfolioPhoto(
+          uid,
+          _portfolioPhotos[index],
+          'portfolio_$index',
         );
+        portfolioUrls.add(photoUrl);
       }
 
-      // Upload files
-      String? photoUrl;
-      if (_profileImage != null) {
-        photoUrl = await StorageService.uploadProfilePicture(uid, _profileImage!);
-      }
+      final verification = await DocumentVerificationService.verifyProviderDocuments(
+        professionalDocument: _professionalDocument!,
+        identityDocument: _identityDocument!,
+      );
 
-      String? diplomaUrl;
-      if (_diplomaFile != null) {
-        diplomaUrl = await StorageService.uploadDocument(uid, _diplomaFile!, 'diploma');
-      }
-
-      String? idUrl = _idFile != null 
-          ? await StorageService.uploadDocument(uid, _idFile!, 'id_card')
-          : null;
-
-      // AI Verification (only if diploma added)
-      String verificationStatus = 'pending';
-      String? verificationReason;
-      
-      if (_diplomaFile != null) {
-        final diplomaResult = await DocumentVerificationService.verifyDocument(_diplomaFile!);
-        verificationStatus = diplomaResult.isValid ? 'approved' : 'rejected';
-        verificationReason = diplomaResult.reason;
-      }
-
-      if (mounted) Navigator.of(context, rootNavigator: true).pop(); // close dialog
-
-      final provider = WorkProviderModel(
+      final model = WorkProviderModel(
         id: uid,
         email: email,
         name: _nameController.text.trim(),
         phone: _phoneController.text.trim(),
-        photoUrl: photoUrl,
+        photoUrl: profileUrl,
         location: _location,
-        language: _selectedLanguage,
+        address: _addressController.text.trim().isEmpty
+            ? null
+            : _addressController.text.trim(),
+        language: _language,
         createdAt: DateTime.now(),
-        profession: _selectedProfession,
-        yearsExperience: int.tryParse(_yearsExpController.text),
+        notificationsEnabled: _notificationsEnabled,
+        profession: _profession,
+        yearsExperience: int.tryParse(_yearsExperienceController.text.trim()),
         bio: _bioController.text.trim(),
-        hourlyRate: double.tryParse(_hourlyRateController.text),
-        services: _services
-            .map((s) => ServicePrice(name: s['name'], price: (s['price'] as num).toDouble()))
-            .toList(),
-        isAvailableNow: _isAvailableNow,
+        hourlyRate: double.tryParse(_hourlyRateController.text.trim()),
+        services: _services,
+        isAvailableNow: _availableNow,
         documents: {
-          if (diplomaUrl != null) 'diplomaURL': diplomaUrl,
-          if (idUrl != null) 'idURL': idUrl,
+          'diplomaURL': diplomaUrl,
+          'idURL': idUrl,
         },
-        verificationStatus: verificationStatus,
-        verificationReason: verificationReason,
+        verificationStatus: verification.status,
+        verificationReason: verification.reason,
+        customQuoteEnabled: _customQuoteEnabled,
+        portfolio: portfolioUrls,
       );
 
-      await authService.setupProfile(provider);
+      await authService.setupProfile(model);
 
-      if (mounted) {
-        if (verificationStatus == 'approved') {
-          context.go('/home');
-        } else {
-          context.go('/verification-pending');
-        }
+      if (!mounted) {
+        return;
       }
-    } catch (e) {
-      if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.errorRed),
-        );
+      Navigator.of(context, rootNavigator: true).pop();
+      context.go(
+        verification.status == VerificationStatus.approved.name
+            ? '/home'
+            : '/verification-pending',
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
       }
+      Navigator.of(context, rootNavigator: true).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          backgroundColor: AppColors.errorRed,
+        ),
+      );
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
     }
   }
 
@@ -273,623 +328,395 @@ class _ProviderProfileSetupScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Column(
-          children: [
-            // Stepper header
-            _buildStepperHeader(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: AppSpacing.pagePadding,
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (_currentStep == 0) _buildStep1(),
-                      if (_currentStep == 1) _buildStep2(),
-                      if (_currentStep == 2) _buildStep3(),
-                      const SizedBox(height: AppSpacing.xxl),
-                      _buildNavButtons(),
-                      const SizedBox(height: AppSpacing.xxl),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStepperHeader() {
-    final steps = ['Personal', 'Professional', 'Documents'];
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.m),
-      decoration: BoxDecoration(
-        color: AppColors.cardSurface,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: List.generate(steps.length, (i) {
-              final isActive = i == _currentStep;
-              final isDone = i < _currentStep;
-              return Expanded(
-                child: Row(
-                  children: [
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isDone
-                            ? AppColors.availableGreen
-                            : isActive
-                                ? AppColors.accentBlue
-                                : AppColors.softGray.withOpacity(0.2),
-                      ),
-                      child: Center(
-                        child: isDone
-                            ? const Icon(Icons.check, color: Colors.white, size: 14)
-                            : Text('${i + 1}',
-                                style: TextStyle(
-                                  color: isActive ? Colors.white : AppColors.softGray,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                )),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        steps[i],
-                        style: AppTextStyles.caption.copyWith(
-                          fontWeight: isActive ? FontWeight.w700 : FontWeight.normal,
-                          color: isActive ? AppColors.accentBlue : AppColors.softGray,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (i < steps.length - 1)
-                      Expanded(
-                        child: Container(
-                          height: 1,
-                          margin: const EdgeInsets.symmetric(horizontal: 6),
-                          color: isDone ? AppColors.availableGreen : AppColors.softGray.withOpacity(0.2),
-                        ),
-                      ),
-                  ],
-                ),
-              );
-            }),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStep1() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: AppSpacing.l),
-        Text('Personal Information', style: AppTextStyles.headingLarge.copyWith(fontSize: 24)),
-        const SizedBox(height: AppSpacing.s),
-        Text('Work Provider Account', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.accentBlue, fontWeight: FontWeight.w600)),
-        const SizedBox(height: AppSpacing.xxl),
-
-        // Profile photo (required)
-        Center(
-          child: GestureDetector(
-            onTap: _pickImage,
-            child: Stack(
+        child: SingleChildScrollView(
+          padding: AppSpacing.pagePadding,
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 110,
-                  height: 110,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.accentBlue.withOpacity(0.08),
-                    border: Border.all(
-                      color: _profileImage != null ? AppColors.accentBlue : AppColors.errorRed.withOpacity(0.3),
-                      width: 2,
-                    ),
-                    image: _profileImage != null
-                        ? DecorationImage(image: FileImage(_profileImage!), fit: BoxFit.cover)
-                        : null,
-                  ),
-                  child: _profileImage == null
-                      ? const Icon(Icons.person_outline, size: 44, color: AppColors.accentBlue)
-                      : null,
+                Text('Set up your work provider profile', style: AppTextStyles.headingLarge),
+                const SizedBox(height: AppSpacing.s),
+                Text(
+                  'Upload your professional documents, pricing, and service details.',
+                  style: AppTextStyles.bodyMedium,
                 ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(7),
-                    decoration: const BoxDecoration(color: AppColors.accentBlue, shape: BoxShape.circle),
-                    child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 16),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Center(child: Text('Profile photo (required)', style: AppTextStyles.caption.copyWith(color: AppColors.errorRed.withOpacity(0.8)))),
-        const SizedBox(height: AppSpacing.xl),
-
-        _buildLabel('FULL NAME *'),
-        TextFormField(
-          controller: _nameController,
-          decoration: _inputDecoration('Your full name', Icons.person_outline),
-          validator: (v) => v == null || v.isEmpty ? 'Name is required' : null,
-        ),
-        const SizedBox(height: AppSpacing.l),
-
-        _buildLabel('PHONE NUMBER *'),
-        TextFormField(
-          controller: _phoneController,
-          keyboardType: TextInputType.phone,
-          decoration: _inputDecoration('+213 --- --- ---', Icons.phone_outlined),
-          validator: (v) => v == null || v.isEmpty ? 'Phone is required' : null,
-        ),
-        const SizedBox(height: AppSpacing.l),
-
-        _buildLabel('PREFERRED LANGUAGE'),
-        _buildLanguageDropdown(),
-        const SizedBox(height: AppSpacing.l),
-
-        // Notifications
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.softGray.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: SwitchListTile(
-            title: Text('Enable Push Notifications', style: AppTextStyles.bodyMedium),
-            value: _notificationsEnabled,
-            onChanged: (v) => setState(() => _notificationsEnabled = v),
-            activeColor: AppColors.accentBlue,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStep2() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: AppSpacing.l),
-        Text('Professional Info', style: AppTextStyles.headingLarge.copyWith(fontSize: 24)),
-        const SizedBox(height: AppSpacing.s),
-        Text('Tell clients about your expertise', style: AppTextStyles.bodyMedium),
-        const SizedBox(height: AppSpacing.xxl),
-
-        _buildLabel('PROFESSION *'),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: AppColors.softGray.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              isExpanded: true,
-              value: _selectedProfession,
-              items: _professions.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
-              onChanged: (v) => setState(() => _selectedProfession = v!),
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.l),
-
-        _buildLabel('YEARS OF EXPERIENCE'),
-        TextFormField(
-          controller: _yearsExpController,
-          keyboardType: TextInputType.number,
-          decoration: _inputDecoration('e.g. 5', Icons.work_history_outlined),
-        ),
-        const SizedBox(height: AppSpacing.l),
-
-        _buildLabel('BIO / DESCRIPTION'),
-        TextFormField(
-          controller: _bioController,
-          maxLines: 4,
-          maxLength: 500,
-          decoration: InputDecoration(
-            hintText: 'Describe your skills and experience...',
-            filled: true,
-            fillColor: AppColors.softGray.withOpacity(0.05),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.all(16),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.l),
-
-        _buildLabel('HOURLY RATE (DZD)'),
-        TextFormField(
-          controller: _hourlyRateController,
-          keyboardType: TextInputType.number,
-          decoration: _inputDecoration('Optional', Icons.attach_money_rounded),
-        ),
-        const SizedBox(height: AppSpacing.l),
-
-        // Custom quote toggle
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.softGray.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: SwitchListTile(
-            title: Text('Prefer to quote per job', style: AppTextStyles.bodyMedium),
-            subtitle: Text('Clients will request custom quotes', style: AppTextStyles.caption),
-            value: _prefersCustomQuote,
-            onChanged: (v) => setState(() => _prefersCustomQuote = v),
-            activeColor: AppColors.accentBlue,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.l),
-
-        // Services
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildLabel('FIXED SERVICES'),
-            TextButton.icon(
-              onPressed: _addService,
-              icon: const Icon(Icons.add, size: 16),
-              label: const Text('Add'),
-            ),
-          ],
-        ),
-        if (_services.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.l),
-            decoration: BoxDecoration(
-              color: AppColors.softGray.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.softGray.withOpacity(0.1)),
-            ),
-            child: Center(child: Text('No fixed services added', style: AppTextStyles.caption)),
-          )
-        else
-          ..._services.asMap().entries.map((e) => ListTile(
-                dense: true,
-                title: Text(e.value['name'], style: AppTextStyles.bodyMedium),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('${e.value['price']} DZD', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.accentBlue, fontWeight: FontWeight.w600)),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.errorRed),
-                      onPressed: () => setState(() => _services.removeAt(e.key)),
-                    ),
-                  ],
-                ),
-              )),
-        const SizedBox(height: AppSpacing.l),
-
-        _buildLabel('LOCATION'),
-        _buildLocationRow(),
-        if (_location != null) ...[
-          const SizedBox(height: AppSpacing.m),
-          MapPreviewWidget(
-            latitude: _location!.latitude,
-            longitude: _location!.longitude,
-          ),
-        ],
-        const SizedBox(height: AppSpacing.l),
-
-        // Availability
-        Container(
-          decoration: BoxDecoration(
-            color: _isAvailableNow ? AppColors.availableGreen.withOpacity(0.05) : AppColors.softGray.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: _isAvailableNow ? AppColors.availableGreen.withOpacity(0.3) : AppColors.softGray.withOpacity(0.15),
-            ),
-          ),
-          child: SwitchListTile(
-            title: Text('Available Now', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-            subtitle: Text(_isAvailableNow ? 'Clients can see you are available' : 'You appear offline', style: AppTextStyles.caption),
-            value: _isAvailableNow,
-            onChanged: (v) => setState(() => _isAvailableNow = v),
-            activeColor: AppColors.availableGreen,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStep3() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: AppSpacing.l),
-        Text('Document Verification', style: AppTextStyles.headingLarge.copyWith(fontSize: 24)),
-        const SizedBox(height: AppSpacing.s),
-        Text('We verify your credentials to earn a verified badge', style: AppTextStyles.bodyMedium),
-        const SizedBox(height: AppSpacing.m),
-
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.m),
-          decoration: BoxDecoration(
-            color: AppColors.starGold.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.starGold.withOpacity(0.3)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.info_outline_rounded, color: AppColors.starGold),
-              const SizedBox(width: AppSpacing.m),
-              Expanded(
-                child: Text(
-                  'Optional: Upload your professional certificate/diploma AND ID card to get a Verified Badge ✓. You can skip this and add them later.',
-                  style: AppTextStyles.caption.copyWith(height: 1.5),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xl),
-
-        _buildLabel('PROFESSIONAL CERTIFICATE / DIPLOMA (Optional)'),
-        _buildDocUploadTile(
-          label: _diplomaFile != null ? '✓ Document uploaded' : 'Tap to upload certificate or diploma',
-          icon: Icons.description_outlined,
-          isUploaded: _diplomaFile != null,
-          onTap: () => _pickDocument(true),
-        ),
-        const SizedBox(height: AppSpacing.l),
-
-        _buildLabel('ID CARD / PASSPORT (Optional)'),
-        _buildDocUploadTile(
-          label: _idFile != null ? '✓ ID uploaded' : 'Tap to upload your ID card',
-          icon: Icons.badge_outlined,
-          isUploaded: _idFile != null,
-          onTap: () => _pickDocument(false),
-        ),
-        const SizedBox(height: AppSpacing.xl),
-
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.m),
-          decoration: BoxDecoration(
-            color: AppColors.accentBlue.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            children: [
-              Row(children: [
-                const Icon(Icons.shield_outlined, color: AppColors.accentBlue, size: 18),
-                const SizedBox(width: 8),
-                Text('Verification Process', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w700, color: AppColors.accentBlue)),
-              ]),
-              const SizedBox(height: 8),
-              Text(
-                '1. Upload your professional certificates or licenses. These will be verified by our system.\n2. AI analyzes your certificates\n3. You get approved or feedback in seconds\n4. Approved providers get a verified badge ✓',
-                style: AppTextStyles.caption.copyWith(height: 1.8),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xl),
-
-        // Portfolio
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildLabel('PORTFOLIO (OPTIONAL, MAX 10)'),
-            TextButton.icon(
-              onPressed: _pickPortfolioPhotos,
-              icon: const Icon(Icons.add_a_photo_outlined, size: 16),
-              label: const Text('Add Photos'),
-            ),
-          ],
-        ),
-        if (_portfolioPhotos.isEmpty)
-          Center(
-            child: Text('Add photos of your work', style: AppTextStyles.caption),
-          )
-        else
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-            ),
-            itemCount: _portfolioPhotos.length,
-            itemBuilder: (ctx, i) => Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.file(_portfolioPhotos[i], fit: BoxFit.cover, width: double.infinity, height: double.infinity),
-                ),
-                Positioned(
-                  top: 4,
-                  right: 4,
+                const SizedBox(height: AppSpacing.xxl),
+                Center(
                   child: GestureDetector(
-                    onTap: () => setState(() => _portfolioPhotos.removeAt(i)),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                      child: const Icon(Icons.close, color: Colors.white, size: 12),
+                    onTap: _pickProfileImage,
+                    child: CircleAvatar(
+                      radius: 54,
+                      backgroundColor: AppColors.accentBlue.withValues(alpha: 0.12),
+                      backgroundImage:
+                          _profileImage == null ? null : FileImage(_profileImage!),
+                      child: _profileImage == null
+                          ? const Icon(
+                              Icons.person_outline,
+                              size: 42,
+                              color: AppColors.accentBlue,
+                            )
+                          : null,
                     ),
                   ),
                 ),
+                const SizedBox(height: AppSpacing.xl),
+                _label('FULL NAME'),
+                TextFormField(
+                  controller: _nameController,
+                  validator: _requiredValidator,
+                  decoration: _inputDecoration('Your full name', Icons.person_outline),
+                ),
+                const SizedBox(height: AppSpacing.l),
+                _label('PHONE NUMBER'),
+                TextFormField(
+                  controller: _phoneController,
+                  validator: _requiredValidator,
+                  keyboardType: TextInputType.phone,
+                  decoration: _inputDecoration('+234...', Icons.phone_outlined),
+                ),
+                const SizedBox(height: AppSpacing.l),
+                _label('PROFESSION CATEGORY'),
+                _dropdown<String>(
+                  value: _profession,
+                  items: MarketplaceTaxonomy.workProviderCategories,
+                  onChanged: (value) => setState(() => _profession = value!),
+                ),
+                const SizedBox(height: AppSpacing.l),
+                _label('YEARS OF EXPERIENCE'),
+                TextFormField(
+                  controller: _yearsExperienceController,
+                  keyboardType: TextInputType.number,
+                  decoration: _inputDecoration('e.g. 5', Icons.badge_outlined),
+                ),
+                const SizedBox(height: AppSpacing.l),
+                _label('BIO / DESCRIPTION'),
+                TextFormField(
+                  controller: _bioController,
+                  maxLines: 4,
+                  maxLength: 500,
+                  validator: _requiredValidator,
+                  decoration: _inputDecoration(
+                    'Tell clients about your expertise',
+                    Icons.notes_outlined,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.l),
+                _label('HOURLY RATE'),
+                TextFormField(
+                  controller: _hourlyRateController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: _inputDecoration('Optional', Icons.payments_outlined),
+                ),
+                const SizedBox(height: AppSpacing.m),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  activeThumbColor: AppColors.accentBlue, // SwitchListTile uses activeColor for the switch itself, but let's check
+                  title: const Text('I prefer to quote per job'),
+                  value: _customQuoteEnabled,
+                  onChanged: (value) {
+                    setState(() => _customQuoteEnabled = value);
+                  },
+                ),
+                const SizedBox(height: AppSpacing.m),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Fixed service prices', style: AppTextStyles.headingSmall),
+                    TextButton.icon(
+                      onPressed: _addFixedService,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add service'),
+                    ),
+                  ],
+                ),
+                if (_services.isEmpty)
+                  Text('No fixed services added yet.', style: AppTextStyles.caption)
+                else
+                  ..._services.asMap().entries.map(
+                        (entry) => ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(entry.value.name),
+                          subtitle: Text(entry.value.price.toStringAsFixed(2)),
+                          trailing: IconButton(
+                            onPressed: () {
+                              setState(() => _services.removeAt(entry.key));
+                            },
+                            icon: const Icon(Icons.delete_outline),
+                          ),
+                        ),
+                      ),
+                const SizedBox(height: AppSpacing.xl),
+                _label('PROFESSIONAL CERTIFICATE OR LICENSE (PDF)'),
+                _uploadTile(
+                  label: _professionalDocument == null
+                      ? 'Upload professional diploma, certificate, or work license'
+                      : _professionalDocument!.path.split(Platform.pathSeparator).last,
+                  icon: Icons.description_outlined,
+                  selected: _professionalDocument != null,
+                  onTap: () => _pickPdf(professional: true),
+                ),
+                const SizedBox(height: AppSpacing.l),
+                _label('ID CARD OR PASSPORT (PDF)'),
+                _uploadTile(
+                  label: _identityDocument == null
+                      ? 'Upload government-issued identity document'
+                      : _identityDocument!.path.split(Platform.pathSeparator).last,
+                  icon: Icons.badge_outlined,
+                  selected: _identityDocument != null,
+                  onTap: () => _pickPdf(professional: false),
+                ),
+                const SizedBox(height: AppSpacing.l),
+                _label('ADDRESS'),
+                TextFormField(
+                  controller: _addressController,
+                  decoration: _inputDecoration(
+                    'Street, city, postal code',
+                    Icons.location_on_outlined,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.m),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _detectingLocation ? null : _detectLocation,
+                        icon: _detectingLocation
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.my_location_outlined),
+                        label: const Text('Use my current location'),
+                      ),
+                    ),
+                  ],
+                ),
+                if (_location != null) ...[
+                  const SizedBox(height: AppSpacing.m),
+                  MapPreviewWidget(
+                    latitude: _location!.latitude,
+                    longitude: _location!.longitude,
+                  ),
+                ],
+                const SizedBox(height: AppSpacing.l),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  activeThumbColor: AppColors.availableGreen,
+                  title: const Text('Available now'),
+                  value: _availableNow,
+                  onChanged: (value) => setState(() => _availableNow = value),
+                ),
+                const SizedBox(height: AppSpacing.l),
+                _label('PREFERRED LANGUAGE'),
+                _dropdown<String>(
+                  value: _language,
+                  items: MarketplaceTaxonomy.supportedLanguages,
+                  itemLabel: (value) {
+                    switch (value) {
+                      case 'fr':
+                        return 'French';
+                      case 'ar':
+                        return 'Arabic';
+                      default:
+                        return 'English';
+                    }
+                  },
+                  onChanged: (value) => setState(() => _language = value!),
+                ),
+                const SizedBox(height: AppSpacing.m),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  activeThumbColor: AppColors.accentBlue, // SwitchListTile uses activeColor for the switch itself, but let's check
+                  title: const Text('Enable push notifications'),
+                  value: _notificationsEnabled,
+                  onChanged: (value) {
+                    setState(() => _notificationsEnabled = value);
+                  },
+                ),
+                const SizedBox(height: AppSpacing.l),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Portfolio photos', style: AppTextStyles.headingSmall),
+                    TextButton.icon(
+                      onPressed:
+                          _portfolioPhotos.length >= 10 ? null : _pickPortfolioImages,
+                      icon: const Icon(Icons.add_photo_alternate_outlined),
+                      label: Text('Add (${_portfolioPhotos.length}/10)'),
+                    ),
+                  ],
+                ),
+                if (_portfolioPhotos.isNotEmpty)
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _portfolioPhotos.length,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                    ),
+                    itemBuilder: (context, index) {
+                      return Stack(
+                        children: [
+                          Positioned.fill(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.file(
+                                _portfolioPhotos[index],
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 6,
+                            right: 6,
+                            child: InkWell(
+                              onTap: () {
+                                setState(() => _portfolioPhotos.removeAt(index));
+                              },
+                              child: const CircleAvatar(
+                                radius: 12,
+                                backgroundColor: Colors.black54,
+                                child: Icon(
+                                  Icons.close,
+                                  size: 14,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                const SizedBox(height: AppSpacing.xxl),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _submitting ? null : _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryNavy,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                    ),
+                    child: _submitting
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.4,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('Create account'),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xxl),
               ],
             ),
           ),
-      ],
+        ),
+      ),
     );
   }
 
-  Widget _buildDocUploadTile({required String label, required IconData icon, required bool isUploaded, required VoidCallback onTap}) {
-    return GestureDetector(
+  String? _requiredValidator(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'This field is required';
+    }
+    return null;
+  }
+
+  Widget _dropdown<T>({
+    required T value,
+    required List<T> items,
+    required ValueChanged<T?> onChanged,
+    String Function(T item)? itemLabel,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: AppColors.softGray.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          isExpanded: true,
+          value: value,
+          items: items
+              .map(
+                (item) => DropdownMenuItem<T>(
+                  value: item,
+                  child: Text(itemLabel?.call(item) ?? item.toString()),
+                ),
+              )
+              .toList(),
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+
+  Widget _uploadTile({
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.l),
         decoration: BoxDecoration(
-          color: isUploaded ? AppColors.availableGreen.withOpacity(0.06) : AppColors.softGray.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(12),
+          color: selected
+              ? AppColors.availableGreen.withValues(alpha: 0.08)
+              : AppColors.softGray.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isUploaded ? AppColors.availableGreen : AppColors.accentBlue.withOpacity(0.3),
-            width: isUploaded ? 1.5 : 1,
+            color: selected ? AppColors.availableGreen : AppColors.borderLight,
           ),
         ),
         child: Row(
           children: [
-            Icon(isUploaded ? Icons.check_circle_rounded : icon,
-                color: isUploaded ? AppColors.availableGreen : AppColors.accentBlue, size: 28),
+            Icon(
+              selected ? Icons.check_circle_outline : icon,
+              color: selected ? AppColors.availableGreen : AppColors.accentBlue,
+            ),
             const SizedBox(width: AppSpacing.m),
-            Expanded(child: Text(label, style: AppTextStyles.bodyMedium.copyWith(
-              color: isUploaded ? AppColors.availableGreen : AppColors.textDark,
-            ))),
-            Icon(Icons.upload_outlined, color: AppColors.softGray, size: 20),
+            Expanded(child: Text(label)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLocationRow() {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            decoration: BoxDecoration(
-              color: AppColors.softGray.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
-            ),
-            child: Text(
-              _location != null
-                  ? '${_location!.latitude.toStringAsFixed(4)}, ${_location!.longitude.toStringAsFixed(4)}'
-                  : 'No location set',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: _location != null ? AppColors.textDark : AppColors.softGray,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        _isLoadingLocation
-            ? const SizedBox(width: 56, height: 56, child: Center(child: CircularProgressIndicator(strokeWidth: 2)))
-            : GestureDetector(
-                onTap: _detectLocation,
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: _location != null ? AppColors.availableGreen.withOpacity(0.1) : AppColors.accentBlue.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _location != null ? AppColors.availableGreen : AppColors.accentBlue.withOpacity(0.3)),
-                  ),
-                  child: Icon(
-                    _location != null ? Icons.my_location_rounded : Icons.gps_fixed_rounded,
-                    color: _location != null ? AppColors.availableGreen : AppColors.accentBlue,
-                  ),
-                ),
-              ),
-      ],
-    );
-  }
-
-  Widget _buildLanguageDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: AppColors.softGray.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          isExpanded: true,
-          value: _selectedLanguage,
-          items: const [
-            DropdownMenuItem(value: 'en', child: Text('English')),
-            DropdownMenuItem(value: 'fr', child: Text('Français')),
-            DropdownMenuItem(value: 'ar', child: Text('العربية')),
-          ],
-          onChanged: (v) => setState(() => _selectedLanguage = v!),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavButtons() {
-    return Row(
-      children: [
-        if (_currentStep > 0)
-          Expanded(
-            child: OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: AppColors.accentBlue.withOpacity(0.4)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.borderRadius)),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              onPressed: () => setState(() => _currentStep--),
-              child: const Text('Back'),
-            ),
-          ),
-        if (_currentStep > 0) const SizedBox(width: AppSpacing.m),
-        Expanded(
-          flex: 2,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accentBlue,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.borderRadius)),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-            onPressed: _isLoading
-                ? null
-                : () {
-                    if (_currentStep < 2) {
-                      if (_formKey.currentState!.validate()) setState(() => _currentStep++);
-                    } else {
-                      _submit();
-                    }
-                  },
-            child: _isLoading
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                : Text(
-                    _currentStep < 2 ? 'Next' : 'Create Account & Verify',
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                  ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLabel(String label) {
+  Widget _label(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Text(label, style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.8)),
+      child: Text(
+        text,
+        style: AppTextStyles.labelSmall.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1,
+        ),
+      ),
     );
   }
 
   InputDecoration _inputDecoration(String hint, IconData icon) {
     return InputDecoration(
       hintText: hint,
-      prefixIcon: Icon(icon, color: AppColors.softGray, size: 20),
+      prefixIcon: Icon(icon, color: AppColors.softGray),
       filled: true,
-      fillColor: AppColors.softGray.withOpacity(0.05),
+      fillColor: AppColors.softGray.withValues(alpha: 0.05),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
         borderSide: BorderSide.none,
       ),
-      contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
     );
   }
 }
@@ -900,26 +727,17 @@ class _VerificationProgressDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: AppColors.accentBlue.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Center(child: CircularProgressIndicator(color: AppColors.accentBlue, strokeWidth: 3)),
-            ),
+            const CircularProgressIndicator(),
             const SizedBox(height: AppSpacing.l),
-            Text('Verifying Documents', style: AppTextStyles.headingSmall),
+            Text('Verifying documents...', style: AppTextStyles.headingSmall),
             const SizedBox(height: AppSpacing.s),
             Text(
-              'Our AI is analyzing your certificates...\nThis may take a moment.',
+              'Please wait while we analyze your professional certificate and ID.',
               style: AppTextStyles.caption,
               textAlign: TextAlign.center,
             ),

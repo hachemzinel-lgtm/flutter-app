@@ -9,10 +9,10 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../services/notification_service.dart';
 
-final notificationServiceProvider = Provider((ref) => NotificationService());
-
 // StreamProvider scoped inside build via ref.watch — defined here for clarity
-final _notificationsStreamFamily = StreamProvider.family<QuerySnapshot, String>(
+final _notificationsStreamFamily = StreamProvider.family<
+    QuerySnapshot<Map<String, dynamic>>,
+    String>(
   (ref, uid) => ref.watch(notificationServiceProvider).getNotifications(uid),
 );
 
@@ -42,12 +42,12 @@ class NotificationsScreen extends ConsumerWidget {
               itemCount: docs.length,
               itemBuilder: (context, index) {
                 final doc = docs[index];
-                final data = doc.data() as Map<String, dynamic>;
+                final data = doc.data();
 
                 // Section headers by date
                 final date = (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
                 final showHeader = index == 0 || !_isSameDay(date,
-                  (docs[index - 1].data() as Map<String, dynamic>)['createdAt']?.toDate() ?? DateTime.now());
+                  (docs[index - 1].data())['createdAt']?.toDate() ?? DateTime.now());
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,28 +108,26 @@ class NotificationsScreen extends ConsumerWidget {
         child: const Icon(Icons.delete, color: Colors.white),
       ),
       onDismissed: (_) {
-        FirebaseFirestore.instance
-            .collection('users').doc(uid)
-            .collection('notifications').doc(id)
-            .delete();
+        ref.read(notificationServiceProvider).deleteNotification(uid, id);
       },
       child: InkWell(
         onTap: () {
           ref.read(notificationServiceProvider).markAsRead(uid, id);
-          if (type == 'message' && data['conversationId'] != null) {
-            context.push('/chat/${data['conversationId']}');
+          final route = ref.read(notificationServiceProvider).resolveDeepLink(data);
+          if (route != null && route.isNotEmpty) {
+            context.push(route);
           }
         },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: 12),
-          color: isRead ? null : AppColors.accentBlue.withOpacity(0.03),
+          color: isRead ? null : AppColors.accentBlue.withValues(alpha: 0.03),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: isRead ? AppColors.softGray.withOpacity(0.08) : AppColors.accentBlue.withOpacity(0.1),
+                  color: isRead ? AppColors.softGray.withValues(alpha: 0.08) : AppColors.accentBlue.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -176,7 +174,7 @@ class NotificationsScreen extends ConsumerWidget {
           children: [
             Container(
               width: 100, height: 100,
-              decoration: BoxDecoration(color: AppColors.accentBlue.withOpacity(0.08), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: AppColors.accentBlue.withValues(alpha: 0.08), shape: BoxShape.circle),
               child: const Icon(Icons.notifications_none_rounded, size: 50, color: AppColors.accentBlue),
             ),
             const SizedBox(height: 24),
@@ -214,15 +212,15 @@ class NotificationsScreen extends ConsumerWidget {
         padding: const EdgeInsets.only(bottom: 16),
         child: Row(
           children: [
-            Container(width: 44, height: 44, decoration: BoxDecoration(color: AppColors.softGray.withOpacity(0.12), shape: BoxShape.circle)),
+            Container(width: 44, height: 44, decoration: BoxDecoration(color: AppColors.softGray.withValues(alpha: 0.12), shape: BoxShape.circle)),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(height: 14, width: 180, decoration: BoxDecoration(color: AppColors.softGray.withOpacity(0.12), borderRadius: BorderRadius.circular(4))),
+                  Container(height: 14, width: 180, decoration: BoxDecoration(color: AppColors.softGray.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4))),
                   const SizedBox(height: 8),
-                  Container(height: 12, width: 120, decoration: BoxDecoration(color: AppColors.softGray.withOpacity(0.08), borderRadius: BorderRadius.circular(4))),
+                  Container(height: 12, width: 120, decoration: BoxDecoration(color: AppColors.softGray.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(4))),
                 ],
               ),
             ),

@@ -25,7 +25,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
             Container(
               padding: const EdgeInsets.all(AppSpacing.l),
               decoration: BoxDecoration(
-                color: _isAvailable ? AppColors.availableGreen.withOpacity(0.1) : AppColors.softGray.withOpacity(0.1),
+                color: _isAvailable ? AppColors.availableGreen.withValues(alpha: 0.1) : AppColors.softGray.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
               ),
               child: Column(

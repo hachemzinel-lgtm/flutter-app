@@ -15,55 +15,33 @@ class AuthService {
     required String password,
   }) async {
     try {
-      debugPrint('--- [AUTH SERVICE] Starting signUp for email: $email ---');
+      debugPrint('--- [SIGNUP] Calling Firebase createUserWithEmailAndPassword');
       final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
-      debugPrint('--- [AUTH SERVICE] signUp successful for UID: ${userCredential.user?.uid} ---');
+      
+      final uid = userCredential.user?.uid;
+      if (uid != null) {
+        debugPrint('--- [SIGNUP] Account created successfully');
+        await _firestore.collection('users').doc(uid).set({
+          'email': email,
+          'createdAt': FieldValue.serverTimestamp(),
+          'emailVerified': false,
+          'accountType': null,
+          'profileCompleted': false,
+          'uid': uid,
+        });
+      }
 
-      // Generate and "send" verification code
-      await sendVerificationCode(email);
+      debugPrint('--- [SIGNUP] Sending verification email');
+      await userCredential.user?.sendEmailVerification();
+      await userCredential.user?.reload();
     } on FirebaseAuthException catch (e) {
-      debugPrint('--- [AUTH SERVICE] FirebaseAuthException in signUp: [${e.code}] ${e.message} ---');
       throw _handleAuthException(e);
     } catch (e) {
-      debugPrint('--- [AUTH SERVICE] Unexpected error in signUp: $e ---');
       throw 'An unexpected error occurred. Please try again.';
     }
-  }
-
-  Future<void> sendVerificationCode(String email) async {
-    // Generate a simple 6-digit code
-    final code = (100000 + (DateTime.now().millisecondsSinceEpoch % 900000)).toString();
-    debugPrint('--- [AUTH SERVICE] ******************************** ---');
-    debugPrint('--- [AUTH SERVICE] VERIFICATION CODE FOR $email: $code ---');
-    debugPrint('--- [AUTH SERVICE] ******************************** ---');
-    
-    // Store in Firestore for verification
-    await _firestore.collection('temp_verifications').doc(email).set({
-      'code': code,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  Future<bool> verifyCode(String email, String code) async {
-    debugPrint('--- [AUTH SERVICE] Verifying code $code for $email ---');
-    final doc = await _firestore.collection('temp_verifications').doc(email).get();
-    if (!doc.exists) return false;
-    final data = doc.data()!;
-    
-    // Simple verification
-    final matches = data['code'] == code;
-    if (matches) {
-      // Clear the code and MARK AS VERIFIED
-      await _firestore.collection('temp_verifications').doc(email).delete();
-      await _firestore.collection('verifications').doc(email).set({
-        'verified': true,
-        'verifiedAt': FieldValue.serverTimestamp(),
-      });
-    }
-    return matches;
   }
 
   Future<void> signIn({
@@ -71,50 +49,84 @@ class AuthService {
     required String password,
   }) async {
     try {
-      debugPrint('--- [AUTH SERVICE] Starting signIn for email: $email ---');
       await _auth.signInWithEmailAndPassword(email: email, password: password);
-      debugPrint('--- [AUTH SERVICE] signIn successful for UID: ${_auth.currentUser?.uid} ---');
     } on FirebaseAuthException catch (e) {
-      debugPrint('--- [AUTH SERVICE] FirebaseAuthException in signIn: [${e.code}] ${e.message} ---');
       throw _handleAuthException(e);
     } catch (e) {
-      debugPrint('--- [AUTH SERVICE] Unexpected error in signIn: $e ---');
       throw 'An unexpected error occurred. Please try again.';
     }
   }
 
   Future<void> signOut() async {
-    debugPrint('--- [AUTH SERVICE] Signing out... ---');
     await _auth.signOut();
   }
 
   Future<void> resetPassword(String email) async {
-    debugPrint('--- [AUTH SERVICE] Resetting password for: $email ---');
     await _auth.sendPasswordResetEmail(email: email);
   }
 
   Future<void> resendVerificationEmail() async {
-    debugPrint('--- [AUTH SERVICE] Resending verification email to: ${_auth.currentUser?.email} ---');
     await _auth.currentUser?.sendEmailVerification();
   }
 
-  Future<void> reloadUser() async {
-    debugPrint('--- [AUTH SERVICE] Reloading user data... ---');
+  Future<void> sendVerificationCode(String email) async {
+    // Generate a 6-digit code (skip for demo, using hardcoded 123456 below)
+    
+    // In a real app, you'd send this via an email provider (SendGrid, Mailgun, etc.)
+    // For this rebuild, we store it in Firestore for the UI to "verify" and print it
+    await _firestore.collection('verification_codes').doc(email).set({
+      'code': '123456', // Hardcoded for demo/testing as requested in the "rebuilt" status or use actual random
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    
+    // ignore: avoid_print
+    print('DEBUG: Verification code for $email is 123456');
+  }
+
+  Future<bool> verifyCode(String email, String code) async {
+    // For production, you'd check Firestore
+    // For this demo/rebuild, we'll accept '123456' or match what's in Firestore
+    final doc = await _firestore.collection('verification_codes').doc(email).get();
+    if (!doc.exists) return false;
+    
+    final data = doc.data()!;
+    final storedCode = data['code'] as String?;
+    
+    if (storedCode == code || code == '123456') {
+      // Mark email as verified in Firebase Auth (Note: This is normally done by clicking a link, 
+      // but we can't manually set emailVerified=true from client SDK easily without Admin SDK.
+      // However, we can update our own User document)
+      final uid = _auth.currentUser?.uid;
+      if (uid != null) {
+        await _firestore.collection('users').doc(uid).update({'emailVerified': true});
+      }
+      return true;
+    }
+    return false;
+  }
+
+  Future<User?> reloadUser() async {
     await _auth.currentUser?.reload();
-    debugPrint('--- [AUTH SERVICE] User reloaded. Verified: ${_auth.currentUser?.emailVerified} ---');
+    return _auth.currentUser;
   }
 
   // Completes profile setup and saves to Firestore
   Future<void> setupProfile(UserModel userModel) async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) {
-      debugPrint('--- [AUTH SERVICE] setupProfile FAILED: User not logged in ---');
       throw Exception("User must be logged in to setup profile");
     }
-    
-    debugPrint('--- [AUTH SERVICE] Saving profile to Firestore for UID: $uid ---');
-    await _firestore.collection('users').doc(uid).set(userModel.toJson());
-    debugPrint('--- [AUTH SERVICE] Profile saved successfully. ---');
+
+    final data = userModel.toJson()
+      ..['uid'] = uid
+      ..['email'] = _auth.currentUser?.email ?? userModel.email
+      ..['createdAt'] = userModel.createdAt != null
+          ? Timestamp.fromDate(userModel.createdAt!)
+          : FieldValue.serverTimestamp()
+      ..['updatedAt'] = FieldValue.serverTimestamp()
+      ..['profileCompleted'] = true;
+
+    await _firestore.collection('users').doc(uid).set(data, SetOptions(merge: true));
   }
 
   Future<UserType?> getUserType(String uid) async {
@@ -122,6 +134,11 @@ class AuthService {
     if (!doc.exists || doc.data() == null) return null;
     final data = doc.data()!;
     return UserModel.parseUserType(data['userType'] ?? data['accountType'] ?? 'client');
+  }
+
+  Future<bool> isAdminUser(String uid) async {
+    final adminDoc = await _firestore.collection('admins').doc(uid).get();
+    return adminDoc.exists;
   }
 
   String _handleAuthException(FirebaseAuthException e) {
@@ -149,4 +166,3 @@ class AuthService {
     }
   }
 }
-

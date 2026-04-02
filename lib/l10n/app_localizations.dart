@@ -193,7 +193,7 @@ abstract class AppLocalizations {
   /// No description provided for @bio.
   ///
   /// In en, this message translates to:
-  /// **'Bio/Description'**
+  /// **'Bio / Description'**
   String get bio;
 
   /// No description provided for @portfolio.
@@ -243,6 +243,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reviews'**
   String get reviews;
+
+  /// No description provided for @emailVerificationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Please check your email and verify your account'**
+  String get emailVerificationTitle;
+
+  /// No description provided for @emailVerificationCta.
+  ///
+  /// In en, this message translates to:
+  /// **'I\'ve verified, continue'**
+  String get emailVerificationCta;
+
+  /// No description provided for @emailVerificationResend.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend verification email'**
+  String get emailVerificationResend;
+
+  /// No description provided for @accountTypeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your account type'**
+  String get accountTypeTitle;
+
+  /// No description provided for @clientDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking for services or products'**
+  String get clientDescription;
+
+  /// No description provided for @providerDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'I offer professional services'**
+  String get providerDescription;
+
+  /// No description provided for @marketplaceDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'I own a local business'**
+  String get marketplaceDescription;
+
+  /// No description provided for @profileSetupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up your profile'**
+  String get profileSetupTitle;
+
+  /// No description provided for @documentVerificationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Document verification'**
+  String get documentVerificationTitle;
+
+  /// No description provided for @verificationPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification pending'**
+  String get verificationPending;
+
+  /// No description provided for @bestProviders.
+  ///
+  /// In en, this message translates to:
+  /// **'Best Providers'**
+  String get bestProviders;
+
+  /// No description provided for @messages.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get messages;
+
+  /// No description provided for @profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get profile;
+
+  /// No description provided for @aiChat.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Chat'**
+  String get aiChat;
 }
 
 class _AppLocalizationsDelegate

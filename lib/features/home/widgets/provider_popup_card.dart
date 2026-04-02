@@ -3,28 +3,30 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/models/user_model.dart';
+import '../../../core/models/work_provider_model.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/star_rating_row.dart';
 
 class ProviderPopupCard extends StatelessWidget {
-  final Map<String, dynamic> provider;
+  final UserModel user;
   final double distanceKm;
 
   const ProviderPopupCard({
     super.key,
-    required this.provider,
+    required this.user,
     required this.distanceKm,
   });
 
   @override
   Widget build(BuildContext context) {
-    final String uid = provider['uid'] ?? 'mock_id';
-    final String name = provider['name'] ?? 'Unknown';
-    final String profession = provider['profession'] ?? provider['category'] ?? '';
-    final double rating = (provider['rating'] as num?)?.toDouble() ?? 0.0;
-    final int reviewCount = (provider['reviewCount'] as num?)?.toInt() ?? 0;
-    final bool isAvailable = provider['isAvailable'] as bool? ?? false;
-    final String? hourlyRate = provider['hourlyRate']?.toString();
+    final String uid = user.id;
+    final String name = user.name;
+    final String profession = user is WorkProviderModel ? (user as WorkProviderModel).profession ?? '' : '';
+    final double rating = user.rating;
+    final int reviewCount = user.reviewCount; 
+    final bool isAvailable = user is WorkProviderModel ? (user as WorkProviderModel).isAvailableNow : false;
+    final String? hourlyRate = user is WorkProviderModel ? (user as WorkProviderModel).hourlyRate?.toString() : null;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(AppSpacing.l, AppSpacing.m, AppSpacing.l, AppSpacing.l),
@@ -41,7 +43,7 @@ class ProviderPopupCard extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.softGray.withOpacity(0.3),
+                color: AppColors.softGray.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -54,7 +56,7 @@ class ProviderPopupCard extends StatelessWidget {
               // Avatar
               CircleAvatar(
                 radius: 32,
-                backgroundColor: AppColors.softGray.withOpacity(0.15),
+                backgroundColor: AppColors.softGray.withValues(alpha: 0.15),
                 child: Text(
                   name.isNotEmpty ? name[0].toUpperCase() : '?',
                   style: AppTextStyles.headingSmall.copyWith(color: AppColors.accentBlue),
@@ -76,7 +78,7 @@ class ProviderPopupCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: (isAvailable ? Colors.green : Colors.orange).withOpacity(0.1),
+                  color: (isAvailable ? Colors.green : Colors.orange).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -116,11 +118,11 @@ class ProviderPopupCard extends StatelessWidget {
     );
   }
 
-  Widget _infoChip(IconData icon, String label, {Color? textColor}) {
+  Widget _infoChip(IconData icon, String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.softGray.withOpacity(0.08),
+        color: AppColors.softGray.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(

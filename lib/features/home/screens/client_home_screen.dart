@@ -1,21 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_text_styles.dart';
 import '../../../core/constants/app_spacing.dart';
+import '../../../core/constants/app_text_styles.dart';
+import '../../../core/constants/marketplace_taxonomy.dart';
+import '../../../core/models/work_provider_model.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../models/discovery_models.dart';
+import '../providers/home_provider.dart';
 import '../widgets/provider_feature_card.dart';
-
-const _professions = [
-  'Any', 'Plumber', 'Electrician', 'Cleaner', 'Carpenter',
-  'Painter', 'Gardener', 'Mechanic', 'Tutor', 'Photographer', 'Other',
-];
-
-const _marketplaceCats = [
-  'Any', 'Restaurant', 'Bakery', 'Grocery Store', 'Pharmacy',
-  'Hardware Store', 'Café', 'Butcher Shop', 'Clothing Store', 'Electronics Store', 'Other',
-];
 
 class ClientHomeScreen extends ConsumerStatefulWidget {
   const ClientHomeScreen({super.key});
@@ -24,178 +19,262 @@ class ClientHomeScreen extends ConsumerStatefulWidget {
   ConsumerState<ClientHomeScreen> createState() => _ClientHomeScreenState();
 }
 
-class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  String _selectedProviderCategory = 'Any';
-  String _selectedMarketCategory = 'Any';
+class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
+  final _manualAddressController = TextEditingController();
+  DiscoverySearchType _searchType = DiscoverySearchType.workProviders;
+  String _providerCategory = 'Any';
+  String _marketplaceCategory = 'Any';
   double _radiusKm = 10;
-  double _minRating = 0;
+  double _minimumRating = 0;
   bool _availableOnly = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() => setState(() {}));
-  }
+  bool _useCurrentLocation = true;
+  bool _isResolvingLocation = false;
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _manualAddressController.dispose();
     super.dispose();
   }
 
-  void _search() {
-    final isProvider = _tabController.index == 0;
-    final category = isProvider ? _selectedProviderCategory : _selectedMarketCategory;
-    context.push(
-      '/map-results?type=${isProvider ? 'provider' : 'marketplace'}'
-      '&category=${Uri.encodeComponent(category)}'
-      '&radius=$_radiusKm'
-      '&minRating=$_minRating'
-      '&availableOnly=$_availableOnly',
-    );
+  Future<void> _startSearch() async {
+    final user = ref.read(currentUserDocProvider).value;
+    setState(() => _isResolvingLocation = true);
+    try {
+      final location = await ref.read(discoveryServiceProvider).resolveSearchLocation(
+            useCurrentLocation: _useCurrentLocation,
+            savedLocation: user?.location,
+            savedAddress: user?.address,
+            manualAddress: _manualAddressController.text,
+          );
+
+      if (!mounted) {
+        return;
+      }
+
+      context.push(
+        '/search-results'
+        '?type=${_searchType.queryValue}'
+        '&category=${Uri.encodeComponent(_selectedCategory)}'
+        '&radius=$_radiusKm'
+        '&minRating=$_minimumRating'
+        '&availableOnly=$_availableOnly'
+        '&lat=${location.center.latitude}'
+        '&lng=${location.center.longitude}'
+        '&label=${Uri.encodeComponent(location.label)}',
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          backgroundColor: AppColors.errorRed,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isResolvingLocation = false);
+      }
+    }
+  }
+
+  String get _selectedCategory {
+    return _searchType == DiscoverySearchType.workProviders
+        ? _providerCategory
+        : _marketplaceCategory;
   }
 
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserDocProvider).value;
     final firstName = user?.name.split(' ').first ?? 'there';
+    final topRatedAsync = ref.watch(topRatedProvidersProvider);
 
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
+          padding: AppSpacing.pagePadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Header ──────────────────────────────────────────────
               Container(
-                padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.l, AppSpacing.l, AppSpacing.l, AppSpacing.xl),
-                decoration: const BoxDecoration(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.l),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryNavy,
+                  borderRadius: BorderRadius.circular(24),
                   gradient: LinearGradient(
+                    colors: [
+                      AppColors.primaryNavy,
+                      AppColors.primaryNavy.withValues(alpha: 0.88),
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF1A1F3A), Color(0xFF0D1B2A)],
                   ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                    Text(
+                      'Hello, $firstName',
+                      style: AppTextStyles.headingLarge.copyWith(
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s),
+                    InkWell(
+                      onTap: () => _manualAddressController.selection =
+                          TextSelection.collapsed(
+                        offset: _manualAddressController.text.length,
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Hello, $firstName 👋',
-                                style: AppTextStyles.headingLarge.copyWith(
-                                    color: Colors.white, fontSize: 24)),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Icon(Icons.location_on,
-                                    color: AppColors.accentBlue, size: 14),
-                                const SizedBox(width: 4),
-                                Text(
-                                  user?.address ?? 'Tap to set location',
-                                  style: AppTextStyles.caption
-                                      .copyWith(color: Colors.white70),
+                            const Icon(
+                              Icons.location_on_outlined,
+                              color: AppColors.accentBlue,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                user?.address?.isNotEmpty == true
+                                    ? user!.address!
+                                    : 'No saved location yet',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: Colors.white70,
                                 ),
-                              ],
+                              ),
                             ),
                           ],
                         ),
-                        // Avatar
-                        CircleAvatar(
-                          radius: 24,
-                          backgroundColor: AppColors.accentBlue.withOpacity(0.2),
-                          backgroundImage: user?.photoUrl != null
-                              ? NetworkImage(user!.photoUrl!)
-                              : null,
-                          child: user?.photoUrl == null
-                              ? Text(firstName[0].toUpperCase(),
-                                  style: const TextStyle(
-                                      color: AppColors.accentBlue,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 18))
-                              : null,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    // Tab switcher
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: TabBar(
-                        controller: _tabController,
-                        indicator: BoxDecoration(
-                          color: AppColors.accentBlue,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        indicatorSize: TabBarIndicatorSize.tab,
-                        dividerColor: Colors.transparent,
-                        labelColor: Colors.white,
-                        unselectedLabelColor: Colors.white60,
-                        labelStyle: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 14),
-                        tabs: const [
-                          Tab(text: '🔧  Work Providers'),
-                          Tab(text: '🏪  Marketplaces'),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.l),
-                    // Category picker
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
-                      child: _tabController.index == 0
-                          ? _CategoryPicker(
-                              key: const ValueKey('provider'),
-                              categories: _professions,
-                              selected: _selectedProviderCategory,
-                              onSelected: (v) =>
-                                  setState(() => _selectedProviderCategory = v),
-                            )
-                          : _CategoryPicker(
-                              key: const ValueKey('market'),
-                              categories: _marketplaceCats,
-                              selected: _selectedMarketCategory,
-                              onSelected: (v) =>
-                                  setState(() => _selectedMarketCategory = v),
-                            ),
                     ),
                   ],
                 ),
               ),
-
-              // ── Filters ────────────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.all(AppSpacing.l),
+              const SizedBox(height: AppSpacing.l),
+              TextField(
+                readOnly: true,
+                decoration: InputDecoration(
+                  hintText: 'What are you looking for?',
+                  prefixIcon: const Icon(Icons.search),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.l),
+              SegmentedButton<DiscoverySearchType>(
+                segments: const [
+                  ButtonSegment(
+                    value: DiscoverySearchType.workProviders,
+                    label: Text('Work Providers'),
+                    icon: Icon(Icons.handyman_outlined),
+                  ),
+                  ButtonSegment(
+                    value: DiscoverySearchType.marketplaces,
+                    label: Text('Marketplaces'),
+                    icon: Icon(Icons.storefront_outlined),
+                  ),
+                ],
+                selected: {_searchType},
+                onSelectionChanged: (value) {
+                  setState(() => _searchType = value.first);
+                },
+              ),
+              const SizedBox(height: AppSpacing.l),
+              _SectionCard(
+                title: _searchType == DiscoverySearchType.workProviders
+                    ? 'Search for work providers'
+                    : 'Search for marketplaces',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    _label('CATEGORY'),
+                    _CategoryDropdown(
+                      items: [
+                        'Any',
+                        ...(_searchType == DiscoverySearchType.workProviders
+                            ? MarketplaceTaxonomy.workProviderCategories
+                            : MarketplaceTaxonomy.marketplaceCategories),
+                      ],
+                      value: _selectedCategory,
+                      onChanged: (value) {
+                        setState(() {
+                          if (_searchType == DiscoverySearchType.workProviders) {
+                            _providerCategory = value!;
+                          } else {
+                            _marketplaceCategory = value!;
+                          }
+                        });
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.l),
+                    _label('LOCATION'),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ChoiceChip(
+                          label: const Text('Use my current location'),
+                          selected: _useCurrentLocation,
+                          onSelected: (_) => setState(() => _useCurrentLocation = true),
+                        ),
+                        ChoiceChip(
+                          label: const Text('Use saved profile location'),
+                          selected: !_useCurrentLocation &&
+                              _manualAddressController.text.trim().isEmpty,
+                          onSelected: (_) {
+                            setState(() {
+                              _useCurrentLocation = false;
+                              _manualAddressController.clear();
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.m),
+                    TextField(
+                      controller: _manualAddressController,
+                      decoration: InputDecoration(
+                        hintText: 'Or set location manually',
+                        prefixIcon: const Icon(Icons.edit_location_alt_outlined),
+                        filled: true,
+                        fillColor: AppColors.backgroundSecondary,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      onChanged: (_) {
+                        if (_manualAddressController.text.trim().isNotEmpty) {
+                          setState(() => _useCurrentLocation = false);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.l),
+                    _label('DISTANCE RADIUS'),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Search Radius',
-                            style: AppTextStyles.bodyMedium
-                                .copyWith(fontWeight: FontWeight.w600)),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.accentBlue.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text('${_radiusKm.toInt()} km',
-                              style: AppTextStyles.caption.copyWith(
-                                  color: AppColors.accentBlue,
-                                  fontWeight: FontWeight.w700)),
+                        Text('${_radiusKm.toInt()} km', style: AppTextStyles.headingSmall),
+                        Text(
+                          'Search range',
+                          style: AppTextStyles.caption,
                         ),
                       ],
                     ),
@@ -204,292 +283,209 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen>
                       min: 5,
                       max: 50,
                       divisions: 9,
-                      activeColor: AppColors.accentBlue,
-                      inactiveColor: AppColors.softGray.withOpacity(0.2),
-                      onChanged: (v) => setState(() => _radiusKm = v),
+                      onChanged: (value) => setState(() => _radiusKm = value),
                     ),
-                    Row(children: [
-                      ...[5, 10, 20, 50].map((km) => Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: GestureDetector(
-                              onTap: () => setState(() => _radiusKm = km.toDouble()),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: _radiusKm == km
-                                      ? AppColors.accentBlue
-                                      : AppColors.softGray.withOpacity(0.08),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text('${km}km',
-                                    style: AppTextStyles.caption.copyWith(
-                                        color: _radiusKm == km
-                                            ? Colors.white
-                                            : AppColors.textLight,
-                                        fontWeight: FontWeight.w600)),
-                              ),
+                    Wrap(
+                      spacing: 8,
+                      children: MarketplaceTaxonomy.searchRadiusOptionsKm
+                          .map(
+                            (radius) => ChoiceChip(
+                              label: Text('${radius.toInt()}km'),
+                              selected: _radiusKm == radius,
+                              onSelected: (_) => setState(() => _radiusKm = radius),
                             ),
-                          )),
-                    ]),
-                    const SizedBox(height: AppSpacing.m),
-                    if (_tabController.index == 0) ...[
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _FilterChipTile(
-                              label: 'Available Now',
-                              isSelected: _availableOnly,
-                              onTap: () =>
-                                  setState(() => _availableOnly = !_availableOnly),
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.m),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Min Rating',
-                                    style: AppTextStyles.caption
-                                        .copyWith(fontWeight: FontWeight.w600)),
-                                const SizedBox(height: 4),
-                                DropdownButton<double>(
-                                  isExpanded: true,
-                                  value: _minRating,
-                                  underline: const SizedBox(),
-                                  items: const [
-                                    DropdownMenuItem(
-                                        value: 0, child: Text('Any')),
-                                    DropdownMenuItem(
-                                        value: 3, child: Text('3+ ⭐')),
-                                    DropdownMenuItem(
-                                        value: 4, child: Text('4+ ⭐')),
-                                    DropdownMenuItem(
-                                        value: 4.5, child: Text('4.5+ ⭐')),
-                                  ],
-                                  onChanged: (v) =>
-                                      setState(() => _minRating = v!),
-                                ),
-                              ],
-                            ),
-                          ),
+                          )
+                          .toList(),
+                    ),
+                    if (_searchType == DiscoverySearchType.workProviders) ...[
+                      const SizedBox(height: AppSpacing.l),
+                      _label('FILTERS'),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Available now only'),
+                        value: _availableOnly,
+                        onChanged: (value) {
+                          setState(() => _availableOnly = value);
+                        },
+                      ),
+                      DropdownButtonFormField<double>(
+                        initialValue: _minimumRating,
+                        decoration: const InputDecoration(
+                          labelText: 'Minimum rating',
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 0, child: Text('Any')),
+                          DropdownMenuItem(value: 3, child: Text('3+ stars')),
+                          DropdownMenuItem(value: 4, child: Text('4+ stars')),
+                          DropdownMenuItem(value: 4.5, child: Text('4.5+ stars')),
                         ],
+                        onChanged: (value) {
+                          setState(() => _minimumRating = value ?? 0);
+                        },
                       ),
                     ],
                     const SizedBox(height: AppSpacing.l),
                     SizedBox(
                       width: double.infinity,
-                      height: 54,
-                      child: ElevatedButton.icon(
+                      child: ElevatedButton(
+                        onPressed: _isResolvingLocation ? null : _startSearch,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.accentBlue,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(vertical: 18),
                         ),
-                        onPressed: _search,
-                        icon: const Icon(Icons.search_rounded),
-                        label: Text(
-                          _tabController.index == 0
-                              ? 'Find Work Providers'
-                              : 'Find Marketplaces',
-                          style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w700),
-                        ),
+                        child: _isResolvingLocation
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.4,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Search'),
                       ),
                     ),
                   ],
                 ),
               ),
-
-              // ── Top Rated Near You ─────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.l, 0, AppSpacing.l, AppSpacing.m),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Top Rated Near You',
-                        style: AppTextStyles.headingSmall),
-                    TextButton(
-                      onPressed: () => context.go('/best-providers'),
-                      child: Text('See All',
-                          style: AppTextStyles.caption.copyWith(
-                              color: AppColors.accentBlue,
-                              fontWeight: FontWeight.w700)),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(
-                height: 220,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
-                  itemCount: 4,
-                  itemBuilder: (_, i) => ProviderFeatureCard(
-                    name: i == 0 ? 'Mohamed A.' : i == 1 ? 'Lamine P.' : i == 2 ? 'Sarah K.' : 'Ahmed T.',
-                    profession: i == 0 ? 'Électricien' : i == 1 ? 'Plombier' : i == 2 ? 'Nettoyeuse' : 'Menuisier',
-                    rating: 4.8,
-                    distance: '${2 + i}km',
-                    isVerified: i % 2 == 0,
-                    isAvailable: i < 2,
-                    onTap: () => context.push('/profile/provider-$i'),
-                  ),
-                ),
-              ),
               const SizedBox(height: AppSpacing.xl),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Top Rated Near You', style: AppTextStyles.headingSmall),
+                  TextButton(
+                    onPressed: () => context.go('/best-providers'),
+                    child: const Text('See All'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.m),
+              topRatedAsync.when(
+                loading: () => const SizedBox(
+                  height: 180,
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (error, _) => Text(
+                  error.toString(),
+                  style: AppTextStyles.caption.copyWith(color: AppColors.errorRed),
+                ),
+                data: (results) {
+                  if (results.isEmpty) {
+                    return _SectionCard(
+                      title: 'No nearby providers yet',
+                      child: Text(
+                        'Verified work providers will appear here once they are close to your saved location.',
+                        style: AppTextStyles.bodyMedium,
+                      ),
+                    );
+                  }
+
+                  return SizedBox(
+                    height: 220,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: results.take(10).length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 12),
+                      itemBuilder: (context, index) {
+                        final result = results[index];
+                        final provider = result.user as WorkProviderModel;
+                        return ProviderFeatureCard(
+                          name: result.user.name,
+                          profession: provider.profession ?? '',
+                          rating: result.user.rating,
+                          distance: '${result.distanceKm.toStringAsFixed(1)} km',
+                          photoUrl: result.user.photoUrl,
+                          isVerified: result.isVerified,
+                          isAvailable: provider.isAvailableNow,
+                          onTap: () {
+                            context.push('/provider-profile/${result.user.id}');
+                          },
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
             ],
           ),
         ),
       ),
     );
   }
-}
 
-// ── Reusable components ──────────────────────────────────────────────────────
-
-class _CategoryPicker extends StatelessWidget {
-  final List<String> categories;
-  final String selected;
-  final ValueChanged<String> onSelected;
-
-  const _CategoryPicker({
-    super.key,
-    required this.categories,
-    required this.selected,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 36,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: categories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (ctx, i) {
-          final cat = categories[i];
-          final isSelected = cat == selected;
-          return GestureDetector(
-            onTap: () => onSelected(cat),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.accentBlue
-                    : Colors.white.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isSelected
-                      ? AppColors.accentBlue
-                      : Colors.white.withOpacity(0.2),
-                ),
-              ),
-              child: Text(cat,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.white70,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.normal,
-                    fontSize: 13,
-                  )),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _FilterChipTile extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _FilterChipTile({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.availableGreen.withOpacity(0.1)
-              : AppColors.softGray.withOpacity(0.06),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isSelected
-                ? AppColors.availableGreen
-                : AppColors.softGray.withOpacity(0.2),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
-              size: 16,
-              color: isSelected ? AppColors.availableGreen : AppColors.softGray,
-            ),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(label,
-                  style: AppTextStyles.caption.copyWith(
-                    color: isSelected ? AppColors.availableGreen : AppColors.textLight,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.normal,
-                  )),
-            ),
-          ],
+  Widget _label(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        text,
+        style: AppTextStyles.labelSmall.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1,
         ),
       ),
     );
   }
 }
 
-class _ProviderCardSkeleton extends StatelessWidget {
-  const _ProviderCardSkeleton();
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.title,
+    required this.child,
+  });
+
+  final String title;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 150,
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(12),
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.l),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2))
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.softGray.withOpacity(0.15),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(height: 12, width: 100, color: AppColors.softGray.withOpacity(0.15)),
-          const SizedBox(height: 6),
-          Container(height: 10, width: 70, color: AppColors.softGray.withOpacity(0.1)),
-          const SizedBox(height: 8),
-          Container(height: 10, width: 80, color: AppColors.softGray.withOpacity(0.1)),
+          Text(title, style: AppTextStyles.headingSmall),
+          const SizedBox(height: AppSpacing.m),
+          child,
         ],
+      ),
+    );
+  }
+}
+
+class _CategoryDropdown extends StatelessWidget {
+  const _CategoryDropdown({
+    required this.items,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final List<String> items;
+  final String value;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<String>(
+      initialValue: value,
+      items: items
+          .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+          .toList(),
+      onChanged: onChanged,
+      decoration: const InputDecoration(
+        border: OutlineInputBorder(),
       ),
     );
   }

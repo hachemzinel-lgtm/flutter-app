@@ -117,7 +117,7 @@ class _ChatSessionItem extends ConsumerWidget {
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -167,7 +167,7 @@ class _EmptyStateWidget extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.chat_bubble_outline, size: 80, color: AppColors.softGray.withOpacity(0.5)),
+          Icon(Icons.chat_bubble_outline, size: 80, color: AppColors.softGray.withValues(alpha: 0.5)),
           const SizedBox(height: 16),
           Text(
             'No previous chats',

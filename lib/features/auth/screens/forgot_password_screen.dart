@@ -71,7 +71,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   hintText: 'name@example.com',
                   prefixIcon: const Icon(Icons.email_outlined),
                   filled: true,
-                  fillColor: AppColors.softGray.withOpacity(0.05),
+                  fillColor: AppColors.softGray.withValues(alpha: 0.05),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
                     borderSide: BorderSide.none,

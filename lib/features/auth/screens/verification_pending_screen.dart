@@ -29,10 +29,10 @@ class VerificationPendingScreen extends ConsumerWidget {
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: (isRejected ? AppColors.errorRed : AppColors.starGold).withOpacity(0.1),
+                  color: (isRejected ? AppColors.errorRed : AppColors.starGold).withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: (isRejected ? AppColors.errorRed : AppColors.starGold).withOpacity(0.3),
+                    color: (isRejected ? AppColors.errorRed : AppColors.starGold).withValues(alpha: 0.3),
                     width: 2,
                   ),
                 ),
@@ -61,9 +61,9 @@ class VerificationPendingScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.m),
                   decoration: BoxDecoration(
-                    color: AppColors.errorRed.withOpacity(0.05),
+                    color: AppColors.errorRed.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.errorRed.withOpacity(0.2)),
+                    border: Border.all(color: AppColors.errorRed.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
@@ -89,7 +89,7 @@ class VerificationPendingScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.m),
                   decoration: BoxDecoration(
-                    color: AppColors.accentBlue.withOpacity(0.06),
+                    color: AppColors.accentBlue.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(

@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:geolocator/geolocator.dart';
+// import 'package:geolocator/geolocator.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/models/user_model.dart';
+import '../../../core/models/work_provider_model.dart';
+import '../../../core/models/marketplace_model.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/services/location_service.dart';
 import '../../../core/services/distance_service.dart';
+import '../models/discovery_models.dart';
 import '../providers/home_provider.dart';
 import '../widgets/map_marker_widget.dart';
 import '../widgets/provider_popup_card.dart';
@@ -28,7 +32,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
   LatLng? _selectedLocation;
   bool _useCustomLocation = false;
   
-  double _searchRadiusKm = 10.0;
+  final double _searchRadiusKm = 10.0;
   String _selectedCategory = 'All';
   final TextEditingController _locationSearchController = TextEditingController();
 
@@ -251,7 +255,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
 
   @override
   Widget build(BuildContext context) {
-    final providersAsync = ref.watch(providersStreamProvider);
+    final providersAsync = ref.watch(providersStreamProvider(DiscoverySearchType.workProviders));
 
     return Scaffold(
       body: Stack(
@@ -286,29 +290,32 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
 
               // Providers markers
               providersAsync.when(
-                data: (allProviders) {
-                  List<Map<String, dynamic>> filtered = _selectedCategory == 'All'
-                      ? List.from(allProviders)
-                      : allProviders.where((p) => (p['category'] ?? p['profession'] ?? '') == _selectedCategory).toList();
-                  
-                  // Sort by distance
-                  filtered = DistanceService().sortWorkersByDistance(filtered, _activeLocation.latitude, _activeLocation.longitude);
+                data: (allResults) {
+                  final filtered = _selectedCategory == 'All'
+                      ? allResults
+                      : allResults.where((r) {
+                          final user = r.user;
+                          final category = user is WorkProviderModel 
+                              ? user.profession 
+                              : (user is MarketplaceModel ? user.category : '');
+                          return category == _selectedCategory;
+                        }).toList();
 
                   return MarkerLayer(
-                    markers: filtered.where((p) => p['lat'] != null && p['lng'] != null).map((provider) {
-                      final double? lat = (provider['lat'] as num?)?.toDouble();
-                      final double? lng = (provider['lng'] as num?)?.toDouble();
-                      if (lat == null || lng == null) return const Marker(point: LatLng(0,0), width: 0, height: 0, child: SizedBox());
+                    markers: filtered.where((r) => r.user.location != null).map((result) {
+                      final user = result.user;
+                      final lat = user.location!.latitude;
+                      final lng = user.location!.longitude;
                       
                       return Marker(
                         point: LatLng(lat, lng),
                         width: 60, height: 60,
                         child: MapMarkerWidget(
-                          imageUrl: provider['profile_picture'] ?? provider['photo_url'] ?? provider['image_url'],
-                          rating: (provider['rating'] as num?)?.toDouble() ?? 4.5,
-                          category: provider['profession'] ?? provider['category'] ?? '',
-                          isVerified: provider['verificationStatus'] == 'approved',
-                          onTap: () => _showProviderPopup(context, provider),
+                          imageUrl: user.photoUrl,
+                          rating: user.rating,
+                          category: user is WorkProviderModel ? user.profession ?? '' : '',
+                          isVerified: user is WorkProviderModel && user.verificationStatus == VerificationStatus.approved.name,
+                          onTap: () => _showProviderPopup(context, user),
                         ),
                       );
                     }).toList(),
@@ -531,15 +538,16 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
   }
 
 
-  void _showProviderPopup(BuildContext context, Map<String, dynamic> provider) {
-    final double lat = (provider['lat'] as num?)?.toDouble() ?? _currentGpsLocation.latitude;
-    final double lng = (provider['lng'] as num?)?.toDouble() ?? _currentGpsLocation.longitude;
+  void _showProviderPopup(BuildContext context, UserModel user) {
+    if (user.location == null) return;
+    final double lat = user.location!.latitude;
+    final double lng = user.location!.longitude;
     final double km = _distanceKm(lat, lng);
 
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => ProviderPopupCard(provider: provider, distanceKm: km),
+      builder: (context) => ProviderPopupCard(user: user, distanceKm: km),
     );
   }
 }

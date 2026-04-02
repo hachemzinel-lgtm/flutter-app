@@ -1,25 +1,38 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:latlong2/latlong.dart';
+
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_text_styles.dart';
 import '../../../core/constants/app_spacing.dart';
-import '../../../core/models/user_model.dart';
+import '../../../core/constants/app_text_styles.dart';
+import '../../../core/models/marketplace_model.dart';
+import '../../../core/models/work_provider_model.dart';
+import '../models/discovery_models.dart';
+import '../providers/home_provider.dart';
 
 class MapResultsScreen extends ConsumerStatefulWidget {
-  final String category;
-  final String searchType; // 'provider' or 'marketplace'
-
   const MapResultsScreen({
     super.key,
-    required this.category,
     required this.searchType,
+    required this.category,
+    required this.radiusKm,
+    required this.minimumRating,
+    required this.availableOnly,
+    required this.originLatitude,
+    required this.originLongitude,
+    required this.originLabel,
   });
+
+  final String searchType;
+  final String category;
+  final double radiusKm;
+  final double minimumRating;
+  final bool availableOnly;
+  final double originLatitude;
+  final double originLongitude;
+  final String originLabel;
 
   @override
   ConsumerState<MapResultsScreen> createState() => _MapResultsScreenState();
@@ -27,442 +40,509 @@ class MapResultsScreen extends ConsumerStatefulWidget {
 
 class _MapResultsScreenState extends ConsumerState<MapResultsScreen> {
   final MapController _mapController = MapController();
-  LatLng? _userLocation;
-  List<UserModel> _results = [];
-  bool _isLoading = true;
-  UserModel? _selectedUser;
+  late DiscoverySearchType _type;
+  late String _category;
+  late double _radiusKm;
+  late double _minimumRating;
+  late bool _availableOnly;
+  late DiscoverySearchLocation _location;
 
   @override
   void initState() {
     super.initState();
-    _init();
+    _type = DiscoverySearchType.fromQuery(widget.searchType);
+    _category = widget.category;
+    _radiusKm = widget.radiusKm;
+    _minimumRating = widget.minimumRating;
+    _availableOnly = widget.availableOnly;
+    _location = DiscoverySearchLocation(
+      center: LatLng(widget.originLatitude, widget.originLongitude),
+      label: widget.originLabel,
+    );
   }
 
-  Future<void> _init() async {
-    await _getLocation();
-    await _loadResults();
-  }
+  DiscoverySearchRequest get _request => DiscoverySearchRequest(
+        type: _type,
+        category: _category,
+        radiusKm: _radiusKm,
+        minimumRating: _minimumRating,
+        availableOnly: _availableOnly,
+        location: _location,
+      );
 
-  Future<void> _getLocation() async {
-    try {
-      LocationPermission perm = await Geolocator.checkPermission();
-      if (perm == LocationPermission.denied) {
-        perm = await Geolocator.requestPermission();
-      }
-      final pos = await Geolocator.getCurrentPosition();
-      setState(() => _userLocation = LatLng(pos.latitude, pos.longitude));
-    } catch (_) {
-      // Default to Algiers if location fails
-      setState(() => _userLocation = const LatLng(36.7372, 3.0865));
-    }
-  }
+  Future<void> _openFilterSheet() async {
+    double draftRadius = _radiusKm;
+    double draftRating = _minimumRating;
+    bool draftAvailable = _availableOnly;
 
-  Future<void> _loadResults() async {
-    setState(() => _isLoading = true);
-    try {
-      final accountType = widget.searchType == 'provider' ? 'workProvider' : 'marketplace';
-      Query query = FirebaseFirestore.instance
-          .collection('users')
-          .where('accountType', isEqualTo: accountType)
-          .where('isBanned', isEqualTo: false);
-
-      if (widget.category != 'Any' && widget.category.isNotEmpty) {
-        final field = widget.searchType == 'provider' ? 'profession' : 'category';
-        query = query.where(field, isEqualTo: widget.category);
-      }
-      if (widget.searchType == 'provider') {
-        query = query.where('verificationStatus', isEqualTo: 'approved');
-      }
-
-      final snapshot = await query.limit(50).get();
-      final users = snapshot.docs
-          .map((doc) => UserModel.fromMap(doc.id, doc.data() as Map<String, dynamic>))
-          .where((u) => u.location != null)
-          .toList();
-
-      setState(() => _results = users);
-    } catch (e) {
-      debugPrint('Error loading map results: $e');
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  void _openProfile(UserModel user) {
-    setState(() => _selectedUser = user);
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: AppSpacing.l,
+                right: AppSpacing.l,
+                top: AppSpacing.l,
+                bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.l,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Adjust filters', style: AppTextStyles.headingSmall),
+                  const SizedBox(height: AppSpacing.m),
+                  Text(
+                    'Search radius: ${draftRadius.toInt()} km',
+                    style: AppTextStyles.bodyMedium,
+                  ),
+                  Slider(
+                    value: draftRadius,
+                    min: 5,
+                    max: 50,
+                    divisions: 9,
+                    onChanged: (value) => setModalState(() => draftRadius = value),
+                  ),
+                  if (_type == DiscoverySearchType.workProviders) ...[
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Available now only'),
+                      value: draftAvailable,
+                      onChanged: (value) {
+                        setModalState(() => draftAvailable = value);
+                      },
+                    ),
+                    DropdownButtonFormField<double>(
+                      initialValue: draftRating,
+                      decoration: const InputDecoration(labelText: 'Minimum rating'),
+                      items: const [
+                        DropdownMenuItem(value: 0, child: Text('Any')),
+                        DropdownMenuItem(value: 3, child: Text('3+ stars')),
+                        DropdownMenuItem(value: 4, child: Text('4+ stars')),
+                        DropdownMenuItem(value: 4.5, child: Text('4.5+ stars')),
+                      ],
+                      onChanged: (value) {
+                        setModalState(() => draftRating = value ?? 0);
+                      },
+                    ),
+                  ],
+                  const SizedBox(height: AppSpacing.l),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _radiusKm = draftRadius;
+                          _minimumRating = draftRating;
+                          _availableOnly = draftAvailable;
+                        });
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accentBlue,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Apply filters'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isProvider = widget.searchType == 'provider';
+    final resultsAsync = ref.watch(searchResultsProvider(_request));
+
     return Scaffold(
       body: Stack(
         children: [
-          // ── Map ───────────────────────────────────────────────────
-          FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              initialCenter: _userLocation ?? const LatLng(36.7372, 3.0865),
-              initialZoom: 13,
-              onTap: (_, __) => setState(() => _selectedUser = null),
-            ),
-            children: [
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.nearwork.app',
+          resultsAsync.when(
+            loading: () => FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: _location.center,
+                initialZoom: 12.5,
               ),
-              // User marker
-              if (_userLocation != null)
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: _userLocation!,
-                      width: 24,
-                      height: 24,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.accentBlue,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 3),
-                          boxShadow: [
-                            BoxShadow(
-                                color: AppColors.accentBlue.withOpacity(0.4),
-                                blurRadius: 8)
-                          ],
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.nearwork.app',
+                ),
+              ],
+            ),
+            error: (error, _) => Center(
+              child: Padding(
+                padding: AppSpacing.pagePadding,
+                child: Text(
+                  error.toString(),
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.errorRed),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+            data: (results) {
+              final markers = results
+                  .map(
+                    (result) => Marker(
+                      point: LatLng(
+                        result.user.location!.latitude,
+                        result.user.location!.longitude,
+                      ),
+                      width: 64,
+                      height: 64,
+                      child: GestureDetector(
+                        onTap: () {
+                          if (_type == DiscoverySearchType.workProviders) {
+                            context.push('/provider-profile/${result.user.id}');
+                          } else {
+                            context.push('/merchant-profile/${result.user.id}');
+                          }
+                        },
+                        child: _MarkerAvatar(result: result),
+                      ),
+                    ),
+                  )
+                  .toList();
+
+              return FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: _location.center,
+                  initialZoom: 12.5,
+                  interactionOptions: const InteractionOptions(
+                    flags: InteractiveFlag.all,
+                  ),
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.nearwork.app',
+                  ),
+                  CircleLayer(
+                    circles: [
+                      CircleMarker(
+                        point: _location.center,
+                        radius: _radiusKm * 1000,
+                        useRadiusInMeter: true,
+                        color: AppColors.accentBlue.withValues(alpha: 0.08),
+                        borderColor: AppColors.accentBlue.withValues(alpha: 0.45),
+                        borderStrokeWidth: 2,
+                      ),
+                    ],
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: _location.center,
+                        width: 30,
+                        height: 30,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.accentBlue,
+                            border: Border.all(color: Colors.white, width: 3),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              // Result markers
-              MarkerLayer(
-                markers: _results.map((user) {
-                  final loc = user.location!;
-                  final isSelected = _selectedUser?.id == user.id;
-                  return Marker(
-                    point: LatLng(loc.latitude, loc.longitude),
-                    width: 56,
-                    height: 64,
-                    child: GestureDetector(
-                      onTap: () => _openProfile(user),
-                      child: Column(
-                        children: [
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            width: isSelected ? 56 : 48,
-                            height: isSelected ? 56 : 48,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white,
-                              border: Border.all(
-                                color: isSelected
-                                    ? AppColors.accentBlue
-                                    : Colors.white,
-                                width: isSelected ? 3 : 2,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                    color: Colors.black.withOpacity(0.2),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2))
-                              ],
-                            ),
-                            child: ClipOval(
-                              child: user.photoUrl != null
-                                  ? CachedNetworkImage(
-                                      imageUrl: user.photoUrl!,
-                                      fit: BoxFit.cover,
-                                      placeholder: (_, __) =>
-                                          const ColoredBox(color: AppColors.accentBlue),
-                                    )
-                                  : Container(
-                                      color: AppColors.accentBlue.withOpacity(0.2),
-                                      child: Center(
-                                        child: Text(
-                                          user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                                          style: const TextStyle(
-                                            color: AppColors.accentBlue,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                            ),
-                          ),
-                          // Pin tail
-                          Container(
-                            width: 2,
-                            height: 8,
-                            color: isSelected ? AppColors.accentBlue : Colors.grey,
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
+                      ...markers,
+                    ],
+                  ),
+                ],
+              );
+            },
           ),
-
-          // ── Top Bar ───────────────────────────────────────────────
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.m),
-              child: Row(
+              child: Column(
                 children: [
-                  _MapButton(
-                    icon: Icons.arrow_back_rounded,
-                    onTap: () => context.pop(),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 8)
-                        ],
+                  Row(
+                    children: [
+                      _MapActionButton(
+                        icon: Icons.arrow_back_rounded,
+                        onTap: () => context.pop(),
                       ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            isProvider ? Icons.handyman_rounded : Icons.storefront_rounded,
-                            color: AppColors.accentBlue,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            widget.category == 'Any' || widget.category.isEmpty
-                                ? 'All ${isProvider ? 'Providers' : 'Marketplaces'}'
-                                : widget.category,
-                            style: AppTextStyles.bodyMedium
-                                .copyWith(fontWeight: FontWeight.w600),
-                          ),
-                          const Spacer(),
-                          if (_isLoading)
-                            const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.accentBlue))
-                          else
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.accentBlue.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 16,
+                                offset: const Offset(0, 6),
                               ),
-                              child: Text('${_results.length} found',
-                                  style: AppTextStyles.caption.copyWith(
-                                      color: AppColors.accentBlue,
-                                      fontWeight: FontWeight.w700)),
-                            ),
-                        ],
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _type == DiscoverySearchType.workProviders
+                                    ? 'Work Providers'
+                                    : 'Marketplaces',
+                                style: AppTextStyles.headingSmall,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _location.label,
+                                style: AppTextStyles.caption,
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
+                      const SizedBox(width: 8),
+                      _MapActionButton(
+                        icon: Icons.tune_rounded,
+                        onTap: _openFilterSheet,
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _MapActionButton(
+                          icon: Icons.add_rounded,
+                          onTap: () {
+                            _mapController.move(
+                              _mapController.camera.center,
+                              _mapController.camera.zoom + 1,
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        _MapActionButton(
+                          icon: Icons.remove_rounded,
+                          onTap: () {
+                            _mapController.move(
+                              _mapController.camera.center,
+                              _mapController.camera.zoom - 1,
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        _MapActionButton(
+                          icon: Icons.my_location_rounded,
+                          onTap: () => _mapController.move(_location.center, 12.5),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  _MapButton(
-                    icon: Icons.my_location_rounded,
-                    onTap: () {
-                      if (_userLocation != null) {
-                        _mapController.move(_userLocation!, 14);
-                      }
+                  const SizedBox(height: AppSpacing.m),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final resultsValue = ref.watch(searchResultsProvider(_request));
+                      return resultsValue.when(
+                        loading: () => const SizedBox(
+                          width: double.infinity,
+                          child: Card(
+                            child: Padding(
+                              padding: EdgeInsets.all(AppSpacing.m),
+                              child: LinearProgressIndicator(),
+                            ),
+                          ),
+                        ),
+                        error: (_, _) => const SizedBox.shrink(),
+                        data: (results) {
+                          if (results.isEmpty) {
+                            return Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(AppSpacing.m),
+                                child: Text(
+                                  'No results matched the current filters.',
+                                  style: AppTextStyles.bodyMedium,
+                                ),
+                              ),
+                            );
+                          }
+
+                          return Container(
+                            width: double.infinity,
+                            constraints: const BoxConstraints(maxHeight: 220),
+                            padding: const EdgeInsets.all(AppSpacing.m),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.08),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${results.length} result${results.length == 1 ? '' : 's'}',
+                                  style: AppTextStyles.headingSmall,
+                                ),
+                                const SizedBox(height: AppSpacing.s),
+                                Expanded(
+                                  child: ListView.separated(
+                                    itemCount: results.length,
+                                    separatorBuilder: (_, _) =>
+                                        const SizedBox(height: 10),
+                                    itemBuilder: (context, index) {
+                                      final result = results[index];
+                                      final title = _type ==
+                                              DiscoverySearchType.workProviders
+                                          ? result.user.name
+                                          : (result.user is MarketplaceModel
+                                              ? (result.user as MarketplaceModel)
+                                                      .businessName ??
+                                                  result.user.name
+                                              : result.user.name);
+                                      final subtitle = _type ==
+                                              DiscoverySearchType.workProviders
+                                          ? (result.user as WorkProviderModel)
+                                                  .profession ??
+                                              'Work Provider'
+                                          : (result.user as MarketplaceModel)
+                                                  .category ??
+                                              'Marketplace';
+
+                                      return ListTile(
+                                        contentPadding: EdgeInsets.zero,
+                                        leading: CircleAvatar(
+                                          backgroundImage: result.user.photoUrl == null
+                                              ? null
+                                              : NetworkImage(result.user.photoUrl!),
+                                          backgroundColor:
+                                              AppColors.accentBlue.withValues(alpha: 0.12),
+                                          child: result.user.photoUrl == null
+                                              ? Text(
+                                                  title.substring(0, 1).toUpperCase(),
+                                                  style: AppTextStyles.headingSmall.copyWith(
+                                                    color: AppColors.accentBlue,
+                                                  ),
+                                                )
+                                              : null,
+                                        ),
+                                        title: Text(title),
+                                        subtitle: Text(
+                                          '$subtitle • ${result.distanceKm.toStringAsFixed(1)} km',
+                                        ),
+                                        trailing: const Icon(
+                                          Icons.chevron_right_rounded,
+                                        ),
+                                        onTap: () {
+                                          if (_type ==
+                                              DiscoverySearchType.workProviders) {
+                                            context.push('/provider-profile/${result.user.id}');
+                                          } else {
+                                            context.push('/merchant-profile/${result.user.id}');
+                                          }
+                                        },
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
                     },
                   ),
                 ],
               ),
             ),
           ),
-
-          // ── Loading ───────────────────────────────────────────────
-          if (_isLoading)
-            const Center(child: CircularProgressIndicator(color: AppColors.accentBlue)),
-
-          // ── Selected Profile Sheet ────────────────────────────────
-          if (_selectedUser != null)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: _ProfileMiniCard(
-                user: _selectedUser!,
-                isProvider: isProvider,
-                onTap: () {
-                  if (isProvider) {
-                    context.push('/provider-profile/${_selectedUser!.id}');
-                  } else {
-                    context.push('/merchant-profile/${_selectedUser!.id}');
-                  }
-                },
-                onClose: () => setState(() => _selectedUser = null),
-              ),
-            ),
         ],
       ),
     );
   }
 }
 
-class _MapButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  const _MapButton({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8)
-          ],
-        ),
-        child: Icon(icon, color: AppColors.textDark, size: 20),
-      ),
-    );
-  }
-}
-
-class _ProfileMiniCard extends StatelessWidget {
-  final UserModel user;
-  final bool isProvider;
-  final VoidCallback onTap;
-  final VoidCallback onClose;
-
-  const _ProfileMiniCard({
-    required this.user,
-    required this.isProvider,
+class _MapActionButton extends StatelessWidget {
+  const _MapActionButton({
+    required this.icon,
     required this.onTap,
-    required this.onClose,
   });
 
+  final IconData icon;
+  final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) {
-    final data = user.toJson();
-    final subtitle = isProvider
-        ? (data['profession'] as String? ?? '')
-        : (data['category'] as String? ?? '');
-    final isAvailable = data['isAvailableNow'] as bool? ?? false;
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: Icon(icon, color: AppColors.primaryNavy),
+        ),
+      ),
+    );
+  }
+}
 
-    return Container(
-      margin: const EdgeInsets.all(AppSpacing.m),
-      padding: const EdgeInsets.all(AppSpacing.l),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 20,
-              offset: const Offset(0, -4))
-        ],
-      ),
-      child: Row(
-        children: [
-          // Avatar
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.accentBlue.withOpacity(0.3)),
+class _MarkerAvatar extends StatelessWidget {
+  const _MarkerAvatar({required this.result});
+
+  final DiscoverySearchResult result;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = result.user.photoUrl == null
+        ? Text(
+            result.user.name.substring(0, 1).toUpperCase(),
+            style: AppTextStyles.headingSmall.copyWith(
+              color: AppColors.accentBlue,
             ),
-            child: ClipOval(
-              child: user.photoUrl != null
-                  ? CachedNetworkImage(imageUrl: user.photoUrl!, fit: BoxFit.cover)
-                  : Container(
-                      color: AppColors.accentBlue.withOpacity(0.1),
-                      child: Center(
-                        child: Text(
-                          user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                          style: const TextStyle(
-                              color: AppColors.accentBlue,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 22),
-                        ),
-                      ),
-                    ),
+          )
+        : null;
+
+    return Column(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white,
+            border: Border.all(
+              color: result.isVerified ? AppColors.starGold : AppColors.accentBlue,
+              width: 3,
             ),
+            image: result.user.photoUrl == null
+                ? null
+                : DecorationImage(
+                    image: NetworkImage(result.user.photoUrl!),
+                    fit: BoxFit.cover,
+                  ),
           ),
-          const SizedBox(width: AppSpacing.m),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        isProvider ? user.name : (data['businessName'] as String? ?? user.name),
-                        style: AppTextStyles.headingSmall.copyWith(fontSize: 16),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (isProvider && isAvailable)
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                            color: AppColors.availableGreen, shape: BoxShape.circle),
-                      ),
-                  ],
-                ),
-                if (subtitle.isNotEmpty)
-                  Text(subtitle,
-                      style: AppTextStyles.caption.copyWith(color: AppColors.accentBlue)),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.star_rounded, color: AppColors.starGold, size: 14),
-                    const SizedBox(width: 2),
-                    Text(
-                      user.rating > 0
-                          ? '${user.rating.toStringAsFixed(1)} (${user.reviewCount})'
-                          : 'No reviews yet',
-                      style: AppTextStyles.caption,
-                    ),
-                  ],
-                ),
-              ],
-            ),
+          child: child == null ? null : Center(child: child),
+        ),
+        Container(
+          width: 4,
+          height: 10,
+          decoration: BoxDecoration(
+            color: result.isVerified ? AppColors.starGold : AppColors.accentBlue,
+            borderRadius: BorderRadius.circular(99),
           ),
-          const SizedBox(width: AppSpacing.m),
-          Column(
-            children: [
-              GestureDetector(
-                onTap: onClose,
-                child: const Icon(Icons.close, color: AppColors.softGray, size: 20),
-              ),
-              const SizedBox(height: 10),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accentBlue,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                onPressed: onTap,
-                child: const Text('View', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-              ),
-            ],
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

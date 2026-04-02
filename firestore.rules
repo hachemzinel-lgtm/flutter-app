@@ -1,42 +1,120 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
+
+    function currentUid() {
+      return request.auth.uid;
+    }
+
     function isOwner(userId) {
-      return request.auth.uid == userId;
+      return isSignedIn() && currentUid() == userId;
     }
+
     function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/admins/$(currentUid()));
     }
 
-    // User profiles
+    function userType(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.accountType;
+    }
+
+    function hasParticipantAccess(participants) {
+      return isSignedIn() && currentUid() in participants;
+    }
+
+    function isAllowedConversationPair(participants) {
+      return participants.size() == 2 &&
+        participants[0] != participants[1] &&
+        (
+          (userType(participants[0]) == 'client' &&
+            (userType(participants[1]) == 'workProvider' || userType(participants[1]) == 'marketplace')) ||
+          (userType(participants[1]) == 'client' &&
+            (userType(participants[0]) == 'workProvider' || userType(participants[0]) == 'marketplace')) ||
+          (userType(participants[0]) == 'workProvider' && userType(participants[1]) == 'marketplace') ||
+          (userType(participants[1]) == 'workProvider' && userType(participants[0]) == 'marketplace')
+        );
+    }
+
+    function ownerCanUpdateOwnProfile() {
+      return request.resource.data.accountType == resource.data.accountType &&
+        request.resource.data.email == resource.data.email &&
+        request.resource.data.rating == resource.data.rating &&
+        request.resource.data.reviewCount == resource.data.reviewCount &&
+        request.resource.data.isBanned == resource.data.isBanned &&
+        request.resource.data.verificationStatus == resource.data.verificationStatus &&
+        request.resource.data.verificationReason == resource.data.verificationReason &&
+        request.resource.data.isVerified == resource.data.isVerified;
+    }
+
     match /users/{userId} {
+      // Note: With the current single-document schema, Firestore cannot expose only
+      // public fields. To hide private fields like email, move public data into a
+      // separate collection or subcollection and lock the private document down.
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow create: if isOwner(userId);
+      allow update: if isAdmin() || (isOwner(userId) && ownerCanUpdateOwnProfile());
       allow delete: if isAdmin();
-      
-      // Verification status should only be writable by server/admin
-      // (Simplified here, in production we would restrict specific fields)
-    }
 
-    // Conversations
-    match /conversations/{convId} {
-      allow read, write: if isSignedIn() && (request.auth.uid in resource.data.participants || request.auth.uid in request.resource.data.participants);
-      
-      match /messages/{msgId} {
-        allow read, write: if isSignedIn(); // Add more strict checks in production
+      match /portfolio/{photoId} {
+        allow read: if isSignedIn();
+        allow create, update, delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /notifications/{notificationId} {
+        allow read, create, update, delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /reviews/{reviewId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() &&
+          request.resource.data.reviewerId == currentUid();
+        allow update: if isAdmin() ||
+          (isOwner(userId) &&
+            request.resource.data.reviewerId == resource.data.reviewerId &&
+            request.resource.data.rating == resource.data.rating &&
+            request.resource.data.reviewText == resource.data.reviewText &&
+            request.resource.data.createdAt == resource.data.createdAt);
+        allow delete: if isAdmin();
       }
     }
 
-    // Reviews
-    match /users/{userId}/reviews/{reviewId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.reviewerId == request.auth.uid;
-      allow update, delete: if isAdmin() || isOwner(request.resource.data.reviewerId);
+    match /conversations/{conversationId} {
+      allow read: if hasParticipantAccess(resource.data.participants);
+      allow create: if hasParticipantAccess(request.resource.data.participants) &&
+        isAllowedConversationPair(request.resource.data.participants);
+      allow update: if hasParticipantAccess(resource.data.participants) &&
+        request.resource.data.participants == resource.data.participants;
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if hasParticipantAccess(
+          get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants
+        );
+        allow create: if hasParticipantAccess(
+            get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants
+          ) &&
+          request.resource.data.senderId == currentUid();
+        allow update: if hasParticipantAccess(
+          get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants
+        );
+        allow delete: if isAdmin();
+      }
+    }
+
+    match /admins/{adminId} {
+      allow read: if (isSignedIn() && currentUid() == adminId) || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /reports/{reportId} {
+      allow create: if isSignedIn() &&
+        request.resource.data.reporterId == currentUid();
+      allow read: if isAdmin() || resource.data.reporterId == currentUid();
+      allow update, delete: if isAdmin();
     }
   }
 }

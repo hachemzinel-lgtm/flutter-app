@@ -11,7 +11,7 @@ class StorageService {
   }
 
   static Future<String> uploadDocument(String uid, File file, String name) async {
-    final ref = _storage.ref('users/$uid/documents/$name');
+    final ref = _storage.ref('users/$uid/documents/$name.pdf');
     await ref.putFile(file);
     return await ref.getDownloadURL();
   }

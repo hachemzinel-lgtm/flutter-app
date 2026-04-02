@@ -1,234 +1,325 @@
+import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_text_styles.dart';
 import '../../../core/constants/app_spacing.dart';
+import '../../../core/constants/app_text_styles.dart';
+import '../../../core/models/marketplace_model.dart';
+import '../../../services/storage_service.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../reviews/screens/reviews_screen.dart';
 
 class MarketplaceEditProfileScreen extends ConsumerStatefulWidget {
   const MarketplaceEditProfileScreen({super.key});
 
   @override
-  ConsumerState<MarketplaceEditProfileScreen> createState() => _MarketplaceEditProfileScreenState();
+  ConsumerState<MarketplaceEditProfileScreen> createState() =>
+      _MarketplaceEditProfileScreenState();
 }
 
-class _MarketplaceEditProfileScreenState extends ConsumerState<MarketplaceEditProfileScreen> {
-  final _formKey = GlobalKey<FormState>();
-  bool _isSaving = false;
-
-  final _shopNameCtrl = TextEditingController();
-  final _shopDescCtrl = TextEditingController();
-  final _shopCategoryCtrl = TextEditingController();
-  
-  final _ownerNameCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController();
-  final _whatsappCtrl = TextEditingController();
-
-  final _streetCtrl = TextEditingController();
-  final _cityCtrl = TextEditingController();
-  
-  bool _deliveryAvailable = false;
-  double _deliveryRadius = 15.0;
+class _MarketplaceEditProfileScreenState
+    extends ConsumerState<MarketplaceEditProfileScreen> {
+  final _descriptionController = TextEditingController();
+  final _addressController = TextEditingController();
+  bool _initialized = false;
+  bool _saving = false;
+  bool _alwaysOpen = false;
+  String _language = 'en';
+  GeoPoint? _location;
+  File? _newProfileImage;
+  final List<File> _newPhotos = [];
 
   @override
-  void initState() {
-    super.initState();
-    _loadProfile();
+  void dispose() {
+    _descriptionController.dispose();
+    _addressController.dispose();
+    super.dispose();
   }
 
-  Future<void> _loadProfile() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-    
-    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    if (!doc.exists || !mounted) return;
-    
-    final d = doc.data()!;
+  void _hydrate(MarketplaceModel user) {
+    if (_initialized) return;
+    _initialized = true;
+    _descriptionController.text = user.description ?? '';
+    _addressController.text = user.address ?? '';
+    _alwaysOpen = user.openingHours?['alwaysOpen'] == true;
+    _language = user.language ?? 'en';
+    _location = user.location;
+  }
+
+  Future<void> _pickProfileImage() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 82,
+    );
+    if (picked != null) {
+      setState(() => _newProfileImage = File(picked.path));
+    }
+  }
+
+  Future<void> _pickPhotos() async {
+    final picked = await ImagePicker().pickMultiImage(imageQuality: 78);
+    if (picked.isEmpty) return;
     setState(() {
-      _shopNameCtrl.text = d['shopName'] ?? d['name'] ?? '';
-      _shopDescCtrl.text = d['shopDescription'] ?? '';
-      _shopCategoryCtrl.text = d['shopCategory'] ?? '';
-
-      _ownerNameCtrl.text = d['ownerName'] ?? d['firstName'] ?? '';
-      
-      final contact = d['contact'] as Map<String, dynamic>? ?? {};
-      _phoneCtrl.text = contact['phoneNumber'] ?? d['phone'] ?? '';
-      _whatsappCtrl.text = contact['whatsappNumber'] ?? '';
-
-      final loc = d['location'] as Map<String, dynamic>? ?? {};
-      _streetCtrl.text = loc['street'] ?? '';
-      _cityCtrl.text = loc['city'] ?? '';
-      _deliveryAvailable = loc['deliveryAvailable'] ?? false;
-      _deliveryRadius = (loc['deliveryRadius'] as num?)?.toDouble() ?? 15.0;
+      for (final item in picked) {
+        if (_newPhotos.length >= 20) break;
+        _newPhotos.add(File(item.path));
+      }
     });
   }
 
-  Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-    
-    setState(() => _isSaving = true);
+  Future<void> _useCurrentLocation() async {
     try {
-      await FirebaseFirestore.instance.collection('users').doc(uid).set({
-        'shopName': _shopNameCtrl.text.trim(),
-        'name': _shopNameCtrl.text.trim(),
-        'shopDescription': _shopDescCtrl.text.trim(),
-        'shopCategory': _shopCategoryCtrl.text.trim(),
-        'ownerName': _ownerNameCtrl.text.trim(),
-        'contact': {
-          'phoneNumber': _phoneCtrl.text.trim(),
-          'whatsappNumber': _whatsappCtrl.text.trim(),
-        },
-        'location': {
-          'street': _streetCtrl.text.trim(),
-          'city': _cityCtrl.text.trim(),
-          'deliveryAvailable': _deliveryAvailable,
-          'deliveryRadius': _deliveryRadius,
-        },
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        throw Exception('Location permission is required.');
+      }
+      final position = await Geolocator.getCurrentPosition();
+      setState(() {
+        _location = GeoPoint(position.latitude, position.longitude);
+      });
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          backgroundColor: AppColors.errorRed,
+        ),
+      );
+    }
+  }
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Marketplace profile updated successfully!'), backgroundColor: Colors.green),
-        );
+  Future<void> _save(MarketplaceModel user) async {
+    setState(() => _saving = true);
+    try {
+      String? profileUrl = user.photoUrl;
+      if (_newProfileImage != null) {
+        profileUrl =
+            await StorageService.uploadProfilePicture(user.id, _newProfileImage!);
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.errorRed),
+
+      final photos = <String>[...user.photos];
+      for (var index = 0; index < _newPhotos.length; index++) {
+        final url = await StorageService.uploadMarketplacePhoto(
+          user.id,
+          _newPhotos[index],
+          'edit_${DateTime.now().millisecondsSinceEpoch}_$index',
         );
+        photos.add(url);
       }
+
+      final updated = MarketplaceModel(
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        phone: user.phone,
+        photoUrl: profileUrl,
+        createdAt: user.createdAt,
+        location: _location,
+        address: _addressController.text.trim().isEmpty
+            ? null
+            : _addressController.text.trim(),
+        language: _language,
+        rating: user.rating,
+        reviewCount: user.reviewCount,
+        isBanned: user.isBanned,
+        notificationsEnabled: user.notificationsEnabled,
+        businessName: user.businessName,
+        category: user.category,
+        description: _descriptionController.text.trim(),
+        openingHours: _alwaysOpen ? {'alwaysOpen': true} : user.openingHours,
+        photos: photos,
+      );
+
+      await ref.read(authServiceProvider).setupProfile(updated);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile updated.'),
+          backgroundColor: AppColors.availableGreen,
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          backgroundColor: AppColors.errorRed,
+        ),
+      );
     } finally {
-      if (mounted) setState(() => _isSaving = false);
+      if (mounted) setState(() => _saving = false);
     }
   }
 
   @override
-  void dispose() {
-    _shopNameCtrl.dispose(); _shopDescCtrl.dispose(); _shopCategoryCtrl.dispose();
-    _ownerNameCtrl.dispose(); _phoneCtrl.dispose(); _whatsappCtrl.dispose();
-    _streetCtrl.dispose(); _cityCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final user = ref.watch(currentUserDocProvider).value;
+    if (user is! MarketplaceModel) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    _hydrate(user);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Marketplace Profile'), elevation: 0),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: AppSpacing.pagePadding,
-          children: [
-            _buildSection(
-              title: 'Shop Details',
-              icon: Icons.store_outlined,
-              children: [
-                _field('Shop / Business Name', _shopNameCtrl, Icons.store, required: true),
-                _field('Category (e.g., Electronics, Bakery)', _shopCategoryCtrl, Icons.category, required: true),
-                _field('Shop Description', _shopDescCtrl, Icons.article, maxLines: 4),
-              ],
-            ),
-            _buildSection(
-              title: 'Contact Information',
-              icon: Icons.contact_page_outlined,
-              children: [
-                _field('Owner Name', _ownerNameCtrl, Icons.person, required: true),
-                _field('Phone Number', _phoneCtrl, Icons.phone, type: TextInputType.phone, required: true),
-                _field('WhatsApp Number', _whatsappCtrl, Icons.chat, type: TextInputType.phone),
-              ],
-            ),
-            _buildSection(
-              title: 'Location & Delivery',
-              icon: Icons.local_shipping_outlined,
-              children: [
-                _field('Street Address', _streetCtrl, Icons.home, required: true),
-                _field('City', _cityCtrl, Icons.location_city, required: true),
-                SwitchListTile(
-                  title: const Text('Delivery Available', style: TextStyle(fontWeight: FontWeight.w600)),
-                  value: _deliveryAvailable,
-                  activeColor: AppColors.accentBlue,
-                  onChanged: (v) => setState(() => _deliveryAvailable = v),
-                  contentPadding: EdgeInsets.zero,
-                ),
-                if (_deliveryAvailable) ...[
-                  const SizedBox(height: 8),
-                  Text('Delivery Radius: ${_deliveryRadius.toStringAsFixed(0)} km', style: AppTextStyles.bodyLarge),
-                  Slider(
-                    value: _deliveryRadius, min: 1, max: 100, divisions: 99,
-                    activeColor: AppColors.accentBlue,
-                    onChanged: (v) => setState(() => _deliveryRadius = v),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            SizedBox(
-              height: AppSpacing.buttonHeight,
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isSaving ? null : _save,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accentBlue,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.borderRadius)),
-                ),
-                child: _isSaving
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Save Changes', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+      appBar: AppBar(title: const Text('My Marketplace Profile')),
+      body: ListView(
+        padding: AppSpacing.pagePadding,
+        children: [
+          Center(
+            child: GestureDetector(
+              onTap: _pickProfileImage,
+              child: CircleAvatar(
+                radius: 48,
+                backgroundColor: AppColors.accentBlue.withValues(alpha: 0.12),
+                backgroundImage: _profileImageProvider(user),
+                child: (_newProfileImage == null && user.photoUrl == null)
+                    ? Text(
+                        (user.businessName ?? user.name).substring(0, 1).toUpperCase(),
+                        style: AppTextStyles.headingSmall.copyWith(
+                          color: AppColors.accentBlue,
+                        ),
+                      )
+                    : null,
               ),
             ),
-            const SizedBox(height: AppSpacing.xl),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSection({required String title, required IconData icon, required List<Widget> children}) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: AppSpacing.m),
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.borderRadius), side: BorderSide(color: AppColors.softGray.withOpacity(0.15))),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.m),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              Icon(icon, color: AppColors.accentBlue),
-              const SizedBox(width: 8),
-              Text(title, style: AppTextStyles.headingSmall.copyWith(fontSize: 15)),
-            ]),
-            const SizedBox(height: AppSpacing.l),
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: children.map((w) => Padding(padding: const EdgeInsets.only(bottom: 12), child: w)).toList()),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _field(String label, TextEditingController ctrl, IconData icon, {TextInputType? type, bool required = false, int maxLines = 1}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label + (required ? ' *' : ''), style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: ctrl,
-          keyboardType: type,
-          maxLines: maxLines,
-          validator: required ? (v) => (v == null || v.trim().isEmpty) ? 'Required' : null : null,
-          decoration: InputDecoration(
-            prefixIcon: maxLines == 1 ? Icon(icon, color: AppColors.softGray, size: 18) : null,
-            filled: true,
-            fillColor: AppColors.softGray.withOpacity(0.04),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
           ),
-        ),
-      ],
+          const SizedBox(height: AppSpacing.xl),
+          TextField(
+            controller: _descriptionController,
+            maxLines: 5,
+            maxLength: 500,
+            decoration: const InputDecoration(labelText: 'Description'),
+          ),
+          const SizedBox(height: AppSpacing.m),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Always open'),
+            value: _alwaysOpen,
+            onChanged: (value) => setState(() => _alwaysOpen = value),
+          ),
+          const SizedBox(height: AppSpacing.m),
+          TextField(
+            controller: _addressController,
+            decoration: const InputDecoration(labelText: 'Location'),
+          ),
+          const SizedBox(height: AppSpacing.s),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: _useCurrentLocation,
+              icon: const Icon(Icons.my_location_outlined),
+              label: const Text('Use current location'),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.m),
+          DropdownButtonFormField<String>(
+            initialValue: _language,
+            decoration: const InputDecoration(labelText: 'Language'),
+            items: const [
+              DropdownMenuItem(value: 'en', child: Text('English')),
+              DropdownMenuItem(value: 'fr', child: Text('French')),
+              DropdownMenuItem(value: 'ar', child: Text('Arabic')),
+            ],
+            onChanged: (value) => setState(() => _language = value ?? 'en'),
+          ),
+          const SizedBox(height: AppSpacing.l),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Business photos', style: AppTextStyles.headingSmall),
+              TextButton.icon(
+                onPressed: _pickPhotos,
+                icon: const Icon(Icons.add_photo_alternate_outlined),
+                label: const Text('Add photos'),
+              ),
+            ],
+          ),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              ...user.photos.map(
+                (image) => ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Image.network(
+                    image,
+                    width: 90,
+                    height: 90,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              ..._newPhotos.map(
+                (image) => ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Image.file(
+                    image,
+                    width: 90,
+                    height: 90,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          ElevatedButton(
+            onPressed: _saving ? null : () => _save(user),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentBlue,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 18),
+            ),
+            child: _saving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.4,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text('Save Changes'),
+          ),
+          const SizedBox(height: AppSpacing.m),
+          OutlinedButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ReviewsScreen(providerId: user.id),
+              ),
+            ),
+            child: const Text('My Reviews'),
+          ),
+          const SizedBox(height: AppSpacing.s),
+          OutlinedButton(
+            onPressed: () async {
+              await ref.read(authServiceProvider).signOut();
+              if (!context.mounted) return;
+              context.go('/login');
+            },
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
     );
+  }
+
+  ImageProvider<Object>? _profileImageProvider(MarketplaceModel user) {
+    if (_newProfileImage != null) {
+      return FileImage(_newProfileImage!);
+    }
+    if (user.photoUrl != null) {
+      return NetworkImage(user.photoUrl!);
+    }
+    return null;
   }
 }

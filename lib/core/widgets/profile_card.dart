@@ -40,7 +40,7 @@ class ProfileCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -52,7 +52,7 @@ class ProfileCard extends StatelessWidget {
               tag: heroTag ?? 'profile_$name',
               child: CircleAvatar(
                 radius: 30,
-                backgroundColor: AppColors.softGray.withOpacity(0.2),
+                backgroundColor: AppColors.softGray.withValues(alpha: 0.2),
                 backgroundImage: photoUrl != null
                     ? CachedNetworkImageProvider(photoUrl!)
                     : null,

@@ -46,10 +46,10 @@ class _LanguageSelectorScreenState extends State<LanguageSelectorScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppColors.accentBlue.withOpacity(0.05) : Colors.white,
+                      color: isSelected ? AppColors.accentBlue.withValues(alpha: 0.05) : Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isSelected ? AppColors.accentBlue : AppColors.softGray.withOpacity(0.2),
+                        color: isSelected ? AppColors.accentBlue : AppColors.softGray.withValues(alpha: 0.2),
                         width: isSelected ? 2 : 1,
                       ),
                     ),
@@ -59,7 +59,7 @@ class _LanguageSelectorScreenState extends State<LanguageSelectorScreen> {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: AppColors.softGray.withOpacity(0.1),
+                            color: AppColors.softGray.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: Center(

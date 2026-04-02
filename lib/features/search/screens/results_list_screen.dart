@@ -175,7 +175,7 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
                 child: Container(
                   width: 40, height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.softGray.withOpacity(0.3),
+                    color: AppColors.softGray.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -249,7 +249,7 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
                           _minRating = tempRating;
                           _availableOnly = tempAvailable;
                           _activeDistanceLabel = tempDist < 100 ? '≤${tempDist.toStringAsFixed(0)} km' : null;
-                          _activeRatingLabel = tempRating > 0 ? '${tempRating}+★' : null;
+                          _activeRatingLabel = tempRating > 0 ? '$tempRating+★' : null;
                         });
                         Navigator.pop(ctx);
                       },
@@ -272,7 +272,7 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? AppColors.accentBlue : AppColors.softGray.withOpacity(0.08),
+          color: selected ? AppColors.accentBlue : AppColors.softGray.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
@@ -291,9 +291,9 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
       margin: const EdgeInsets.only(right: 6, bottom: 4),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.accentBlue.withOpacity(0.1),
+        color: AppColors.accentBlue.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.accentBlue.withOpacity(0.3)),
+        border: Border.all(color: AppColors.accentBlue.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -345,9 +345,9 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
             child: Container(
               height: 52,
               decoration: BoxDecoration(
-                color: AppColors.softGray.withOpacity(0.06),
+                color: AppColors.softGray.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
-                border: Border.all(color: AppColors.softGray.withOpacity(0.15)),
+                border: Border.all(color: AppColors.softGray.withValues(alpha: 0.15)),
               ),
               child: TextField(
                 controller: _searchController,

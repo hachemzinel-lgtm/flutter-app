@@ -1,24 +1,31 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/models/user_model.dart';
 import '../../../services/review_service.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class RateServiceScreen extends ConsumerStatefulWidget {
+  const RateServiceScreen({
+    super.key,
+    required this.providerId,
+  });
+
   final String providerId;
-  const RateServiceScreen({super.key, required this.providerId});
 
   @override
   ConsumerState<RateServiceScreen> createState() => _RateServiceScreenState();
 }
 
 class _RateServiceScreenState extends ConsumerState<RateServiceScreen> {
+  final _reviewController = TextEditingController();
   double _rating = 0;
-  final TextEditingController _reviewController = TextEditingController();
-  bool _isSubmitting = false;
+  bool _submitting = false;
 
   @override
   void dispose() {
@@ -28,98 +35,166 @@ class _RateServiceScreenState extends ConsumerState<RateServiceScreen> {
 
   Future<void> _submit() async {
     if (_rating == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a rating')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please choose a star rating first.'),
+          backgroundColor: AppColors.errorRed,
+        ),
+      );
       return;
     }
 
-    setState(() => _isSubmitting = true);
-
+    setState(() => _submitting = true);
     try {
-      final user = ref.read(authServiceProvider).currentUser;
+      final authUser = ref.read(authServiceProvider).currentUser;
       final userDoc = ref.read(currentUserDocProvider).value;
-      if (user == null || userDoc == null) throw Exception('User not logged in');
+      if (authUser == null || userDoc == null) {
+        throw Exception('You must be signed in to leave a review.');
+      }
 
       await ReviewService().submitReview(
         targetUserId: widget.providerId,
-        reviewerId: user.uid,
+        reviewerId: authUser.uid,
         reviewerName: userDoc.name,
         reviewerPhoto: userDoc.photoUrl ?? '',
         rating: _rating,
-        text: _reviewController.text,
+        text: _reviewController.text.trim(),
       );
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Thank you for your review!')));
-        context.pop();
+      if (!mounted) {
+        return;
       }
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Thanks for sharing your experience.'),
+          backgroundColor: AppColors.availableGreen,
+        ),
+      );
+      context.pop();
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          backgroundColor: AppColors.errorRed,
+        ),
+      );
     } finally {
-      if (mounted) setState(() => _isSubmitting = false);
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Rate Service')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.l),
-        child: Column(
-          children: [
-            const SizedBox(height: AppSpacing.xl),
-            Text('How was your experience?', style: AppTextStyles.headingMedium, textAlign: TextAlign.center),
-            const SizedBox(height: AppSpacing.m),
-            Text('Your feedback helps others choose better providers.', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.softGray), textAlign: TextAlign.center),
-            const SizedBox(height: AppSpacing.xxl),
-            
-            // Star selector
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(5, (index) {
-                final starValue = index + 1.0;
-                return GestureDetector(
-                  onTap: () => setState(() => _rating = starValue),
-                  child: Icon(
-                    starValue <= _rating ? Icons.star_rounded : Icons.star_outline_rounded,
-                    color: AppColors.starGold,
-                    size: 48,
+    final currentUser = ref.watch(currentUserDocProvider).value;
+
+    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      future: FirebaseFirestore.instance.collection('users').doc(widget.providerId).get(),
+      builder: (context, snapshot) {
+        final targetData = snapshot.data?.data();
+        final targetName = targetData?['businessName']?.toString().trim().isNotEmpty == true
+            ? targetData!['businessName'].toString()
+            : targetData?['name']?.toString() ?? 'this user';
+        final targetType = UserModel.parseUserType(
+          targetData?['accountType']?.toString() ??
+              targetData?['userType']?.toString() ??
+              'client',
+        );
+
+        return Scaffold(
+          appBar: AppBar(title: const Text('Rate your experience')),
+          body: currentUser != null && currentUser.userType != UserType.client
+              ? Center(
+                  child: Padding(
+                    padding: AppSpacing.pagePadding,
+                    child: Text(
+                      'Only clients can submit reviews in NearWork.',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.bodyMedium,
+                    ),
                   ),
-                );
-              }),
-            ),
-            const SizedBox(height: AppSpacing.xxl),
-
-            TextField(
-              controller: _reviewController,
-              maxLines: 5,
-              decoration: InputDecoration(
-                hintText: 'Describe your experience (optional)',
-                fillColor: AppColors.softGray.withOpacity(0.05),
-                filled: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xxl),
-
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: _isSubmitting ? null : _submit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accentBlue,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                )
+              : SingleChildScrollView(
+                  padding: AppSpacing.pagePadding,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: AppSpacing.xl),
+                      Text(
+                        'How was your experience with $targetName?',
+                        style: AppTextStyles.headingMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: AppSpacing.s),
+                      Text(
+                        targetType == UserType.marketplace
+                            ? 'Rate this marketplace and leave an optional review.'
+                            : 'Rate this work provider and leave an optional review.',
+                        style: AppTextStyles.bodyMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: AppSpacing.xxl),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(5, (index) {
+                          final value = index + 1.0;
+                          return IconButton(
+                            onPressed: () => setState(() => _rating = value),
+                            iconSize: 42,
+                            icon: Icon(
+                              value <= _rating
+                                  ? Icons.star_rounded
+                                  : Icons.star_outline_rounded,
+                              color: AppColors.starGold,
+                            ),
+                          );
+                        }),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      TextField(
+                        controller: _reviewController,
+                        maxLines: 6,
+                        maxLength: 500,
+                        decoration: InputDecoration(
+                          hintText: 'Tell others what went well or what could improve.',
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _submitting ? null : _submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.accentBlue,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                          ),
+                          child: _submitting
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.4,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text('Submit Review'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: _isSubmitting 
-                    ? const CircularProgressIndicator(color: Colors.white) 
-                    : const Text('Submit Review', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              ),
-            ),
-          ],
-        ),
-      ),
+        );
+      },
     );
   }
 }

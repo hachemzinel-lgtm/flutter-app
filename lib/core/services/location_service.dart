@@ -38,7 +38,9 @@ class LocationService {
 
       // When we reach here, permissions are granted and we can continue accessing the position of the device.
       return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high, // Production grade default
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
     } catch (e) {
       debugPrint('Error getting location: $e');

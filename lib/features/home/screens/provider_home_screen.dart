@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_text_styles.dart';
 import '../../../core/constants/app_spacing.dart';
+import '../../../core/constants/app_text_styles.dart';
+import '../../../core/constants/marketplace_taxonomy.dart';
+import '../../../core/models/work_provider_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../profile/providers/availability_provider.dart';
-
-const _marketplaceCats = [
-  'Any', 'Restaurant', 'Bakery', 'Grocery Store', 'Pharmacy',
-  'Hardware Store', 'Café', 'Butcher Shop', 'Clothing Store', 'Electronics Store', 'Other',
-];
+import '../providers/home_provider.dart';
 
 class ProviderHomeScreen extends ConsumerStatefulWidget {
   const ProviderHomeScreen({super.key});
@@ -20,260 +19,276 @@ class ProviderHomeScreen extends ConsumerStatefulWidget {
 }
 
 class _ProviderHomeScreenState extends ConsumerState<ProviderHomeScreen> {
-  String _selectedCategory = 'Any';
+  final _manualAddressController = TextEditingController();
+  String _category = 'Any';
   double _radiusKm = 10;
+  bool _useCurrentLocation = true;
+  bool _loadingSearch = false;
 
-  void _search() {
-    context.push(
-      '/map-results?type=marketplace'
-      '&category=${Uri.encodeComponent(_selectedCategory)}'
-      '&radius=$_radiusKm',
-    );
+  @override
+  void dispose() {
+    _manualAddressController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _search() async {
+    final user = ref.read(currentUserDocProvider).value;
+    setState(() => _loadingSearch = true);
+    try {
+      final location = await ref.read(discoveryServiceProvider).resolveSearchLocation(
+            useCurrentLocation: _useCurrentLocation,
+            savedLocation: user?.location,
+            savedAddress: user?.address,
+            manualAddress: _manualAddressController.text,
+          );
+
+      if (!mounted) {
+        return;
+      }
+
+      context.push(
+        '/search-results'
+        '?type=marketplace'
+        '&category=${Uri.encodeComponent(_category)}'
+        '&radius=$_radiusKm'
+        '&minRating=0'
+        '&availableOnly=false'
+        '&lat=${location.center.latitude}'
+        '&lng=${location.center.longitude}'
+        '&label=${Uri.encodeComponent(location.label)}',
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          backgroundColor: AppColors.errorRed,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _loadingSearch = false);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserDocProvider).value;
-    final firstName = user?.name.split(' ').first ?? 'there';
-    final providerData = user?.toJson();
-    final isAvailable = providerData?['isAvailableNow'] as bool? ?? false;
-    final profession = providerData?['profession'] as String? ?? '';
-    final rating = user?.rating ?? 0.0;
+    final provider = user is WorkProviderModel ? user : null;
+    final name = user?.name.split(' ').first ?? 'there';
 
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
+          padding: AppSpacing.pagePadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Header ──────────────────────────────────────────────
               Container(
+                width: double.infinity,
                 padding: const EdgeInsets.all(AppSpacing.l),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF1A1F3A), Color(0xFF0D1B2A)],
-                  ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  color: AppColors.primaryNavy,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 28,
-                          backgroundColor: AppColors.accentBlue.withOpacity(0.2),
-                          backgroundImage: user?.photoUrl != null
-                              ? NetworkImage(user!.photoUrl!)
-                              : null,
-                          child: user?.photoUrl == null
-                              ? Text(firstName[0].toUpperCase(),
-                                  style: const TextStyle(
-                                      color: AppColors.accentBlue,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 20))
-                              : null,
-                        ),
-                        const SizedBox(width: AppSpacing.m),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Welcome back,',
-                                  style: AppTextStyles.caption
-                                      .copyWith(color: Colors.white60)),
-                              Text(firstName,
-                                  style: AppTextStyles.headingSmall
-                                      .copyWith(color: Colors.white)),
-                              if (profession.isNotEmpty)
-                                Text(profession,
-                                    style: AppTextStyles.caption.copyWith(
-                                        color: AppColors.accentBlue)),
-                            ],
-                          ),
-                        ),
-                        // Verified badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: AppColors.starGold.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                                color: AppColors.starGold.withOpacity(0.4)),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.verified_rounded,
-                                  color: AppColors.starGold, size: 14),
-                              const SizedBox(width: 4),
-                              Text('Verified',
-                                  style: AppTextStyles.caption.copyWith(
-                                      color: AppColors.starGold,
-                                      fontWeight: FontWeight.w700)),
-                            ],
-                          ),
-                        ),
-                      ],
+                    Text(
+                      'Welcome back, $name',
+                      style: AppTextStyles.headingLarge.copyWith(color: Colors.white),
+                    ),
+                    const SizedBox(height: AppSpacing.s),
+                    Text(
+                      provider?.profession ?? 'Work Provider',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.accentBlue,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.l),
-                    // Availability toggle
-                    Consumer(builder: (ctx, r, _) {
-                      return Container(
-                        padding: const EdgeInsets.all(AppSpacing.m),
-                        decoration: BoxDecoration(
-                          color: (isAvailable
-                                  ? AppColors.availableGreen
-                                  : AppColors.softGray)
-                              .withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: (isAvailable
-                                    ? AppColors.availableGreen
-                                    : AppColors.softGray)
-                                .withOpacity(0.3),
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.m),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Available Now',
+                                  style: AppTextStyles.headingSmall.copyWith(
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  provider?.isAvailableNow == true
+                                      ? 'Clients can discover you right now.'
+                                      : 'Turn this on when you are ready to accept jobs.',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              isAvailable
-                                  ? Icons.radio_button_checked
-                                  : Icons.radio_button_unchecked,
-                              color: isAvailable
-                                  ? AppColors.availableGreen
-                                  : AppColors.softGray,
-                              size: 20,
-                            ),
-                            const SizedBox(width: AppSpacing.m),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    isAvailable
-                                        ? 'Available Now'
-                                        : 'Currently Offline',
-                                    style: AppTextStyles.bodyMedium.copyWith(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  Text(
-                                    isAvailable
-                                        ? 'Clients can find and contact you'
-                                        : 'You\'re hidden from search results',
-                                    style: AppTextStyles.caption
-                                        .copyWith(color: Colors.white60),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Switch(
-                              value: isAvailable,
-                              onChanged: (v) => ref
-                                  .read(availabilityProvider.notifier)
-                                  .toggle(v),
-                              activeColor: AppColors.availableGreen,
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
+                          Switch(
+                            value: provider?.isAvailableNow ?? false,
+                            onChanged: (value) {
+                              ref.read(availabilityProvider.notifier).toggle(value);
+                            },
+                            activeThumbColor: AppColors.availableGreen,
+                          ),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: AppSpacing.m),
-                    // Stats row
-                    Row(
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
                       children: [
-                        _StatChip(
-                            label: 'Rating',
-                            value: rating > 0
-                                ? '${rating.toStringAsFixed(1)} ⭐'
-                                : 'No ratings'),
-                        const SizedBox(width: AppSpacing.m),
-                        _StatChip(
-                            label: 'Reviews', value: '${user?.reviewCount ?? 0}'),
+                        _StatTile(
+                          label: 'Profile views',
+                          value: '--',
+                        ),
+                        _StatTile(
+                          label: 'Messages',
+                          value: '--',
+                        ),
+                        _StatTile(
+                          label: 'Rating',
+                          value: provider == null || provider.rating == 0
+                              ? '--'
+                              : provider.rating.toStringAsFixed(1),
+                        ),
                       ],
                     ),
                   ],
                 ),
               ),
-
-              // ── Marketplace Search ────────────────────────────────
-              Padding(
+              const SizedBox(height: AppSpacing.l),
+              TextField(
+                readOnly: true,
+                decoration: InputDecoration(
+                  hintText: 'Find marketplaces',
+                  prefixIcon: const Icon(Icons.search),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.l),
+              Container(
                 padding: const EdgeInsets.all(AppSpacing.l),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Find Marketplaces Near You',
-                        style: AppTextStyles.headingSmall),
+                    Text('Search nearby marketplaces', style: AppTextStyles.headingSmall),
                     const SizedBox(height: AppSpacing.m),
-                    Text('Category', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.softGray.withOpacity(0.2)),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          isExpanded: true,
-                          value: _selectedCategory,
-                          items: _marketplaceCats
-                              .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                              .toList(),
-                          onChanged: (v) => setState(() => _selectedCategory = v!),
-                        ),
-                      ),
+                    DropdownButtonFormField<String>(
+                      initialValue: _category,
+                      decoration: const InputDecoration(labelText: 'Marketplace category'),
+                      items: [
+                        'Any',
+                        ...MarketplaceTaxonomy.marketplaceCategories,
+                      ]
+                          .map(
+                            (item) => DropdownMenuItem(value: item, child: Text(item)),
+                          )
+                          .toList(),
+                      onChanged: (value) => setState(() => _category = value ?? 'Any'),
                     ),
-                    const SizedBox(height: AppSpacing.m),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    const SizedBox(height: AppSpacing.l),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
-                        Text('Distance: ${_radiusKm.toInt()} km',
-                            style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.accentBlue.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text('${_radiusKm.toInt()} km',
-                              style: AppTextStyles.caption.copyWith(
-                                  color: AppColors.accentBlue,
-                                  fontWeight: FontWeight.w700)),
+                        ChoiceChip(
+                          label: const Text('Use my current location'),
+                          selected: _useCurrentLocation,
+                          onSelected: (_) => setState(() => _useCurrentLocation = true),
+                        ),
+                        ChoiceChip(
+                          label: const Text('Use saved profile location'),
+                          selected: !_useCurrentLocation &&
+                              _manualAddressController.text.trim().isEmpty,
+                          onSelected: (_) {
+                            setState(() {
+                              _useCurrentLocation = false;
+                              _manualAddressController.clear();
+                            });
+                          },
                         ),
                       ],
                     ),
+                    const SizedBox(height: AppSpacing.m),
+                    TextField(
+                      controller: _manualAddressController,
+                      decoration: const InputDecoration(
+                        labelText: 'Or set location manually',
+                        prefixIcon: Icon(Icons.edit_location_alt_outlined),
+                      ),
+                      onChanged: (_) {
+                        if (_manualAddressController.text.trim().isNotEmpty) {
+                          setState(() => _useCurrentLocation = false);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.l),
+                    Text('Distance radius', style: AppTextStyles.labelSmall),
                     Slider(
                       value: _radiusKm,
                       min: 5,
                       max: 50,
                       divisions: 9,
-                      activeColor: AppColors.accentBlue,
-                      inactiveColor: AppColors.softGray.withOpacity(0.2),
-                      onChanged: (v) => setState(() => _radiusKm = v),
+                      onChanged: (value) => setState(() => _radiusKm = value),
                     ),
-                    const SizedBox(height: AppSpacing.m),
+                    Wrap(
+                      spacing: 8,
+                      children: MarketplaceTaxonomy.searchRadiusOptionsKm
+                          .map(
+                            (radius) => ChoiceChip(
+                              label: Text('${radius.toInt()}km'),
+                              selected: _radiusKm == radius,
+                              onSelected: (_) => setState(() => _radiusKm = radius),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                    const SizedBox(height: AppSpacing.l),
                     SizedBox(
                       width: double.infinity,
-                      height: 54,
-                      child: ElevatedButton.icon(
+                      child: ElevatedButton(
+                        onPressed: _loadingSearch ? null : _search,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.accentBlue,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(vertical: 18),
                         ),
-                        onPressed: _search,
-                        icon: const Icon(Icons.map_outlined),
-                        label: const Text('Show on Map',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                        child: _loadingSearch
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.4,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Search'),
                       ),
                     ),
                   ],
@@ -287,28 +302,34 @@ class _ProviderHomeScreenState extends ConsumerState<ProviderHomeScreen> {
   }
 }
 
-class _StatChip extends StatelessWidget {
+class _StatTile extends StatelessWidget {
+  const _StatTile({
+    required this.label,
+    required this.value,
+  });
+
   final String label;
   final String value;
-  const _StatChip({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(10),
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14)),
-          Text(label,
-              style: const TextStyle(color: Colors.white60, fontSize: 11)),
+          Text(
+            value,
+            style: AppTextStyles.headingSmall.copyWith(color: Colors.white),
+          ),
+          Text(
+            label,
+            style: AppTextStyles.caption.copyWith(color: Colors.white70),
+          ),
         ],
       ),
     );

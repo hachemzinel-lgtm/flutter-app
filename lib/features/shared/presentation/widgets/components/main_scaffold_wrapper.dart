@@ -39,7 +39,7 @@ class MainScaffoldWrapper extends ConsumerWidget {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.06),
+                color: Colors.black.withValues(alpha: 0.06),
                 blurRadius: 20,
                 offset: const Offset(0, -4))
           ],
@@ -67,7 +67,7 @@ class MainScaffoldWrapper extends ConsumerWidget {
                             height: 32,
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? AppColors.accentBlue.withOpacity(0.12)
+                                  ? AppColors.accentBlue.withValues(alpha: 0.12)
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(10),
                             ),

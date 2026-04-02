@@ -15,6 +15,8 @@ class ClientModel extends UserModel {
     super.rating,
     super.reviewCount,
     super.isBanned,
+    super.notificationsEnabled,
+    super.profileCompleted,
   }) : super(userType: UserType.client);
 
   factory ClientModel.fromMap(String id, Map<String, dynamic> data) {
@@ -31,6 +33,8 @@ class ClientModel extends UserModel {
       rating: (data['rating'] ?? 0).toDouble(),
       reviewCount: data['reviewCount'] ?? 0,
       isBanned: data['isBanned'] ?? false,
+      notificationsEnabled: data['notificationsEnabled'] ?? true,
+      profileCompleted: data['profileCompleted'] ?? true,
     );
   }
 }

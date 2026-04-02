@@ -39,7 +39,7 @@ class SettingsScreen extends ConsumerWidget {
                 trailing: Switch(
                   value: false, 
                   onChanged: (v) {},
-                  activeColor: AppColors.accentBlue,
+                  activeThumbColor: AppColors.accentBlue,
                 )),
             
             const SizedBox(height: AppSpacing.l),
@@ -70,15 +70,15 @@ class SettingsScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.m),
       decoration: BoxDecoration(
-        color: AppColors.accentBlue.withOpacity(0.05),
+        color: AppColors.accentBlue.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
-        border: Border.all(color: AppColors.accentBlue.withOpacity(0.1)),
+        border: Border.all(color: AppColors.accentBlue.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 35,
-            backgroundColor: AppColors.softGray.withOpacity(0.1),
+            backgroundColor: AppColors.softGray.withValues(alpha: 0.1),
             backgroundImage: user?.photoUrl != null ? NetworkImage(user!.photoUrl!) : null,
             child: user?.photoUrl == null ? const Icon(Icons.person, size: 35, color: AppColors.softGray) : null,
           ),
@@ -109,7 +109,7 @@ class SettingsScreen extends ConsumerWidget {
         style: AppTextStyles.labelSmall.copyWith(
           letterSpacing: 1.2,
           fontWeight: FontWeight.w800,
-          color: AppColors.textLight.withOpacity(0.7),
+          color: AppColors.textLight.withValues(alpha: 0.7),
         ),
       ),
     );
@@ -121,7 +121,7 @@ class SettingsScreen extends ConsumerWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppColors.softGray.withOpacity(0.05),
+          color: AppColors.softGray.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: AppColors.textDark, size: 20),

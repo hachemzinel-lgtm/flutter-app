@@ -20,8 +20,8 @@ class AvailabilityBadge extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: isAvailable
-            ? AppColors.availableGreen.withOpacity(0.1)
-            : AppColors.offlineGray.withOpacity(0.1),
+            ? AppColors.availableGreen.withValues(alpha: 0.1)
+            : AppColors.offlineGray.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(

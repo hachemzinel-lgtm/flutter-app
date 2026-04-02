@@ -6,6 +6,8 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/google_sign_in_button.dart';
+import '../services/google_auth_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -18,7 +20,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final GoogleAuthService _googleAuthService = GoogleAuthService();
   bool _isPasswordVisible = false;
+  bool _isGoogleLoading = false;
 
   @override
   void dispose() {
@@ -33,11 +37,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         debugPrint('--- [LOGIN SCREEN] Login button pressed ---');
         await ref.read(authServiceProvider).signIn(
           email: _emailController.text.trim(),
-          password: _passwordController.text,
+          password: _passwordController.text.trim(),
         );
         debugPrint('--- [LOGIN SCREEN] Login successful, navigation should be handled by router ---');
-        
-        // No need to context.go('/home') if router handles it via refreshListenable
       } catch (e) {
         debugPrint('--- [LOGIN SCREEN] Login FAILED: $e ---');
         if (mounted) {
@@ -50,6 +52,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           );
         }
       }
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isGoogleLoading = true);
+    try {
+      final credential = await _googleAuthService.signInWithGoogle();
+      if (credential != null && mounted) {
+        // App router will handle navigation strictly based on Auth state + Firestore doc state
+        debugPrint('--- [LOGIN SCREEN] Google Login successful, navigation should be handled by router ---');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppColors.errorRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
     }
   }
 
@@ -140,17 +164,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const _DividerWithText(text: 'OR CONTINUE WITH'),
                     const SizedBox(height: AppSpacing.l),
                     
-                    _SocialButton(
+                    GoogleSignInButton(
                       text: 'Continue with Google',
-                      iconPath: 'assets/google_logo.png', // Assuming asset exists or using placeholder icon
-                      onPressed: () {},
+                      isLoading: _isGoogleLoading,
+                      onPressed: _handleGoogleSignIn,
                     ),
                     
                     const Spacer(),
                     const SizedBox(height: AppSpacing.l), // add some bottom padding for smaller screens
                     Center(
                       child: GestureDetector(
-                        onTap: () => context.push('/account-type'),
+                        onTap: () => context.push('/signup'), // Fixed bug here: User wanted signup navigation! Let's ensure it maps directly to route
                         child: RichText(
                           text: TextSpan(
                             text: "Don't have an account? ",
@@ -198,7 +222,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       hintText: hint,
       prefixIcon: Icon(icon, color: AppColors.softGray, size: 20),
       filled: true,
-      fillColor: AppColors.softGray.withOpacity(0.05),
+      fillColor: AppColors.softGray.withValues(alpha: 0.05),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
         borderSide: BorderSide.none,
@@ -216,7 +240,7 @@ class _DividerWithText extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: Divider(color: AppColors.softGray.withOpacity(0.2))),
+        Expanded(child: Divider(color: AppColors.softGray.withValues(alpha: 0.2))),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
           child: Text(
@@ -224,55 +248,12 @@ class _DividerWithText extends StatelessWidget {
             style: AppTextStyles.caption.copyWith(
               fontWeight: FontWeight.w600,
               letterSpacing: 1.5,
-              color: AppColors.softGray.withOpacity(0.6),
+              color: AppColors.softGray.withValues(alpha: 0.6),
             ),
           ),
         ),
-        Expanded(child: Divider(color: AppColors.softGray.withOpacity(0.2))),
+        Expanded(child: Divider(color: AppColors.softGray.withValues(alpha: 0.2))),
       ],
-    );
-  }
-}
-
-class _SocialButton extends StatelessWidget {
-  final String text;
-  final String iconPath;
-  final VoidCallback onPressed;
-
-  const _SocialButton({
-    required this.text,
-    required this.iconPath,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: AppSpacing.buttonHeight,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(color: AppColors.softGray.withOpacity(0.2)),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.g_mobiledata, size: 32, color: Colors.red), // Placeholder for Google Icon
-            const SizedBox(width: AppSpacing.s),
-            Text(
-              text,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textDark,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
