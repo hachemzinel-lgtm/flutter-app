@@ -76,7 +76,11 @@ class _AccountTypeScreenState extends ConsumerState<AccountTypeScreen>
                         ),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Icon(Icons.location_on, color: Colors.white, size: 30),
+                      child: const Icon(
+                        Icons.location_on,
+                        color: Colors.white,
+                        size: 30,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.xl),
                     Text(
@@ -123,9 +127,13 @@ class _AccountTypeScreenState extends ConsumerState<AccountTypeScreen>
                         title: 'Client',
                         description: 'Looking for services or products',
                         icon: Icons.search_rounded,
-                        gradientColors: const [Color(0xFF00B4D8), Color(0xFF0077A8)],
+                        gradientColors: const [
+                          Color(0xFF00B4D8),
+                          Color(0xFF0077A8),
+                        ],
                         isSelected: _selectedType == UserType.client,
-                        onTap: () => setState(() => _selectedType = UserType.client),
+                        onTap: () =>
+                            setState(() => _selectedType = UserType.client),
                       ),
                       const SizedBox(height: AppSpacing.m),
                       _AccountTypeCard(
@@ -133,9 +141,14 @@ class _AccountTypeScreenState extends ConsumerState<AccountTypeScreen>
                         title: 'Work Provider',
                         description: 'I offer professional services',
                         icon: Icons.handyman_rounded,
-                        gradientColors: const [Color(0xFFFFD700), Color(0xFFF59E0B)],
+                        gradientColors: const [
+                          Color(0xFFFFD700),
+                          Color(0xFFF59E0B),
+                        ],
                         isSelected: _selectedType == UserType.workProvider,
-                        onTap: () => setState(() => _selectedType = UserType.workProvider),
+                        onTap: () => setState(
+                          () => _selectedType = UserType.workProvider,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.m),
                       _AccountTypeCard(
@@ -143,9 +156,14 @@ class _AccountTypeScreenState extends ConsumerState<AccountTypeScreen>
                         title: 'Marketplace',
                         description: 'I own a local business',
                         icon: Icons.storefront_rounded,
-                        gradientColors: const [Color(0xFF10B981), Color(0xFF059669)],
+                        gradientColors: const [
+                          Color(0xFF10B981),
+                          Color(0xFF059669),
+                        ],
                         isSelected: _selectedType == UserType.marketplace,
-                        onTap: () => setState(() => _selectedType = UserType.marketplace),
+                        onTap: () => setState(
+                          () => _selectedType = UserType.marketplace,
+                        ),
                       ),
                     ],
                   ),
@@ -160,16 +178,24 @@ class _AccountTypeScreenState extends ConsumerState<AccountTypeScreen>
                   decoration: BoxDecoration(
                     color: AppColors.accentBlue.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.accentBlue.withValues(alpha: 0.15)),
+                    border: Border.all(
+                      color: AppColors.accentBlue.withValues(alpha: 0.15),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline_rounded, color: AppColors.accentBlue, size: 18),
+                      const Icon(
+                        Icons.info_outline_rounded,
+                        color: AppColors.accentBlue,
+                        size: 18,
+                      ),
                       const SizedBox(width: AppSpacing.s),
                       Expanded(
                         child: Text(
                           'Account type cannot be changed after setup.',
-                          style: AppTextStyles.caption.copyWith(color: AppColors.accentBlue),
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.accentBlue,
+                          ),
                         ),
                       ),
                     ],
@@ -188,7 +214,9 @@ class _AccountTypeScreenState extends ConsumerState<AccountTypeScreen>
                       backgroundColor: AppColors.accentBlue,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.borderRadius,
+                        ),
                       ),
                       elevation: 0,
                     ),
@@ -250,7 +278,9 @@ class _AccountTypeCard extends StatelessWidget {
               : AppColors.cardSurface,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isSelected ? gradientColors[0] : AppColors.softGray.withValues(alpha: 0.15),
+            color: isSelected
+                ? gradientColors[0]
+                : AppColors.softGray.withValues(alpha: 0.15),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
@@ -259,7 +289,7 @@ class _AccountTypeCard extends StatelessWidget {
                     color: gradientColors[0].withValues(alpha: 0.15),
                     blurRadius: 20,
                     offset: const Offset(0, 6),
-                  )
+                  ),
                 ]
               : [],
         ),
@@ -290,7 +320,9 @@ class _AccountTypeCard extends StatelessWidget {
                   Text(
                     title,
                     style: AppTextStyles.headingSmall.copyWith(
-                      color: isSelected ? gradientColors[0] : AppColors.textDark,
+                      color: isSelected
+                          ? gradientColors[0]
+                          : AppColors.textDark,
                       fontSize: 17,
                     ),
                   ),
@@ -311,7 +343,9 @@ class _AccountTypeCard extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: isSelected ? gradientColors[0] : Colors.transparent,
                 border: Border.all(
-                  color: isSelected ? gradientColors[0] : AppColors.softGray.withValues(alpha: 0.3),
+                  color: isSelected
+                      ? gradientColors[0]
+                      : AppColors.softGray.withValues(alpha: 0.3),
                   width: 2,
                 ),
               ),

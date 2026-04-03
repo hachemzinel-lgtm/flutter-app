@@ -64,18 +64,20 @@ class ConversationSummary {
 
     return ConversationSummary(
       id: doc.id,
-      participants:
-          (data['participants'] as List<dynamic>? ?? const [])
-              .map((item) => item.toString())
-              .toList(),
+      participants: (data['participants'] as List<dynamic>? ?? const [])
+          .map((item) => item.toString())
+          .toList(),
       participantNames:
-          (data['participantNames'] as Map<String, dynamic>? ?? const {})
-              .map((key, value) => MapEntry(key, value.toString())),
+          (data['participantNames'] as Map<String, dynamic>? ?? const {}).map(
+            (key, value) => MapEntry(key, value.toString()),
+          ),
       participantPhotos:
-          (data['participantPhotos'] as Map<String, dynamic>? ?? const {})
-              .map((key, value) => MapEntry(key, value.toString())),
+          (data['participantPhotos'] as Map<String, dynamic>? ?? const {}).map(
+            (key, value) => MapEntry(key, value.toString()),
+          ),
       participantTypes: rawTypes.map(
-        (key, value) => MapEntry(key, UserModel.parseUserType(value.toString())),
+        (key, value) =>
+            MapEntry(key, UserModel.parseUserType(value.toString())),
       ),
       lastMessage: data['lastMessage']?.toString() ?? '',
       lastMessageType: ChatMessageType.fromValue(

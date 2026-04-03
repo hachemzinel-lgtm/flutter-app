@@ -36,15 +36,19 @@ class ChatController extends Notifier<ChatState> {
     try {
       final user = ref.read(authStateProvider).value;
       if (user == null) return;
-      
+
       final repo = ref.read(chatSessionRepositoryProvider);
       final messages = await repo.getSessionMessages(user.uid, sessionId);
-      
-      final history = messages.map((m) => {
-        'role': m.isUserMessage ? 'user' : 'assistant',
-        'content': m.content,
-      }).toList();
-      
+
+      final history = messages
+          .map(
+            (m) => {
+              'role': m.isUserMessage ? 'user' : 'assistant',
+              'content': m.content,
+            },
+          )
+          .toList();
+
       ref.read(groqChatServiceProvider).setHistory(history);
       ref.read(activeChatSessionIdProvider.notifier).setId(sessionId);
     } catch (e) {
@@ -53,7 +57,7 @@ class ChatController extends Notifier<ChatState> {
       state = state.copyWith(isLoading: false);
     }
   }
-  
+
   Future<void> startNewSession() async {
     ref.read(groqChatServiceProvider).clearHistory();
     ref.read(activeChatSessionIdProvider.notifier).setId(null);
@@ -65,8 +69,10 @@ class ChatController extends Notifier<ChatState> {
     if (sessionId == null) {
       final user = ref.read(authStateProvider).value;
       if (user == null) throw Exception('User not logged in');
-      
-      final session = await ref.read(chatSessionRepositoryProvider).createChatSession(user.uid);
+
+      final session = await ref
+          .read(chatSessionRepositoryProvider)
+          .createChatSession(user.uid);
       sessionId = session.id;
       ref.read(activeChatSessionIdProvider.notifier).setId(sessionId);
     }
@@ -75,7 +81,7 @@ class ChatController extends Notifier<ChatState> {
 
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty) return;
-    
+
     state = state.copyWith(isLoading: true, error: null);
     try {
       final user = ref.read(authStateProvider).value;
@@ -93,12 +99,13 @@ class ChatController extends Notifier<ChatState> {
         timestamp: DateTime.now(),
       );
       await repo.saveMessage(user.uid, sessionId, userMsg);
-      
+
       // Update session title if it's the first message
       final messages = await repo.getSessionMessages(user.uid, sessionId);
-      if (messages.length <= 1) { // 1 is the userMsg we just added
-         final title = text.length > 30 ? '${text.substring(0, 27)}...' : text;
-         await repo.updateSessionTitle(user.uid, sessionId, title);
+      if (messages.length <= 1) {
+        // 1 is the userMsg we just added
+        final title = text.length > 30 ? '${text.substring(0, 27)}...' : text;
+        await repo.updateSessionTitle(user.uid, sessionId, title);
       }
 
       // Call API
@@ -139,14 +146,17 @@ class ChatController extends Notifier<ChatState> {
         timestamp: DateTime.now(),
       );
       await repo.saveMessage(user.uid, sessionId, userMsg);
-      
+
       final messages = await repo.getSessionMessages(user.uid, sessionId);
       if (messages.length <= 1) {
-         await repo.updateSessionTitle(user.uid, sessionId, 'Image Issue');
+        await repo.updateSessionTitle(user.uid, sessionId, 'Image Issue');
       }
 
       final groq = ref.read(groqChatServiceProvider);
-      final reply = await groq.sendImageMessage(imageFile, additionalText: caption);
+      final reply = await groq.sendImageMessage(
+        imageFile,
+        additionalText: caption,
+      );
 
       final aiMsg = ChatMessage(
         id: '',
@@ -173,7 +183,7 @@ class ChatController extends Notifier<ChatState> {
       final repo = ref.read(chatSessionRepositoryProvider);
 
       final groq = ref.read(groqChatServiceProvider);
-      
+
       // Step 1: Transcribe audio
       final transcription = await groq.transcribeAudio(audioFile);
       if (transcription.startsWith('Error')) throw Exception(transcription);
@@ -182,18 +192,20 @@ class ChatController extends Notifier<ChatState> {
       final userMsg = ChatMessage(
         id: '',
         sessionId: sessionId,
-        content: transcription.isEmpty ? '[Voice message]' : '🎤 $transcription',
+        content: transcription.isEmpty
+            ? '[Voice message]'
+            : '🎤 $transcription',
         isUserMessage: true,
         timestamp: DateTime.now(),
       );
       await repo.saveMessage(user.uid, sessionId, userMsg);
-      
+
       final messages = await repo.getSessionMessages(user.uid, sessionId);
       if (messages.length <= 1) {
-         final title = transcription.isNotEmpty && transcription.length > 25 
-             ? '${transcription.substring(0, 25)}...' 
-             : 'Voice Note';
-         await repo.updateSessionTitle(user.uid, sessionId, title);
+        final title = transcription.isNotEmpty && transcription.length > 25
+            ? '${transcription.substring(0, 25)}...'
+            : 'Voice Note';
+        await repo.updateSessionTitle(user.uid, sessionId, title);
       }
 
       // Step 2: Get AI reply

@@ -16,10 +16,10 @@ class DiscoveryService {
     DistanceService? distanceService,
     GeocodingService? geocodingService,
     LocationService? locationService,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _distanceService = distanceService ?? DistanceService(),
-        _geocodingService = geocodingService ?? GeocodingService(),
-        _locationService = locationService ?? LocationService();
+  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+       _distanceService = distanceService ?? DistanceService(),
+       _geocodingService = geocodingService ?? GeocodingService(),
+       _locationService = locationService ?? LocationService();
 
   final FirebaseFirestore _firestore;
   final DistanceService _distanceService;
@@ -33,7 +33,9 @@ class DiscoveryService {
     required String manualAddress,
   }) async {
     if (manualAddress.trim().isNotEmpty) {
-      final location = await _geocodingService.geocodeAddress(manualAddress.trim());
+      final location = await _geocodingService.geocodeAddress(
+        manualAddress.trim(),
+      );
       if (location == null) {
         throw Exception('We could not find that address on the map.');
       }
@@ -46,7 +48,9 @@ class DiscoveryService {
     if (useCurrentLocation) {
       final current = await _locationService.getCurrentLocation();
       if (current == null) {
-        throw Exception('Current location is unavailable. Use a saved or manual address.');
+        throw Exception(
+          'Current location is unavailable. Use a saved or manual address.',
+        );
       }
       return DiscoverySearchLocation(
         center: LatLng(current.latitude, current.longitude),
@@ -57,14 +61,18 @@ class DiscoveryService {
     if (savedLocation != null) {
       return DiscoverySearchLocation(
         center: LatLng(savedLocation.latitude, savedLocation.longitude),
-        label: savedAddress?.isNotEmpty == true ? savedAddress! : 'Saved location',
+        label: savedAddress?.isNotEmpty == true
+            ? savedAddress!
+            : 'Saved location',
       );
     }
 
     throw Exception('No search location is available yet.');
   }
 
-  Future<List<DiscoverySearchResult>> search(DiscoverySearchRequest request) async {
+  Future<List<DiscoverySearchResult>> search(
+    DiscoverySearchRequest request,
+  ) async {
     Query<Map<String, dynamic>> query = _firestore
         .collection('users')
         .where('accountType', isEqualTo: request.type.firestoreValue)
@@ -146,7 +154,9 @@ class DiscoveryService {
       availableOnly: false,
       location: DiscoverySearchLocation(
         center: LatLng(savedLocation.latitude, savedLocation.longitude),
-        label: savedAddress?.isNotEmpty == true ? savedAddress! : 'Saved location',
+        label: savedAddress?.isNotEmpty == true
+            ? savedAddress!
+            : 'Saved location',
       ),
     );
 
@@ -168,9 +178,7 @@ class DiscoveryService {
 
     if (category != null && category.isNotEmpty && category != 'Any') {
       query = query.where(
-        type == DiscoverySearchType.workProviders
-            ? 'profession'
-            : 'category',
+        type == DiscoverySearchType.workProviders ? 'profession' : 'category',
         isEqualTo: category,
       );
     }
@@ -185,7 +193,9 @@ class DiscoveryService {
 
   UserModel _parseUser(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
-    final type = UserModel.parseUserType(data['accountType'] as String? ?? 'client');
+    final type = UserModel.parseUserType(
+      data['accountType'] as String? ?? 'client',
+    );
     switch (type) {
       case UserType.client:
         return ClientModel.fromMap(doc.id, data);

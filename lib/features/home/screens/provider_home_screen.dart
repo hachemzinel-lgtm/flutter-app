@@ -35,7 +35,9 @@ class _ProviderHomeScreenState extends ConsumerState<ProviderHomeScreen> {
     final user = ref.read(currentUserDocProvider).value;
     setState(() => _loadingSearch = true);
     try {
-      final location = await ref.read(discoveryServiceProvider).resolveSearchLocation(
+      final location = await ref
+          .read(discoveryServiceProvider)
+          .resolveSearchLocation(
             useCurrentLocation: _useCurrentLocation,
             savedLocation: user?.location,
             savedAddress: user?.address,
@@ -99,7 +101,9 @@ class _ProviderHomeScreenState extends ConsumerState<ProviderHomeScreen> {
                   children: [
                     Text(
                       'Welcome back, $name',
-                      style: AppTextStyles.headingLarge.copyWith(color: Colors.white),
+                      style: AppTextStyles.headingLarge.copyWith(
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.s),
                     Text(
@@ -142,7 +146,9 @@ class _ProviderHomeScreenState extends ConsumerState<ProviderHomeScreen> {
                           Switch(
                             value: provider?.isAvailableNow ?? false,
                             onChanged: (value) {
-                              ref.read(availabilityProvider.notifier).toggle(value);
+                              ref
+                                  .read(availabilityProvider.notifier)
+                                  .toggle(value);
                             },
                             activeThumbColor: AppColors.availableGreen,
                           ),
@@ -154,14 +160,8 @@ class _ProviderHomeScreenState extends ConsumerState<ProviderHomeScreen> {
                       spacing: 10,
                       runSpacing: 10,
                       children: [
-                        _StatTile(
-                          label: 'Profile views',
-                          value: '--',
-                        ),
-                        _StatTile(
-                          label: 'Messages',
-                          value: '--',
-                        ),
+                        _StatTile(label: 'Profile views', value: '--'),
+                        _StatTile(label: 'Messages', value: '--'),
                         _StatTile(
                           label: 'Rating',
                           value: provider == null || provider.rating == 0
@@ -197,20 +197,27 @@ class _ProviderHomeScreenState extends ConsumerState<ProviderHomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Search nearby marketplaces', style: AppTextStyles.headingSmall),
+                    Text(
+                      'Search nearby marketplaces',
+                      style: AppTextStyles.headingSmall,
+                    ),
                     const SizedBox(height: AppSpacing.m),
                     DropdownButtonFormField<String>(
                       initialValue: _category,
-                      decoration: const InputDecoration(labelText: 'Marketplace category'),
-                      items: [
-                        'Any',
-                        ...MarketplaceTaxonomy.marketplaceCategories,
-                      ]
-                          .map(
-                            (item) => DropdownMenuItem(value: item, child: Text(item)),
-                          )
-                          .toList(),
-                      onChanged: (value) => setState(() => _category = value ?? 'Any'),
+                      decoration: const InputDecoration(
+                        labelText: 'Marketplace category',
+                      ),
+                      items:
+                          ['Any', ...MarketplaceTaxonomy.marketplaceCategories]
+                              .map(
+                                (item) => DropdownMenuItem(
+                                  value: item,
+                                  child: Text(item),
+                                ),
+                              )
+                              .toList(),
+                      onChanged: (value) =>
+                          setState(() => _category = value ?? 'Any'),
                     ),
                     const SizedBox(height: AppSpacing.l),
                     Wrap(
@@ -220,11 +227,13 @@ class _ProviderHomeScreenState extends ConsumerState<ProviderHomeScreen> {
                         ChoiceChip(
                           label: const Text('Use my current location'),
                           selected: _useCurrentLocation,
-                          onSelected: (_) => setState(() => _useCurrentLocation = true),
+                          onSelected: (_) =>
+                              setState(() => _useCurrentLocation = true),
                         ),
                         ChoiceChip(
                           label: const Text('Use saved profile location'),
-                          selected: !_useCurrentLocation &&
+                          selected:
+                              !_useCurrentLocation &&
                               _manualAddressController.text.trim().isEmpty,
                           onSelected: (_) {
                             setState(() {
@@ -264,7 +273,8 @@ class _ProviderHomeScreenState extends ConsumerState<ProviderHomeScreen> {
                             (radius) => ChoiceChip(
                               label: Text('${radius.toInt()}km'),
                               selected: _radiusKm == radius,
-                              onSelected: (_) => setState(() => _radiusKm = radius),
+                              onSelected: (_) =>
+                                  setState(() => _radiusKm = radius),
                             ),
                           )
                           .toList(),
@@ -303,10 +313,7 @@ class _ProviderHomeScreenState extends ConsumerState<ProviderHomeScreen> {
 }
 
 class _StatTile extends StatelessWidget {
-  const _StatTile({
-    required this.label,
-    required this.value,
-  });
+  const _StatTile({required this.label, required this.value});
 
   final String label;
   final String value;

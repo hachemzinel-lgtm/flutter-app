@@ -10,23 +10,23 @@ final chatServiceProvider = Provider<ChatService>((ref) {
   );
 });
 
-final conversationsProvider = StreamProvider.family<List<ConversationSummary>, String>((
-  ref,
-  String uid,
-) {
-  return ref.watch(chatServiceProvider).getConversations(uid);
-});
+final conversationsProvider =
+    StreamProvider.family<List<ConversationSummary>, String>((ref, String uid) {
+      return ref.watch(chatServiceProvider).getConversations(uid);
+    });
 
-final conversationProvider = StreamProvider.family<ConversationSummary?, String>((
-  ref,
-  String conversationId,
-) {
-  return ref.watch(chatServiceProvider).getConversation(conversationId);
-});
+final conversationProvider =
+    StreamProvider.family<ConversationSummary?, String>((
+      ref,
+      String conversationId,
+    ) {
+      return ref.watch(chatServiceProvider).getConversation(conversationId);
+    });
 
-final messagesProvider = StreamProvider.family<List<MarketplaceChatMessage>, String>((
-  ref,
-  String conversationId,
-) {
-  return ref.watch(chatServiceProvider).getMessages(conversationId);
-});
+final messagesProvider =
+    StreamProvider.family<List<MarketplaceChatMessage>, String>((
+      ref,
+      String conversationId,
+    ) {
+      return ref.watch(chatServiceProvider).getMessages(conversationId);
+    });

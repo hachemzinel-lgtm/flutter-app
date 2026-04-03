@@ -11,7 +11,9 @@ final chatSessionRepositoryProvider = Provider<ChatSessionRepository>((ref) {
 });
 
 // Stream of Chat Sessions for the current user
-final userChatSessionsProvider = StreamProvider.autoDispose<List<ChatSession>>((ref) {
+final userChatSessionsProvider = StreamProvider.autoDispose<List<ChatSession>>((
+  ref,
+) {
   final user = ref.watch(authStateProvider).value;
   if (user == null) return const Stream.empty();
 
@@ -25,17 +27,19 @@ class ActiveChatSessionIdNotifier extends Notifier<String?> {
   void setId(String? id) => state = id;
 }
 
-final activeChatSessionIdProvider = NotifierProvider<ActiveChatSessionIdNotifier, String?>(
-  () => ActiveChatSessionIdNotifier(),
-);
+final activeChatSessionIdProvider =
+    NotifierProvider<ActiveChatSessionIdNotifier, String?>(
+      () => ActiveChatSessionIdNotifier(),
+    );
 
 // Stream of messages for the currently active session
-final activeSessionMessagesProvider = StreamProvider.autoDispose<List<ChatMessage>>((ref) {
-  final user = ref.watch(authStateProvider).value;
-  final sessionId = ref.watch(activeChatSessionIdProvider);
-  
-  if (user == null || sessionId == null) return const Stream.empty();
+final activeSessionMessagesProvider =
+    StreamProvider.autoDispose<List<ChatMessage>>((ref) {
+      final user = ref.watch(authStateProvider).value;
+      final sessionId = ref.watch(activeChatSessionIdProvider);
 
-  final repository = ref.watch(chatSessionRepositoryProvider);
-  return repository.watchSessionMessages(user.uid, sessionId);
-});
+      if (user == null || sessionId == null) return const Stream.empty();
+
+      final repository = ref.watch(chatSessionRepositoryProvider);
+      return repository.watchSessionMessages(user.uid, sessionId);
+    });

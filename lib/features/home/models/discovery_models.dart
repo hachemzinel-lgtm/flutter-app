@@ -32,10 +32,7 @@ enum DiscoverySearchType {
 }
 
 class DiscoverySearchLocation {
-  const DiscoverySearchLocation({
-    required this.center,
-    required this.label,
-  });
+  const DiscoverySearchLocation({required this.center, required this.label});
 
   final LatLng center;
   final String label;
@@ -82,20 +79,17 @@ class DiscoverySearchRequest {
 
   @override
   int get hashCode => Object.hash(
-        type,
-        category,
-        radiusKm,
-        minimumRating,
-        availableOnly,
-        location,
-      );
+    type,
+    category,
+    radiusKm,
+    minimumRating,
+    availableOnly,
+    location,
+  );
 }
 
 class DiscoverySearchResult {
-  const DiscoverySearchResult({
-    required this.user,
-    required this.distanceKm,
-  });
+  const DiscoverySearchResult({required this.user, required this.distanceKm});
 
   final UserModel user;
   final double distanceKm;

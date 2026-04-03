@@ -28,7 +28,9 @@ class BestProvidersScreen extends ConsumerWidget {
             padding: AppSpacing.pagePadding,
             child: Text(
               error.toString(),
-              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.errorRed),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.errorRed,
+              ),
               textAlign: TextAlign.center,
             ),
           ),
@@ -74,7 +76,9 @@ class BestProvidersScreen extends ConsumerWidget {
                     children: [
                       CircleAvatar(
                         radius: 30,
-                        backgroundColor: AppColors.accentBlue.withValues(alpha: 0.12),
+                        backgroundColor: AppColors.accentBlue.withValues(
+                          alpha: 0.12,
+                        ),
                         backgroundImage: provider.photoUrl == null
                             ? null
                             : NetworkImage(provider.photoUrl!),
@@ -129,7 +133,8 @@ class BestProvidersScreen extends ConsumerWidget {
                                 ),
                                 _MetaPill(
                                   icon: Icons.place_outlined,
-                                  text: '${result.distanceKm.toStringAsFixed(1)} km',
+                                  text:
+                                      '${result.distanceKm.toStringAsFixed(1)} km',
                                   color: AppColors.accentBlue,
                                 ),
                                 if (provider.isAvailableNow)

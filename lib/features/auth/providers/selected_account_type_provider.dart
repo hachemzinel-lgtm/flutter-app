@@ -9,4 +9,5 @@ class SelectedAccountType extends Notifier<UserType> {
   void set(UserType type) => state = type;
 }
 
-final selectedAccountTypeProvider = NotifierProvider<SelectedAccountType, UserType>(SelectedAccountType.new);
+final selectedAccountTypeProvider =
+    NotifierProvider<SelectedAccountType, UserType>(SelectedAccountType.new);

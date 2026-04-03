@@ -52,8 +52,9 @@ class ProviderFeatureCard extends StatelessWidget {
                 CircleAvatar(
                   radius: 32,
                   backgroundColor: AppColors.accentBlue.withValues(alpha: 0.1),
-                  backgroundImage:
-                      photoUrl == null ? null : NetworkImage(photoUrl!),
+                  backgroundImage: photoUrl == null
+                      ? null
+                      : NetworkImage(photoUrl!),
                   child: photoUrl == null
                       ? Text(
                           name.substring(0, 1).toUpperCase(),
@@ -86,23 +87,33 @@ class ProviderFeatureCard extends StatelessWidget {
               profession,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.caption.copyWith(color: AppColors.accentBlue),
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.accentBlue,
+              ),
             ),
             const SizedBox(height: 6),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.star_rounded, color: AppColors.starGold, size: 14),
+                const Icon(
+                  Icons.star_rounded,
+                  color: AppColors.starGold,
+                  size: 14,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   rating == 0 ? 'New' : rating.toStringAsFixed(1),
-                  style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w700),
+                  style: AppTextStyles.caption.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 if (distance != null) ...[
                   const SizedBox(width: 6),
                   Text(
                     '• $distance',
-                    style: AppTextStyles.caption.copyWith(color: AppColors.softGray),
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.softGray,
+                    ),
                   ),
                 ],
               ],

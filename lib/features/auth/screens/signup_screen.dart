@@ -23,7 +23,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final GoogleAuthService _googleAuthService = GoogleAuthService();
-  
+
   bool _obscurePassword = true;
   bool _isSubmitting = false;
   bool _isGoogleLoading = false;
@@ -44,7 +44,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     setState(() => _isSubmitting = true);
     try {
       debugPrint('--- [SIGNUP] Starting signup process');
-      await ref.read(authServiceProvider).signUp(
+      await ref
+          .read(authServiceProvider)
+          .signUp(
             email: _emailController.text.trim(),
             password: _passwordController.text.trim(),
           );
@@ -76,7 +78,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       final credential = await _googleAuthService.signInWithGoogle();
       if (credential != null && mounted) {
         // App router handles navigation strictly based on Auth state + Firestore doc state
-        debugPrint('--- [SIGNUP] Google Login successful, navigation handled by router ---');
+        debugPrint(
+          '--- [SIGNUP] Google Login successful, navigation handled by router ---',
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -140,22 +144,23 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               TextFormField(
                 controller: _passwordController,
                 obscureText: _obscurePassword,
-                decoration: _inputDecoration(
-                  'Minimum 6 characters',
-                  Icons.lock_outline,
-                ).copyWith(
-                  suffixIcon: IconButton(
-                    onPressed: () {
-                      setState(() => _obscurePassword = !_obscurePassword);
-                    },
-                    icon: Icon(
-                      _obscurePassword
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
-                      color: AppColors.softGray,
+                decoration:
+                    _inputDecoration(
+                      'Minimum 6 characters',
+                      Icons.lock_outline,
+                    ).copyWith(
+                      suffixIcon: IconButton(
+                        onPressed: () {
+                          setState(() => _obscurePassword = !_obscurePassword);
+                        },
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                          color: AppColors.softGray,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
                 validator: (value) {
                   if (value == null || value.length < 6) {
                     return 'Password must be at least 6 characters';
@@ -163,7 +168,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   return null;
                 },
               ),
-              
+
               const SizedBox(height: AppSpacing.l),
               _buildLabel('CONFIRM PASSWORD'),
               TextFormField(
@@ -180,19 +185,25 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   return null;
                 },
               ),
-              
+
               const SizedBox(height: AppSpacing.xxl),
               PrimaryButton(
                 text: _isSubmitting ? 'Creating account...' : 'Sign Up',
                 onPressed: _isSubmitting ? null : _handleSignUp,
               ),
               const SizedBox(height: AppSpacing.l),
-              
+
               Row(
                 children: [
-                  Expanded(child: Divider(color: AppColors.softGray.withValues(alpha: 0.2))),
+                  Expanded(
+                    child: Divider(
+                      color: AppColors.softGray.withValues(alpha: 0.2),
+                    ),
+                  ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.m,
+                    ),
                     child: Text(
                       'OR CONTINUE WITH',
                       style: AppTextStyles.caption.copyWith(
@@ -202,17 +213,21 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                       ),
                     ),
                   ),
-                  Expanded(child: Divider(color: AppColors.softGray.withValues(alpha: 0.2))),
+                  Expanded(
+                    child: Divider(
+                      color: AppColors.softGray.withValues(alpha: 0.2),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.l),
-              
+
               GoogleSignInButton(
                 text: 'Continue with Google',
                 isLoading: _isGoogleLoading,
                 onPressed: _handleGoogleSignIn,
               ),
-              
+
               const SizedBox(height: AppSpacing.xl),
               Center(
                 child: GestureDetector(

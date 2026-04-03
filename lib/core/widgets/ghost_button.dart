@@ -8,12 +8,7 @@ class GhostButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final IconData? icon;
 
-  const GhostButton({
-    super.key,
-    required this.text,
-    this.onPressed,
-    this.icon,
-  });
+  const GhostButton({super.key, required this.text, this.onPressed, this.icon});
 
   @override
   Widget build(BuildContext context) {

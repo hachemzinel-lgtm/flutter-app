@@ -18,7 +18,8 @@ class ChatSessionModel extends ChatSession {
       userId: data['userId'] ?? '',
       title: data['title'] ?? 'New Chat',
       lastMessagePreview: data['lastMessagePreview'] ?? '',
-      lastMessageTime: (data['lastMessageTime'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      lastMessageTime:
+          (data['lastMessageTime'] as Timestamp?)?.toDate() ?? DateTime.now(),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }

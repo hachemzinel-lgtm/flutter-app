@@ -212,7 +212,10 @@ class _MarketplaceProfileSetupScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Set up your marketplace profile', style: AppTextStyles.headingLarge),
+                Text(
+                  'Set up your marketplace profile',
+                  style: AppTextStyles.headingLarge,
+                ),
                 const SizedBox(height: AppSpacing.s),
                 Text(
                   'Add your storefront, hours, location, and gallery.',
@@ -359,9 +362,14 @@ class _MarketplaceProfileSetupScreenState
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Marketplace photos', style: AppTextStyles.headingSmall),
+                    Text(
+                      'Marketplace photos',
+                      style: AppTextStyles.headingSmall,
+                    ),
                     TextButton.icon(
-                      onPressed: _photos.length >= 20 ? null : _pickAdditionalPhotos,
+                      onPressed: _photos.length >= 20
+                          ? null
+                          : _pickAdditionalPhotos,
                       icon: const Icon(Icons.add_photo_alternate_outlined),
                       label: Text('Add (${_photos.length}/20)'),
                     ),
@@ -372,25 +380,30 @@ class _MarketplaceProfileSetupScreenState
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: _photos.length,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                        ),
                     itemBuilder: (context, index) {
                       return Stack(
                         children: [
                           Positioned.fill(
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(12),
-                              child: Image.file(_photos[index], fit: BoxFit.cover),
+                              child: Image.file(
+                                _photos[index],
+                                fit: BoxFit.cover,
+                              ),
                             ),
                           ),
                           Positioned(
                             top: 6,
                             right: 6,
                             child: InkWell(
-                              onTap: () => setState(() => _photos.removeAt(index)),
+                              onTap: () =>
+                                  setState(() => _photos.removeAt(index)),
                               child: const CircleAvatar(
                                 radius: 12,
                                 backgroundColor: Colors.black54,
@@ -449,10 +462,8 @@ class _MarketplaceProfileSetupScreenState
           value: _category,
           items: MarketplaceTaxonomy.marketplaceCategories
               .map(
-                (category) => DropdownMenuItem(
-                  value: category,
-                  child: Text(category),
-                ),
+                (category) =>
+                    DropdownMenuItem(value: category, child: Text(category)),
               )
               .toList(),
           onChanged: (value) => setState(() => _category = value!),

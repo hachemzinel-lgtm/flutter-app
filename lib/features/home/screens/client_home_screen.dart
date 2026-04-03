@@ -40,7 +40,9 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
     final user = ref.read(currentUserDocProvider).value;
     setState(() => _isResolvingLocation = true);
     try {
-      final location = await ref.read(discoveryServiceProvider).resolveSearchLocation(
+      final location = await ref
+          .read(discoveryServiceProvider)
+          .resolveSearchLocation(
             useCurrentLocation: _useCurrentLocation,
             savedLocation: user?.location,
             savedAddress: user?.address,
@@ -126,8 +128,8 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
                     InkWell(
                       onTap: () => _manualAddressController.selection =
                           TextSelection.collapsed(
-                        offset: _manualAddressController.text.length,
-                      ),
+                            offset: _manualAddressController.text.length,
+                          ),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -215,7 +217,8 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
                       value: _selectedCategory,
                       onChanged: (value) {
                         setState(() {
-                          if (_searchType == DiscoverySearchType.workProviders) {
+                          if (_searchType ==
+                              DiscoverySearchType.workProviders) {
                             _providerCategory = value!;
                           } else {
                             _marketplaceCategory = value!;
@@ -232,11 +235,13 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
                         ChoiceChip(
                           label: const Text('Use my current location'),
                           selected: _useCurrentLocation,
-                          onSelected: (_) => setState(() => _useCurrentLocation = true),
+                          onSelected: (_) =>
+                              setState(() => _useCurrentLocation = true),
                         ),
                         ChoiceChip(
                           label: const Text('Use saved profile location'),
-                          selected: !_useCurrentLocation &&
+                          selected:
+                              !_useCurrentLocation &&
                               _manualAddressController.text.trim().isEmpty,
                           onSelected: (_) {
                             setState(() {
@@ -252,7 +257,9 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
                       controller: _manualAddressController,
                       decoration: InputDecoration(
                         hintText: 'Or set location manually',
-                        prefixIcon: const Icon(Icons.edit_location_alt_outlined),
+                        prefixIcon: const Icon(
+                          Icons.edit_location_alt_outlined,
+                        ),
                         filled: true,
                         fillColor: AppColors.backgroundSecondary,
                         border: OutlineInputBorder(
@@ -271,11 +278,11 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('${_radiusKm.toInt()} km', style: AppTextStyles.headingSmall),
                         Text(
-                          'Search range',
-                          style: AppTextStyles.caption,
+                          '${_radiusKm.toInt()} km',
+                          style: AppTextStyles.headingSmall,
                         ),
+                        Text('Search range', style: AppTextStyles.caption),
                       ],
                     ),
                     Slider(
@@ -292,7 +299,8 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
                             (radius) => ChoiceChip(
                               label: Text('${radius.toInt()}km'),
                               selected: _radiusKm == radius,
-                              onSelected: (_) => setState(() => _radiusKm = radius),
+                              onSelected: (_) =>
+                                  setState(() => _radiusKm = radius),
                             ),
                           )
                           .toList(),
@@ -317,7 +325,10 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
                           DropdownMenuItem(value: 0, child: Text('Any')),
                           DropdownMenuItem(value: 3, child: Text('3+ stars')),
                           DropdownMenuItem(value: 4, child: Text('4+ stars')),
-                          DropdownMenuItem(value: 4.5, child: Text('4.5+ stars')),
+                          DropdownMenuItem(
+                            value: 4.5,
+                            child: Text('4.5+ stars'),
+                          ),
                         ],
                         onChanged: (value) {
                           setState(() => _minimumRating = value ?? 0);
@@ -368,7 +379,9 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
                 ),
                 error: (error, _) => Text(
                   error.toString(),
-                  style: AppTextStyles.caption.copyWith(color: AppColors.errorRed),
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.errorRed,
+                  ),
                 ),
                 data: (results) {
                   if (results.isEmpty) {
@@ -394,7 +407,8 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
                           name: result.user.name,
                           profession: provider.profession ?? '',
                           rating: result.user.rating,
-                          distance: '${result.distanceKm.toStringAsFixed(1)} km',
+                          distance:
+                              '${result.distanceKm.toStringAsFixed(1)} km',
                           photoUrl: result.user.photoUrl,
                           isVerified: result.isVerified,
                           isAvailable: provider.isAvailableNow,
@@ -429,10 +443,7 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
 }
 
 class _SectionCard extends StatelessWidget {
-  const _SectionCard({
-    required this.title,
-    required this.child,
-  });
+  const _SectionCard({required this.title, required this.child});
 
   final String title;
   final Widget child;
@@ -484,9 +495,7 @@ class _CategoryDropdown extends StatelessWidget {
           .map((item) => DropdownMenuItem(value: item, child: Text(item)))
           .toList(),
       onChanged: onChanged,
-      decoration: const InputDecoration(
-        border: OutlineInputBorder(),
-      ),
+      decoration: const InputDecoration(border: OutlineInputBorder()),
     );
   }
 }

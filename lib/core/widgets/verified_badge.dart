@@ -28,11 +28,7 @@ class VerifiedBadge extends StatelessWidget {
           ),
         ],
       ),
-      child: Icon(
-        Icons.check,
-        color: Colors.white,
-        size: size * 0.7,
-      ),
+      child: Icon(Icons.check, color: Colors.white, size: size * 0.7),
     );
   }
 }

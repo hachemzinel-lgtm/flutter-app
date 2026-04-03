@@ -44,12 +44,12 @@ class _AIChatPageState extends ConsumerState<AIChatPage> {
 
   void _handleSend() {
     if (_msgController.text.trim().isEmpty) return;
-    
+
     final text = _msgController.text.trim();
     _msgController.clear();
-    
+
     ref.read(chatControllerProvider.notifier).sendMessage(text);
-    
+
     Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
   }
 
@@ -69,20 +69,28 @@ class _AIChatPageState extends ConsumerState<AIChatPage> {
         final path = await _audioRecorder.stop();
         setState(() => _isRecording = false);
         if (path != null) {
-          ref.read(chatControllerProvider.notifier).sendVoiceMessage(File(path));
+          ref
+              .read(chatControllerProvider.notifier)
+              .sendVoiceMessage(File(path));
           Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
         }
       } else {
         if (await _audioRecorder.hasPermission()) {
           final tempDir = await getTemporaryDirectory();
-          final path = '${tempDir.path}/voice_msg_${DateTime.now().millisecondsSinceEpoch}.m4a';
-          await _audioRecorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
+          final path =
+              '${tempDir.path}/voice_msg_${DateTime.now().millisecondsSinceEpoch}.m4a';
+          await _audioRecorder.start(
+            const RecordConfig(encoder: AudioEncoder.aacLc),
+            path: path,
+          );
           setState(() => _isRecording = true);
         }
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Recording failed')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Recording failed')));
     }
   }
 
@@ -95,7 +103,10 @@ class _AIChatPageState extends ConsumerState<AIChatPage> {
     ref.listen<ChatState>(chatControllerProvider, (prev, next) {
       if (next.error != null && (prev?.error != next.error)) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.error!), backgroundColor: AppColors.errorRed),
+          SnackBar(
+            content: Text(next.error!),
+            backgroundColor: AppColors.errorRed,
+          ),
         );
       }
     });
@@ -106,7 +117,8 @@ class _AIChatPageState extends ConsumerState<AIChatPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () => ref.read(chatControllerProvider.notifier).startNewSession(),
+            onPressed: () =>
+                ref.read(chatControllerProvider.notifier).startNewSession(),
             tooltip: 'New Chat',
           ),
         ],
@@ -123,13 +135,17 @@ class _AIChatPageState extends ConsumerState<AIChatPage> {
                       child: Text(
                         "Hi there! 👋 I'm FixIt AI, your home repair assistant!\nYou can describe your problem, send a photo, or record a voice note.",
                         textAlign: TextAlign.center,
-                        style: AppTextStyles.bodyLarge.copyWith(color: AppColors.softGray),
+                        style: AppTextStyles.bodyLarge.copyWith(
+                          color: AppColors.softGray,
+                        ),
                       ),
                     ),
                   );
                 }
 
-                WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+                WidgetsBinding.instance.addPostFrameCallback(
+                  (_) => _scrollToBottom(),
+                );
 
                 return ListView.builder(
                   controller: _scrollController,
@@ -142,7 +158,8 @@ class _AIChatPageState extends ConsumerState<AIChatPage> {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, st) => Center(child: Text('Failed to load messages: $e')),
+              error: (e, st) =>
+                  Center(child: Text('Failed to load messages: $e')),
             ),
           ),
           if (chatState.isLoading)
@@ -198,7 +215,10 @@ class _AIChatPageState extends ConsumerState<AIChatPage> {
                 ),
                 filled: true,
                 fillColor: AppColors.backgroundSecondary,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
               onSubmitted: (_) => _handleSend(),
             ),
@@ -226,7 +246,9 @@ class _MessageBubble extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(12),
-          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.75,
+          ),
           decoration: const BoxDecoration(
             color: AppColors.accentBlue,
             borderRadius: BorderRadius.only(
@@ -247,7 +269,9 @@ class _MessageBubble extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(12),
-          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.8,
+          ),
           decoration: BoxDecoration(
             color: AppColors.backgroundSecondary,
             borderRadius: const BorderRadius.only(

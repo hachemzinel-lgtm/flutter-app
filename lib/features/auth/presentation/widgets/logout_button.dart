@@ -21,9 +21,7 @@ class _LogoutButtonState extends ConsumerState<LogoutButton> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           'Confirm Logout',
           style: AppTextStyles.headingSmall.copyWith(color: AppColors.textDark),
@@ -37,7 +35,9 @@ class _LogoutButtonState extends ConsumerState<LogoutButton> {
             onPressed: () => Navigator.of(ctx).pop(false),
             child: Text(
               'Cancel',
-              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.softGray),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.softGray,
+              ),
             ),
           ),
           ElevatedButton(

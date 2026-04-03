@@ -6,10 +6,7 @@ import '../constants/app_spacing.dart';
 class AvailabilityBadge extends StatelessWidget {
   final bool isAvailable;
 
-  const AvailabilityBadge({
-    super.key,
-    required this.isAvailable,
-  });
+  const AvailabilityBadge({super.key, required this.isAvailable});
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +28,9 @@ class AvailabilityBadge extends StatelessWidget {
             width: 6,
             height: 6,
             decoration: BoxDecoration(
-              color: isAvailable ? AppColors.availableGreen : AppColors.offlineGray,
+              color: isAvailable
+                  ? AppColors.availableGreen
+                  : AppColors.offlineGray,
               shape: BoxShape.circle,
             ),
           ),
@@ -39,7 +38,9 @@ class AvailabilityBadge extends StatelessWidget {
           Text(
             isAvailable ? 'Available' : 'Offline',
             style: AppTextStyles.caption.copyWith(
-              color: isAvailable ? AppColors.availableGreen : AppColors.offlineGray,
+              color: isAvailable
+                  ? AppColors.availableGreen
+                  : AppColors.offlineGray,
               fontWeight: FontWeight.w600,
             ),
           ),

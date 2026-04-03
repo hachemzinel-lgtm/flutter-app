@@ -170,7 +170,11 @@ class _ClientEditProfileScreenState
           const SizedBox(height: AppSpacing.xl),
           _field('Name', _nameController),
           const SizedBox(height: AppSpacing.m),
-          _field('Phone number', _phoneController, keyboardType: TextInputType.phone),
+          _field(
+            'Phone number',
+            _phoneController,
+            keyboardType: TextInputType.phone,
+          ),
           const SizedBox(height: AppSpacing.m),
           InputDecorator(
             decoration: const InputDecoration(labelText: 'Email'),

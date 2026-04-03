@@ -53,7 +53,9 @@ class ConversationTile extends StatelessWidget {
           Text(
             DateFormat.jm().format(timestamp),
             style: AppTextStyles.caption.copyWith(
-              color: unreadCount > 0 ? AppColors.accentBlue : AppColors.textLight,
+              color: unreadCount > 0
+                  ? AppColors.accentBlue
+                  : AppColors.textLight,
               fontWeight: unreadCount > 0 ? FontWeight.w600 : FontWeight.w400,
             ),
           ),
@@ -67,7 +69,9 @@ class ConversationTile extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTextStyles.bodyMedium.copyWith(
-                color: unreadCount > 0 ? AppColors.textDark : AppColors.textLight,
+                color: unreadCount > 0
+                    ? AppColors.textDark
+                    : AppColors.textLight,
                 fontWeight: unreadCount > 0 ? FontWeight.w500 : FontWeight.w400,
               ),
             ),

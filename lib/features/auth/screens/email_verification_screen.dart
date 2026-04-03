@@ -66,7 +66,7 @@ class _EmailVerificationScreenState
       if (mounted) setState(() => _isChecking = false);
     }
   }
-  
+
   Future<void> _verifyManualCode() async {
     final email = ref.read(authServiceProvider).currentUser?.email;
     final code = _codeController.text.trim();
@@ -82,7 +82,9 @@ class _EmailVerificationScreenState
 
     setState(() => _isVerifyingManualCode = true);
     try {
-      final success = await ref.read(authServiceProvider).verifyCode(email, code);
+      final success = await ref
+          .read(authServiceProvider)
+          .verifyCode(email, code);
       if (success) {
         _pollingTimer?.cancel();
         if (mounted) context.go('/account-type');
@@ -99,7 +101,10 @@ class _EmailVerificationScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.errorRed),
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppColors.errorRed,
+          ),
         );
       }
     } finally {
@@ -118,7 +123,7 @@ class _EmailVerificationScreenState
         await ref.read(authServiceProvider).resendVerificationEmail();
         await ref.read(authServiceProvider).sendVerificationCode(email);
       }
-      
+
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -141,7 +146,10 @@ class _EmailVerificationScreenState
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString()), backgroundColor: AppColors.errorRed),
+        SnackBar(
+          content: Text(error.toString()),
+          backgroundColor: AppColors.errorRed,
+        ),
       );
     } finally {
       if (mounted) setState(() => _isResending = false);
@@ -204,7 +212,7 @@ class _EmailVerificationScreenState
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: AppSpacing.xxl),
-                
+
                 // Writing Label for Verification Code
                 Align(
                   alignment: Alignment.centerLeft,
@@ -226,46 +234,61 @@ class _EmailVerificationScreenState
                   style: AppTextStyles.headingMedium.copyWith(letterSpacing: 8),
                   decoration: InputDecoration(
                     hintText: '• • • • • •',
-                    hintStyle: AppTextStyles.headingMedium.copyWith(letterSpacing: 8, color: AppColors.softGray),
+                    hintStyle: AppTextStyles.headingMedium.copyWith(
+                      letterSpacing: 8,
+                      color: AppColors.softGray,
+                    ),
                     filled: true,
                     counterText: '',
                     fillColor: AppColors.softGray.withValues(alpha: 0.05),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.borderRadius,
+                      ),
                       borderSide: BorderSide.none,
                     ),
                     contentPadding: const EdgeInsets.symmetric(vertical: 20),
                   ),
                 ),
-                
+
                 const SizedBox(height: AppSpacing.l),
                 SizedBox(
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _isVerifyingManualCode ? null : _verifyManualCode,
+                    onPressed: _isVerifyingManualCode
+                        ? null
+                        : _verifyManualCode,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.accentBlue,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.borderRadius,
+                        ),
                       ),
                     ),
                     child: _isVerifyingManualCode
                         ? const SizedBox(
                             width: 22,
                             height: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.4,
+                              color: Colors.white,
+                            ),
                           )
                         : const Text(
                             "Verify Code",
-                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
                           ),
                   ),
                 ),
 
                 const SizedBox(height: AppSpacing.m),
-                
+
                 SizedBox(
                   width: double.infinity,
                   height: 56,
@@ -275,7 +298,9 @@ class _EmailVerificationScreenState
                       side: const BorderSide(color: AppColors.primaryNavy),
                       foregroundColor: AppColors.primaryNavy,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.borderRadius,
+                        ),
                       ),
                     ),
                     child: _isChecking
@@ -286,11 +311,14 @@ class _EmailVerificationScreenState
                           )
                         : const Text(
                             "I clicked the email link instead",
-                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
                           ),
                   ),
                 ),
-                
+
                 const Spacer(),
                 const SizedBox(height: AppSpacing.m),
                 TextButton(
@@ -320,7 +348,9 @@ class _EmailVerificationScreenState
                   },
                   child: Text(
                     'Use a different account',
-                    style: AppTextStyles.caption.copyWith(color: AppColors.softGray),
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.softGray,
+                    ),
                   ),
                 ),
               ],

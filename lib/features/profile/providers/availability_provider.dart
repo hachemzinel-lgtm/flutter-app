@@ -10,11 +10,12 @@ class AvailabilityNotifier extends Notifier<bool> {
     state = val;
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .update({'isAvailableNow': val});
+    await FirebaseFirestore.instance.collection('users').doc(uid).update({
+      'isAvailableNow': val,
+    });
   }
 }
 
-final availabilityProvider = NotifierProvider<AvailabilityNotifier, bool>(AvailabilityNotifier.new);
+final availabilityProvider = NotifierProvider<AvailabilityNotifier, bool>(
+  AvailabilityNotifier.new,
+);

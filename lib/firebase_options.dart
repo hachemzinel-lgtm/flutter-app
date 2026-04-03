@@ -84,5 +84,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'shinqy818.firebasestorage.app',
     measurementId: 'G-MS077SWV4T',
   );
-
 }

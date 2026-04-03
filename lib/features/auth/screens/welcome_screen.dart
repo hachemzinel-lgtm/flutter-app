@@ -85,20 +85,31 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   minimumSize: const Size.fromHeight(AppSpacing.buttonHeight),
                   side: const BorderSide(color: AppColors.accentBlue),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
+                    borderRadius: BorderRadius.circular(
+                      AppSpacing.borderRadius,
+                    ),
                   ),
                 ),
                 child: Text(
                   'Login',
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.accentBlue, fontWeight: FontWeight.w600),
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.accentBlue,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.l),
               Row(
                 children: [
-                  Expanded(child: Divider(color: AppColors.softGray.withValues(alpha: 0.2))),
+                  Expanded(
+                    child: Divider(
+                      color: AppColors.softGray.withValues(alpha: 0.2),
+                    ),
+                  ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.m,
+                    ),
                     child: Text(
                       'OR',
                       style: AppTextStyles.caption.copyWith(
@@ -107,7 +118,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       ),
                     ),
                   ),
-                  Expanded(child: Divider(color: AppColors.softGray.withValues(alpha: 0.2))),
+                  Expanded(
+                    child: Divider(
+                      color: AppColors.softGray.withValues(alpha: 0.2),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.l),

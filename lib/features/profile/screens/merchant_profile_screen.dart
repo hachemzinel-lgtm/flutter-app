@@ -13,17 +13,17 @@ import '../../auth/providers/auth_provider.dart';
 import '../../chat/providers/chat_provider.dart';
 
 class MerchantProfileScreen extends ConsumerWidget {
-  const MerchantProfileScreen({
-    super.key,
-    required this.uid,
-  });
+  const MerchantProfileScreen({super.key, required this.uid});
 
   final String uid;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Scaffold(
@@ -36,7 +36,10 @@ class MerchantProfileScreen extends ConsumerWidget {
           );
         }
 
-        final marketplace = MarketplaceModel.fromMap(uid, snapshot.data!.data()!);
+        final marketplace = MarketplaceModel.fromMap(
+          uid,
+          snapshot.data!.data()!,
+        );
 
         return Scaffold(
           body: CustomScrollView(
@@ -96,7 +99,9 @@ class MerchantProfileScreen extends ConsumerWidget {
                                       : '${marketplace.rating.toStringAsFixed(1)} (${marketplace.reviewCount})',
                                   color: AppColors.starGold,
                                 ),
-                                if (_shortLocation(marketplace.address).isNotEmpty)
+                                if (_shortLocation(
+                                  marketplace.address,
+                                ).isNotEmpty)
                                   _Pill(
                                     icon: Icons.location_on_outlined,
                                     label: _shortLocation(marketplace.address),
@@ -104,7 +109,9 @@ class MerchantProfileScreen extends ConsumerWidget {
                                   ),
                                 _Pill(
                                   icon: Icons.schedule_outlined,
-                                  label: _openingStatus(marketplace.openingHours),
+                                  label: _openingStatus(
+                                    marketplace.openingHours,
+                                  ),
                                   color: AppColors.availableGreen,
                                 ),
                               ],
@@ -126,25 +133,32 @@ class MerchantProfileScreen extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: () => _startChat(context, ref, marketplace),
-                              icon: const Icon(Icons.chat_bubble_outline_rounded),
+                              onPressed: () =>
+                                  _startChat(context, ref, marketplace),
+                              icon: const Icon(
+                                Icons.chat_bubble_outline_rounded,
+                              ),
                               label: const Text('Message'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.accentBlue,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
                               ),
                             ),
                           ),
                           const SizedBox(width: AppSpacing.m),
                           OutlinedButton.icon(
-                            onPressed: () => _shareProfile(context, marketplace),
+                            onPressed: () =>
+                                _shareProfile(context, marketplace),
                             icon: const Icon(Icons.share_outlined),
                             label: const Text('Share'),
                           ),
                           const SizedBox(width: AppSpacing.s),
                           OutlinedButton.icon(
-                            onPressed: () => _reportProfile(context, ref, marketplace.id),
+                            onPressed: () =>
+                                _reportProfile(context, ref, marketplace.id),
                             icon: const Icon(Icons.flag_outlined),
                             label: const Text('Report'),
                           ),
@@ -175,13 +189,18 @@ class MerchantProfileScreen extends ConsumerWidget {
                                 ),
                                 _DetailTile(
                                   label: 'Location',
-                                  value: _shortLocation(marketplace.address).isEmpty
+                                  value:
+                                      _shortLocation(
+                                        marketplace.address,
+                                      ).isEmpty
                                       ? 'Not shared'
                                       : _shortLocation(marketplace.address),
                                 ),
                                 _DetailTile(
                                   label: 'Hours',
-                                  value: _openingStatus(marketplace.openingHours),
+                                  value: _openingStatus(
+                                    marketplace.openingHours,
+                                  ),
                                 ),
                               ],
                             ),
@@ -208,17 +227,20 @@ class MerchantProfileScreen extends ConsumerWidget {
                                 itemCount: marketplace.photos.length,
                                 gridDelegate:
                                     const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 3,
-                                  crossAxisSpacing: 10,
-                                  mainAxisSpacing: 10,
-                                ),
+                                      crossAxisCount: 3,
+                                      crossAxisSpacing: 10,
+                                      mainAxisSpacing: 10,
+                                    ),
                                 itemBuilder: (context, index) {
                                   final image = marketplace.photos[index];
                                   return InkWell(
                                     onTap: () => _openGallery(context, image),
                                     child: ClipRRect(
                                       borderRadius: BorderRadius.circular(14),
-                                      child: Image.network(image, fit: BoxFit.cover),
+                                      child: Image.network(
+                                        image,
+                                        fit: BoxFit.cover,
+                                      ),
                                     ),
                                   );
                                 },
@@ -228,7 +250,8 @@ class MerchantProfileScreen extends ConsumerWidget {
                       _Section(
                         title: 'Reviews',
                         trailing: TextButton(
-                          onPressed: () => context.push('/reviews/${marketplace.id}'),
+                          onPressed: () =>
+                              context.push('/reviews/${marketplace.id}'),
                           child: const Text('See all'),
                         ),
                         child: StreamBuilder(
@@ -287,10 +310,12 @@ class MerchantProfileScreen extends ConsumerWidget {
       return;
     }
     try {
-      final conversation = await ref.read(chatServiceProvider).getOrCreateConversation(
-        currentUser: currentUser,
-        otherUser: marketplace,
-      );
+      final conversation = await ref
+          .read(chatServiceProvider)
+          .getOrCreateConversation(
+            currentUser: currentUser,
+            otherUser: marketplace,
+          );
       if (!context.mounted) {
         return;
       }
@@ -380,11 +405,7 @@ class MerchantProfileScreen extends ConsumerWidget {
 }
 
 class _Section extends StatelessWidget {
-  const _Section({
-    required this.title,
-    required this.child,
-    this.trailing,
-  });
+  const _Section({required this.title, required this.child, this.trailing});
 
   final String title;
   final Widget child;
@@ -417,11 +438,7 @@ class _Section extends StatelessWidget {
 }
 
 class _Pill extends StatelessWidget {
-  const _Pill({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
+  const _Pill({required this.icon, required this.label, required this.color});
 
   final IconData icon;
   final String label;
@@ -454,10 +471,7 @@ class _Pill extends StatelessWidget {
 }
 
 class _DetailTile extends StatelessWidget {
-  const _DetailTile({
-    required this.label,
-    required this.value,
-  });
+  const _DetailTile({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -519,7 +533,9 @@ class _ReviewCard extends StatelessWidget {
               CircleAvatar(
                 radius: 16,
                 backgroundColor: AppColors.accentBlue.withValues(alpha: 0.12),
-                backgroundImage: photoUrl.isEmpty ? null : NetworkImage(photoUrl),
+                backgroundImage: photoUrl.isEmpty
+                    ? null
+                    : NetworkImage(photoUrl),
                 child: photoUrl.isEmpty
                     ? Text(
                         name.substring(0, 1).toUpperCase(),
@@ -540,7 +556,11 @@ class _ReviewCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const Icon(Icons.star_rounded, color: AppColors.starGold, size: 16),
+              const Icon(
+                Icons.star_rounded,
+                color: AppColors.starGold,
+                size: 16,
+              ),
               const SizedBox(width: 4),
               Text(rating.toStringAsFixed(1), style: AppTextStyles.caption),
             ],
@@ -548,7 +568,9 @@ class _ReviewCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.s),
           Text(
             text.isEmpty ? 'No written review.' : text,
-            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primaryNavy),
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.primaryNavy,
+            ),
           ),
           const SizedBox(height: 6),
           Text(

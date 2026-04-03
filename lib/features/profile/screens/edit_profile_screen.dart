@@ -13,7 +13,7 @@ class EditProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userTypeAsync = ref.watch(userAccountTypeProvider);
-    
+
     return Scaffold(
       body: userTypeAsync.when(
         data: (userType) {
@@ -26,8 +26,11 @@ class EditProfileScreen extends ConsumerWidget {
           }
           return const Center(child: Text("Unknown account type"));
         },
-        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.accentBlue)),
-        error: (e, st) => Center(child: Text('Error resolving profile type: $e')),
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.accentBlue),
+        ),
+        error: (e, st) =>
+            Center(child: Text('Error resolving profile type: $e')),
       ),
     );
   }

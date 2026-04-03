@@ -32,10 +32,11 @@ class ChatService {
 
     final hasClient =
         firstType == UserType.client || secondType == UserType.client;
-    final hasProvider = firstType == UserType.workProvider ||
+    final hasProvider =
+        firstType == UserType.workProvider ||
         secondType == UserType.workProvider;
-    final hasMarketplace = firstType == UserType.marketplace ||
-        secondType == UserType.marketplace;
+    final hasMarketplace =
+        firstType == UserType.marketplace || secondType == UserType.marketplace;
 
     return (hasClient && hasProvider) ||
         (hasClient && hasMarketplace) ||
@@ -50,9 +51,7 @@ class ChatService {
         .snapshots()
         .map(
           (snapshot) =>
-              snapshot.docs
-                  .map(ConversationSummary.fromFirestore)
-                  .toList(),
+              snapshot.docs.map(ConversationSummary.fromFirestore).toList(),
         );
   }
 
@@ -61,7 +60,9 @@ class ChatService {
         .collection('conversations')
         .doc(conversationId)
         .snapshots()
-        .map((doc) => doc.exists ? ConversationSummary.fromFirestore(doc) : null);
+        .map(
+          (doc) => doc.exists ? ConversationSummary.fromFirestore(doc) : null,
+        );
   }
 
   Stream<List<MarketplaceChatMessage>> getMessages(String conversationId) {
@@ -73,9 +74,7 @@ class ChatService {
         .snapshots()
         .map(
           (snapshot) =>
-              snapshot.docs
-                  .map(MarketplaceChatMessage.fromFirestore)
-                  .toList(),
+              snapshot.docs.map(MarketplaceChatMessage.fromFirestore).toList(),
         );
   }
 
@@ -90,7 +89,9 @@ class ChatService {
     }
 
     final conversationId = buildConversationId(currentUser.id, otherUser.id);
-    final conversationRef = _firestore.collection('conversations').doc(conversationId);
+    final conversationRef = _firestore
+        .collection('conversations')
+        .doc(conversationId);
     final snapshot = await conversationRef.get();
     final participants = [currentUser.id, otherUser.id]..sort();
 
@@ -108,16 +109,14 @@ class ChatService {
         currentUser.id: currentUser.userType.name,
         otherUser.id: otherUser.userType.name,
       },
-      'unreadCount': {
-        currentUser.id: 0,
-        otherUser.id: 0,
-      },
+      'unreadCount': {currentUser.id: 0, otherUser.id: 0},
       'lastMessage': snapshot.data()?['lastMessage'] ?? '',
       'lastMessageType': snapshot.data()?['lastMessageType'] ?? 'text',
       'lastMessageTime':
           snapshot.data()?['lastMessageTime'] ?? FieldValue.serverTimestamp(),
       'messageCount': snapshot.data()?['messageCount'] ?? 0,
-      'createdAt': snapshot.data()?['createdAt'] ?? FieldValue.serverTimestamp(),
+      'createdAt':
+          snapshot.data()?['createdAt'] ?? FieldValue.serverTimestamp(),
     };
 
     await conversationRef.set(payload, SetOptions(merge: true));
@@ -154,9 +153,9 @@ class ChatService {
         .collection('messages');
     final messageRef = messagesRef.doc();
     final extension = type == ChatMessageType.photo ? 'jpg' : 'aac';
-    final storageRef = _storage
-        .ref()
-        .child('messages/$conversationId/${messageRef.id}.$extension');
+    final storageRef = _storage.ref().child(
+      'messages/$conversationId/${messageRef.id}.$extension',
+    );
 
     final upload = await storageRef.putFile(file);
     final mediaUrl = await upload.ref.getDownloadURL();
@@ -183,10 +182,13 @@ class ChatService {
       return;
     }
 
-    final conversationRef = _firestore.collection('conversations').doc(conversationId);
+    final conversationRef = _firestore
+        .collection('conversations')
+        .doc(conversationId);
     final messagesRef = conversationRef.collection('messages');
-    final resolvedMessageRef =
-        messageId == null ? messagesRef.doc() : messagesRef.doc(messageId);
+    final resolvedMessageRef = messageId == null
+        ? messagesRef.doc()
+        : messagesRef.doc(messageId);
 
     await _firestore.runTransaction((transaction) async {
       final conversationSnapshot = await transaction.get(conversationRef);
@@ -194,7 +196,9 @@ class ChatService {
         throw Exception('Conversation not found.');
       }
 
-      final conversation = ConversationSummary.fromFirestore(conversationSnapshot);
+      final conversation = ConversationSummary.fromFirestore(
+        conversationSnapshot,
+      );
       final recipientId = conversation.otherParticipantId(sender.id);
       if (recipientId.isEmpty) {
         throw Exception('Unable to resolve the other participant.');
@@ -247,10 +251,12 @@ class ChatService {
     if (!conversationSnapshot.exists) {
       return;
     }
-    final conversation = ConversationSummary.fromFirestore(conversationSnapshot);
+    final conversation = ConversationSummary.fromFirestore(
+      conversationSnapshot,
+    );
     final recipientId = conversation.otherParticipantId(sender.id);
-    final senderLabel = sender.userType == UserType.marketplace &&
-            sender.name.trim().isNotEmpty
+    final senderLabel =
+        sender.userType == UserType.marketplace && sender.name.trim().isNotEmpty
         ? sender.name
         : sender.name;
 
@@ -269,7 +275,9 @@ class ChatService {
     required String conversationId,
     required String userId,
   }) async {
-    final conversationRef = _firestore.collection('conversations').doc(conversationId);
+    final conversationRef = _firestore
+        .collection('conversations')
+        .doc(conversationId);
     await conversationRef.set({
       'unreadCount': {userId: 0},
     }, SetOptions(merge: true));

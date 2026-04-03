@@ -18,7 +18,7 @@ class MapPreviewWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final point = LatLng(latitude, longitude);
-    
+
     return Container(
       height: height,
       decoration: BoxDecoration(
@@ -31,7 +31,9 @@ class MapPreviewWidget extends StatelessWidget {
           options: MapOptions(
             initialCenter: point,
             initialZoom: 14.0,
-            interactionOptions: const InteractionOptions(flags: InteractiveFlag.none),
+            interactionOptions: const InteractionOptions(
+              flags: InteractiveFlag.none,
+            ),
           ),
           children: [
             TileLayer(

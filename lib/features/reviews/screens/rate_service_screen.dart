@@ -11,10 +11,7 @@ import '../../../services/review_service.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class RateServiceScreen extends ConsumerStatefulWidget {
-  const RateServiceScreen({
-    super.key,
-    required this.providerId,
-  });
+  const RateServiceScreen({super.key, required this.providerId});
 
   final String providerId;
 
@@ -93,10 +90,14 @@ class _RateServiceScreenState extends ConsumerState<RateServiceScreen> {
     final currentUser = ref.watch(currentUserDocProvider).value;
 
     return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      future: FirebaseFirestore.instance.collection('users').doc(widget.providerId).get(),
+      future: FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.providerId)
+          .get(),
       builder: (context, snapshot) {
         final targetData = snapshot.data?.data();
-        final targetName = targetData?['businessName']?.toString().trim().isNotEmpty == true
+        final targetName =
+            targetData?['businessName']?.toString().trim().isNotEmpty == true
             ? targetData!['businessName'].toString()
             : targetData?['name']?.toString() ?? 'this user';
         final targetType = UserModel.parseUserType(
@@ -159,7 +160,8 @@ class _RateServiceScreenState extends ConsumerState<RateServiceScreen> {
                         maxLines: 6,
                         maxLength: 500,
                         decoration: InputDecoration(
-                          hintText: 'Tell others what went well or what could improve.',
+                          hintText:
+                              'Tell others what went well or what could improve.',
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(

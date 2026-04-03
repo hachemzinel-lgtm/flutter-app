@@ -165,7 +165,9 @@ class _ProviderProfileSetupScreenState
               ),
               TextField(
                 controller: priceController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: const InputDecoration(labelText: 'Price'),
               ),
             ],
@@ -261,10 +263,11 @@ class _ProviderProfileSetupScreenState
         portfolioUrls.add(photoUrl);
       }
 
-      final verification = await DocumentVerificationService.verifyProviderDocuments(
-        professionalDocument: _professionalDocument!,
-        identityDocument: _identityDocument!,
-      );
+      final verification =
+          await DocumentVerificationService.verifyProviderDocuments(
+            professionalDocument: _professionalDocument!,
+            identityDocument: _identityDocument!,
+          );
 
       final model = WorkProviderModel(
         id: uid,
@@ -285,10 +288,7 @@ class _ProviderProfileSetupScreenState
         hourlyRate: double.tryParse(_hourlyRateController.text.trim()),
         services: _services,
         isAvailableNow: _availableNow,
-        documents: {
-          'diplomaURL': diplomaUrl,
-          'idURL': idUrl,
-        },
+        documents: {'diplomaURL': diplomaUrl, 'idURL': idUrl},
         verificationStatus: verification.status,
         verificationReason: verification.reason,
         customQuoteEnabled: _customQuoteEnabled,
@@ -335,7 +335,10 @@ class _ProviderProfileSetupScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Set up your work provider profile', style: AppTextStyles.headingLarge),
+                Text(
+                  'Set up your work provider profile',
+                  style: AppTextStyles.headingLarge,
+                ),
                 const SizedBox(height: AppSpacing.s),
                 Text(
                   'Upload your professional documents, pricing, and service details.',
@@ -347,9 +350,12 @@ class _ProviderProfileSetupScreenState
                     onTap: _pickProfileImage,
                     child: CircleAvatar(
                       radius: 54,
-                      backgroundColor: AppColors.accentBlue.withValues(alpha: 0.12),
-                      backgroundImage:
-                          _profileImage == null ? null : FileImage(_profileImage!),
+                      backgroundColor: AppColors.accentBlue.withValues(
+                        alpha: 0.12,
+                      ),
+                      backgroundImage: _profileImage == null
+                          ? null
+                          : FileImage(_profileImage!),
                       child: _profileImage == null
                           ? const Icon(
                               Icons.person_outline,
@@ -365,7 +371,10 @@ class _ProviderProfileSetupScreenState
                 TextFormField(
                   controller: _nameController,
                   validator: _requiredValidator,
-                  decoration: _inputDecoration('Your full name', Icons.person_outline),
+                  decoration: _inputDecoration(
+                    'Your full name',
+                    Icons.person_outline,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.l),
                 _label('PHONE NUMBER'),
@@ -405,13 +414,19 @@ class _ProviderProfileSetupScreenState
                 _label('HOURLY RATE'),
                 TextFormField(
                   controller: _hourlyRateController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: _inputDecoration('Optional', Icons.payments_outlined),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: _inputDecoration(
+                    'Optional',
+                    Icons.payments_outlined,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.m),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  activeThumbColor: AppColors.accentBlue, // SwitchListTile uses activeColor for the switch itself, but let's check
+                  activeThumbColor: AppColors
+                      .accentBlue, // SwitchListTile uses activeColor for the switch itself, but let's check
                   title: const Text('I prefer to quote per job'),
                   value: _customQuoteEnabled,
                   onChanged: (value) {
@@ -422,7 +437,10 @@ class _ProviderProfileSetupScreenState
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Fixed service prices', style: AppTextStyles.headingSmall),
+                    Text(
+                      'Fixed service prices',
+                      style: AppTextStyles.headingSmall,
+                    ),
                     TextButton.icon(
                       onPressed: _addFixedService,
                       icon: const Icon(Icons.add),
@@ -431,27 +449,32 @@ class _ProviderProfileSetupScreenState
                   ],
                 ),
                 if (_services.isEmpty)
-                  Text('No fixed services added yet.', style: AppTextStyles.caption)
+                  Text(
+                    'No fixed services added yet.',
+                    style: AppTextStyles.caption,
+                  )
                 else
                   ..._services.asMap().entries.map(
-                        (entry) => ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(entry.value.name),
-                          subtitle: Text(entry.value.price.toStringAsFixed(2)),
-                          trailing: IconButton(
-                            onPressed: () {
-                              setState(() => _services.removeAt(entry.key));
-                            },
-                            icon: const Icon(Icons.delete_outline),
-                          ),
-                        ),
+                    (entry) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(entry.value.name),
+                      subtitle: Text(entry.value.price.toStringAsFixed(2)),
+                      trailing: IconButton(
+                        onPressed: () {
+                          setState(() => _services.removeAt(entry.key));
+                        },
+                        icon: const Icon(Icons.delete_outline),
                       ),
+                    ),
+                  ),
                 const SizedBox(height: AppSpacing.xl),
                 _label('PROFESSIONAL CERTIFICATE OR LICENSE (PDF)'),
                 _uploadTile(
                   label: _professionalDocument == null
                       ? 'Upload professional diploma, certificate, or work license'
-                      : _professionalDocument!.path.split(Platform.pathSeparator).last,
+                      : _professionalDocument!.path
+                            .split(Platform.pathSeparator)
+                            .last,
                   icon: Icons.description_outlined,
                   selected: _professionalDocument != null,
                   onTap: () => _pickPdf(professional: true),
@@ -461,7 +484,9 @@ class _ProviderProfileSetupScreenState
                 _uploadTile(
                   label: _identityDocument == null
                       ? 'Upload government-issued identity document'
-                      : _identityDocument!.path.split(Platform.pathSeparator).last,
+                      : _identityDocument!.path
+                            .split(Platform.pathSeparator)
+                            .last,
                   icon: Icons.badge_outlined,
                   selected: _identityDocument != null,
                   onTap: () => _pickPdf(professional: false),
@@ -485,7 +510,9 @@ class _ProviderProfileSetupScreenState
                             ? const SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Icon(Icons.my_location_outlined),
                         label: const Text('Use my current location'),
@@ -528,7 +555,8 @@ class _ProviderProfileSetupScreenState
                 const SizedBox(height: AppSpacing.m),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  activeThumbColor: AppColors.accentBlue, // SwitchListTile uses activeColor for the switch itself, but let's check
+                  activeThumbColor: AppColors
+                      .accentBlue, // SwitchListTile uses activeColor for the switch itself, but let's check
                   title: const Text('Enable push notifications'),
                   value: _notificationsEnabled,
                   onChanged: (value) {
@@ -541,8 +569,9 @@ class _ProviderProfileSetupScreenState
                   children: [
                     Text('Portfolio photos', style: AppTextStyles.headingSmall),
                     TextButton.icon(
-                      onPressed:
-                          _portfolioPhotos.length >= 10 ? null : _pickPortfolioImages,
+                      onPressed: _portfolioPhotos.length >= 10
+                          ? null
+                          : _pickPortfolioImages,
                       icon: const Icon(Icons.add_photo_alternate_outlined),
                       label: Text('Add (${_portfolioPhotos.length}/10)'),
                     ),
@@ -553,11 +582,12 @@ class _ProviderProfileSetupScreenState
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: _portfolioPhotos.length,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                        ),
                     itemBuilder: (context, index) {
                       return Stack(
                         children: [
@@ -575,7 +605,9 @@ class _ProviderProfileSetupScreenState
                             right: 6,
                             child: InkWell(
                               onTap: () {
-                                setState(() => _portfolioPhotos.removeAt(index));
+                                setState(
+                                  () => _portfolioPhotos.removeAt(index),
+                                );
                               },
                               child: const CircleAvatar(
                                 radius: 12,

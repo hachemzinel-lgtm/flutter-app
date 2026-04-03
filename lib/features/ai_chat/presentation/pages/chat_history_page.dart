@@ -18,10 +18,7 @@ class ChatHistoryPage extends ConsumerWidget {
     final sessionsAsync = ref.watch(userChatSessionsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('AI Assistant History'),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('AI Assistant History'), elevation: 0),
       body: sessionsAsync.when(
         data: (sessions) {
           if (sessions.isEmpty) {
@@ -84,7 +81,9 @@ class _ChatSessionItem extends ConsumerWidget {
           builder: (BuildContext context) {
             return AlertDialog(
               title: const Text('Delete Chat?'),
-              content: const Text('Are you sure you want to delete this chat session?'),
+              content: const Text(
+                'Are you sure you want to delete this chat session?',
+              ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
@@ -92,7 +91,10 @@ class _ChatSessionItem extends ConsumerWidget {
                 ),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                  child: const Text(
+                    'Delete',
+                    style: TextStyle(color: Colors.red),
+                  ),
                 ),
               ],
             );
@@ -102,12 +104,16 @@ class _ChatSessionItem extends ConsumerWidget {
       onDismissed: (direction) {
         final user = ref.read(authStateProvider).value;
         if (user != null) {
-          ref.read(chatSessionRepositoryProvider).deleteChatSession(user.uid, session.id);
+          ref
+              .read(chatSessionRepositoryProvider)
+              .deleteChatSession(user.uid, session.id);
         }
       },
       child: GestureDetector(
         onTap: () {
-          ref.read(chatControllerProvider.notifier).loadSessionContext(session.id);
+          ref
+              .read(chatControllerProvider.notifier)
+              .loadSessionContext(session.id);
           context.push('/chat-bot');
         },
         child: Container(
@@ -139,14 +145,18 @@ class _ChatSessionItem extends ConsumerWidget {
                   ),
                   Text(
                     timeago.format(session.lastMessageTime),
-                    style: AppTextStyles.caption.copyWith(color: AppColors.softGray),
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.softGray,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
                 session.lastMessagePreview,
-                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textLight),
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textLight,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -167,12 +177,13 @@ class _EmptyStateWidget extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.chat_bubble_outline, size: 80, color: AppColors.softGray.withValues(alpha: 0.5)),
-          const SizedBox(height: 16),
-          Text(
-            'No previous chats',
-            style: AppTextStyles.headingSmall,
+          Icon(
+            Icons.chat_bubble_outline,
+            size: 80,
+            color: AppColors.softGray.withValues(alpha: 0.5),
           ),
+          const SizedBox(height: 16),
+          Text('No previous chats', style: AppTextStyles.headingSmall),
           const SizedBox(height: 8),
           Text(
             'Start a new conversation!',

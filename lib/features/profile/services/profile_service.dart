@@ -19,7 +19,9 @@ class ProfileService {
     List<String> imageUrls = [];
     if (portfolioImages != null) {
       for (var image in portfolioImages) {
-        final ref = _storage.ref().child('portfolios/$uid/${DateTime.now().millisecondsSinceEpoch}.jpg');
+        final ref = _storage.ref().child(
+          'portfolios/$uid/${DateTime.now().millisecondsSinceEpoch}.jpg',
+        );
         await ref.putFile(image);
         imageUrls.add(await ref.getDownloadURL());
       }
@@ -52,7 +54,9 @@ class ProfileService {
     List<String> imageUrls = [];
     if (storeImages != null) {
       for (var image in storeImages) {
-        final ref = _storage.ref().child('stores/$uid/${DateTime.now().millisecondsSinceEpoch}.jpg');
+        final ref = _storage.ref().child(
+          'stores/$uid/${DateTime.now().millisecondsSinceEpoch}.jpg',
+        );
         await ref.putFile(image);
         imageUrls.add(await ref.getDownloadURL());
       }

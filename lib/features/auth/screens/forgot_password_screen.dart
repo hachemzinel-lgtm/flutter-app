@@ -11,7 +11,8 @@ class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  ConsumerState<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  ConsumerState<ForgotPasswordScreen> createState() =>
+      _ForgotPasswordScreenState();
 }
 
 class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
@@ -21,7 +22,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   Future<void> _handleReset() async {
     if (_formKey.currentState!.validate()) {
       try {
-        await ref.read(authServiceProvider).resetPassword(_emailController.text.trim());
+        await ref
+            .read(authServiceProvider)
+            .resetPassword(_emailController.text.trim());
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Reset link sent to your email')),
@@ -31,7 +34,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(e.toString()), backgroundColor: AppColors.errorRed),
+            SnackBar(
+              content: Text(e.toString()),
+              backgroundColor: AppColors.errorRed,
+            ),
           );
         }
       }
@@ -59,10 +65,12 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 style: AppTextStyles.bodyMedium,
               ),
               const SizedBox(height: AppSpacing.xxl),
-              
+
               Text(
                 'EMAIL ADDRESS',
-                style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.w700),
+                style: AppTextStyles.labelSmall.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: AppSpacing.s),
               TextFormField(
@@ -73,18 +81,18 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   filled: true,
                   fillColor: AppColors.softGray.withValues(alpha: 0.05),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
+                    borderRadius: BorderRadius.circular(
+                      AppSpacing.borderRadius,
+                    ),
                     borderSide: BorderSide.none,
                   ),
                 ),
-                validator: (val) => val == null || !val.contains('@') ? 'Invalid email' : null,
+                validator: (val) =>
+                    val == null || !val.contains('@') ? 'Invalid email' : null,
               ),
               const SizedBox(height: AppSpacing.xl),
-              
-              PrimaryButton(
-                text: 'Send Reset Link',
-                onPressed: _handleReset,
-              ),
+
+              PrimaryButton(text: 'Send Reset Link', onPressed: _handleReset),
             ],
           ),
         ),

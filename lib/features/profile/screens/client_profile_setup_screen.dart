@@ -107,7 +107,10 @@ class _ClientProfileSetupScreenState
 
       String? photoUrl;
       if (_profileImage != null) {
-        photoUrl = await StorageService.uploadProfilePicture(uid, _profileImage!);
+        photoUrl = await StorageService.uploadProfilePicture(
+          uid,
+          _profileImage!,
+        );
       }
 
       final client = ClientModel(
@@ -157,7 +160,10 @@ class _ClientProfileSetupScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Set up your client profile', style: AppTextStyles.headingLarge),
+                Text(
+                  'Set up your client profile',
+                  style: AppTextStyles.headingLarge,
+                ),
                 const SizedBox(height: AppSpacing.s),
                 Text(
                   'Add your contact details, language, and saved location.',
@@ -169,9 +175,12 @@ class _ClientProfileSetupScreenState
                     onTap: _pickImage,
                     child: CircleAvatar(
                       radius: 50,
-                      backgroundColor: AppColors.accentBlue.withValues(alpha: 0.12),
-                      backgroundImage:
-                          _profileImage == null ? null : FileImage(_profileImage!),
+                      backgroundColor: AppColors.accentBlue.withValues(
+                        alpha: 0.12,
+                      ),
+                      backgroundImage: _profileImage == null
+                          ? null
+                          : FileImage(_profileImage!),
                       child: _profileImage == null
                           ? const Icon(
                               Icons.person_outline,
@@ -194,7 +203,10 @@ class _ClientProfileSetupScreenState
                 TextFormField(
                   controller: _nameController,
                   validator: _requiredValidator,
-                  decoration: _inputDecoration('Your full name', Icons.person_outline),
+                  decoration: _inputDecoration(
+                    'Your full name',
+                    Icons.person_outline,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.l),
                 _label('PHONE NUMBER'),

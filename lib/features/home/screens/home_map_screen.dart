@@ -25,16 +25,21 @@ class HomeMapScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeMapScreen> createState() => _HomeMapScreenState();
 }
 
-class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProviderStateMixin {
+class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
+    with TickerProviderStateMixin {
   final MapController _mapController = MapController();
-  
-  LatLng _currentGpsLocation = const LatLng(36.8065, 10.1815); // Default (Tunis)
+
+  LatLng _currentGpsLocation = const LatLng(
+    36.8065,
+    10.1815,
+  ); // Default (Tunis)
   LatLng? _selectedLocation;
   bool _useCustomLocation = false;
-  
+
   final double _searchRadiusKm = 10.0;
   String _selectedCategory = 'All';
-  final TextEditingController _locationSearchController = TextEditingController();
+  final TextEditingController _locationSearchController =
+      TextEditingController();
 
   @override
   void initState() {
@@ -51,8 +56,8 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
     super.dispose();
   }
 
-  LatLng get _activeLocation => _useCustomLocation && _selectedLocation != null 
-      ? _selectedLocation! 
+  LatLng get _activeLocation => _useCustomLocation && _selectedLocation != null
+      ? _selectedLocation!
       : _currentGpsLocation;
 
   Future<void> _determinePosition() async {
@@ -71,12 +76,27 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
   }
 
   void _animatedMapMove(LatLng destLocation, double destZoom) {
-    final latTween = Tween<double>(begin: _mapController.camera.center.latitude, end: destLocation.latitude);
-    final lngTween = Tween<double>(begin: _mapController.camera.center.longitude, end: destLocation.longitude);
-    final zoomTween = Tween<double>(begin: _mapController.camera.zoom, end: destZoom);
+    final latTween = Tween<double>(
+      begin: _mapController.camera.center.latitude,
+      end: destLocation.latitude,
+    );
+    final lngTween = Tween<double>(
+      begin: _mapController.camera.center.longitude,
+      end: destLocation.longitude,
+    );
+    final zoomTween = Tween<double>(
+      begin: _mapController.camera.zoom,
+      end: destZoom,
+    );
 
-    final animationController = AnimationController(duration: const Duration(milliseconds: 300), vsync: this);
-    final animation = CurvedAnimation(parent: animationController, curve: Curves.fastOutSlowIn);
+    final animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    final animation = CurvedAnimation(
+      parent: animationController,
+      curve: Curves.fastOutSlowIn,
+    );
 
     animationController.addListener(() {
       _mapController.move(
@@ -86,7 +106,8 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
     });
 
     animation.addStatusListener((status) {
-      if (status == AnimationStatus.completed || status == AnimationStatus.dismissed) {
+      if (status == AnimationStatus.completed ||
+          status == AnimationStatus.dismissed) {
         animationController.dispose();
       }
     });
@@ -98,7 +119,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
     setState(() {
       _selectedLocation = point;
     });
-    
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -112,12 +133,20 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
           children: [
             Center(
               child: Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(color: AppColors.softGray.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.softGray.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.l),
-            const Icon(Icons.location_on, color: AppColors.accentBlue, size: 48),
+            const Icon(
+              Icons.location_on,
+              color: AppColors.accentBlue,
+              size: 48,
+            ),
             const SizedBox(height: 8),
             Text('Location Selected', style: AppTextStyles.headingSmall),
             const SizedBox(height: 4),
@@ -174,14 +203,21 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
           children: [
             Center(
               child: Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(color: AppColors.softGray.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.softGray.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.l),
-            Text('What are you looking for?', style: AppTextStyles.headingMedium),
+            Text(
+              'What are you looking for?',
+              style: AppTextStyles.headingMedium,
+            ),
             const SizedBox(height: AppSpacing.l),
-            
+
             _intentOption(
               icon: Icons.handyman_outlined,
               title: 'Find a Service Provider',
@@ -210,7 +246,12 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
     );
   }
 
-  Widget _intentOption({required IconData icon, required String title, required String subtitle, required VoidCallback onTap}) {
+  Widget _intentOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -224,7 +265,10 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
           children: [
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: AppColors.accentBlue.withValues(alpha: 0.1), shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: AppColors.accentBlue.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
               child: Icon(icon, color: AppColors.accentBlue, size: 28),
             ),
             const SizedBox(width: AppSpacing.m),
@@ -245,17 +289,20 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
     );
   }
 
-
-
   double _distanceKm(double lat, double lng) {
-    return DistanceService().calculateDistance(lat, lng, _activeLocation.latitude, _activeLocation.longitude);
+    return DistanceService().calculateDistance(
+      lat,
+      lng,
+      _activeLocation.latitude,
+      _activeLocation.longitude,
+    );
   }
-
-
 
   @override
   Widget build(BuildContext context) {
-    final providersAsync = ref.watch(providersStreamProvider(DiscoverySearchType.workProviders));
+    final providersAsync = ref.watch(
+      providersStreamProvider(DiscoverySearchType.workProviders),
+    );
 
     return Scaffold(
       body: Stack(
@@ -273,7 +320,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.example.nearwork',
               ),
-              
+
               // Radius Circle
               CircleLayer(
                 circles: [
@@ -283,7 +330,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                     borderColor: AppColors.accentBlue.withValues(alpha: 0.3),
                     borderStrokeWidth: 1,
                     useRadiusInMeter: true,
-                    radius: _searchRadiusKm * 1000, 
+                    radius: _searchRadiusKm * 1000,
                   ),
                 ],
               ),
@@ -295,30 +342,38 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                       ? allResults
                       : allResults.where((r) {
                           final user = r.user;
-                          final category = user is WorkProviderModel 
-                              ? user.profession 
+                          final category = user is WorkProviderModel
+                              ? user.profession
                               : (user is MarketplaceModel ? user.category : '');
                           return category == _selectedCategory;
                         }).toList();
 
                   return MarkerLayer(
-                    markers: filtered.where((r) => r.user.location != null).map((result) {
-                      final user = result.user;
-                      final lat = user.location!.latitude;
-                      final lng = user.location!.longitude;
-                      
-                      return Marker(
-                        point: LatLng(lat, lng),
-                        width: 60, height: 60,
-                        child: MapMarkerWidget(
-                          imageUrl: user.photoUrl,
-                          rating: user.rating,
-                          category: user is WorkProviderModel ? user.profession ?? '' : '',
-                          isVerified: user is WorkProviderModel && user.verificationStatus == VerificationStatus.approved.name,
-                          onTap: () => _showProviderPopup(context, user),
-                        ),
-                      );
-                    }).toList(),
+                    markers: filtered.where((r) => r.user.location != null).map(
+                      (result) {
+                        final user = result.user;
+                        final lat = user.location!.latitude;
+                        final lng = user.location!.longitude;
+
+                        return Marker(
+                          point: LatLng(lat, lng),
+                          width: 60,
+                          height: 60,
+                          child: MapMarkerWidget(
+                            imageUrl: user.photoUrl,
+                            rating: user.rating,
+                            category: user is WorkProviderModel
+                                ? user.profession ?? ''
+                                : '',
+                            isVerified:
+                                user is WorkProviderModel &&
+                                user.verificationStatus ==
+                                    VerificationStatus.approved.name,
+                            onTap: () => _showProviderPopup(context, user),
+                          ),
+                        );
+                      },
+                    ).toList(),
                   );
                 },
                 loading: () => const MarkerLayer(markers: []),
@@ -331,24 +386,35 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                   // GPS Location Dot
                   Marker(
                     point: _currentGpsLocation,
-                    width: 20, height: 20,
+                    width: 20,
+                    height: 20,
                     child: Container(
                       decoration: BoxDecoration(
                         color: AppColors.accentBlue,
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 3),
-                        boxShadow: [BoxShadow(color: AppColors.accentBlue.withValues(alpha: 0.4), blurRadius: 8)],
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.accentBlue.withValues(alpha: 0.4),
+                            blurRadius: 8,
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  
+
                   // Custom Location Pin
                   if (_selectedLocation != null)
                     Marker(
                       point: _selectedLocation!,
-                      width: 40, height: 40,
+                      width: 40,
+                      height: 40,
                       alignment: Alignment.topCenter,
-                      child: const Icon(Icons.location_on, color: AppColors.accentBlue, size: 40),
+                      child: const Icon(
+                        Icons.location_on,
+                        color: AppColors.accentBlue,
+                        size: 40,
+                      ),
                     ),
                 ],
               ),
@@ -371,8 +437,16 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4))],
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.borderRadius,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: Row(
                         children: [
@@ -381,13 +455,22 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                           Expanded(
                             child: Text(
                               'Search plumbers, electricians...',
-                              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.softGray),
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.softGray,
+                              ),
                             ),
                           ),
                           Container(
                             padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(color: AppColors.backgroundSecondary, borderRadius: BorderRadius.circular(8)),
-                            child: const Icon(Icons.tune, size: 20, color: AppColors.accentBlue),
+                            decoration: BoxDecoration(
+                              color: AppColors.backgroundSecondary,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.tune,
+                              size: 20,
+                              color: AppColors.accentBlue,
+                            ),
                           ),
                         ],
                       ),
@@ -403,7 +486,9 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                     children: [
                       _mapActionButton(
                         icon: Icons.tune,
-                        onTap: () => context.push('/search-results'), // In real app, this opens filter sheet
+                        onTap: () => context.push(
+                          '/search-results',
+                        ), // In real app, this opens filter sheet
                       ),
                     ],
                   ),
@@ -420,12 +505,18 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
               children: [
                 _mapActionButton(
                   icon: Icons.add,
-                  onTap: () => _mapController.move(_mapController.camera.center, _mapController.camera.zoom + 1),
+                  onTap: () => _mapController.move(
+                    _mapController.camera.center,
+                    _mapController.camera.zoom + 1,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 _mapActionButton(
                   icon: Icons.remove,
-                  onTap: () => _mapController.move(_mapController.camera.center, _mapController.camera.zoom - 1),
+                  onTap: () => _mapController.move(
+                    _mapController.camera.center,
+                    _mapController.camera.zoom - 1,
+                  ),
                 ),
               ],
             ),
@@ -460,12 +551,21 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
     );
   }
 
-  Widget _mapActionButton({required IconData icon, required VoidCallback onTap}) {
+  Widget _mapActionButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: IconButton(
         icon: Icon(icon, color: AppColors.accentBlue),
@@ -475,7 +575,14 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
   }
 
   Widget _buildCategoryFilters() {
-    final categories = ['All', 'Plumber', 'Electrician', 'Mason', 'Painter', 'Carpenter'];
+    final categories = [
+      'All',
+      'Plumber',
+      'Electrician',
+      'Mason',
+      'Painter',
+      'Carpenter',
+    ];
     final icons = {
       'All': Icons.apps,
       'Plumber': Icons.plumbing,
@@ -494,7 +601,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
         itemBuilder: (context, index) {
           final cat = categories[index];
           final isSelected = _selectedCategory == cat;
-          
+
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: GestureDetector(
@@ -512,18 +619,36 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
                 decoration: BoxDecoration(
                   color: isSelected ? AppColors.accentBlue : Colors.white,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: isSelected ? AppColors.accentBlue : AppColors.borderLight),
-                  boxShadow: isSelected ? [BoxShadow(color: AppColors.accentBlue.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4))] : null,
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColors.accentBlue
+                        : AppColors.borderLight,
+                  ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: AppColors.accentBlue.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : null,
                 ),
                 child: Row(
                   children: [
-                    Icon(icons[cat] ?? Icons.category, size: 16, color: isSelected ? Colors.white : AppColors.softGray),
+                    Icon(
+                      icons[cat] ?? Icons.category,
+                      size: 16,
+                      color: isSelected ? Colors.white : AppColors.softGray,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       cat,
                       style: TextStyle(
                         color: isSelected ? Colors.white : AppColors.textDark,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                         fontSize: 13,
                       ),
                     ),
@@ -536,7 +661,6 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen> with TickerProvid
       ),
     );
   }
-
 
   void _showProviderPopup(BuildContext context, UserModel user) {
     if (user.location == null) return;

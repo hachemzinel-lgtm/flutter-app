@@ -30,7 +30,9 @@ class CategoryChip extends StatelessWidget {
           color: isSelected ? AppColors.accentBlue : AppColors.cardSurface,
           borderRadius: BorderRadius.circular(100),
           border: Border.all(
-            color: isSelected ? AppColors.accentBlue : AppColors.softGray.withValues(alpha: 0.2),
+            color: isSelected
+                ? AppColors.accentBlue
+                : AppColors.softGray.withValues(alpha: 0.2),
           ),
           boxShadow: isSelected
               ? [
@@ -38,7 +40,7 @@ class CategoryChip extends StatelessWidget {
                     color: AppColors.accentBlue.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
-                  )
+                  ),
                 ]
               : [],
         ),

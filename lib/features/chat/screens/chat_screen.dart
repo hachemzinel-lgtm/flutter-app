@@ -18,11 +18,7 @@ import '../models/chat_models.dart';
 import '../providers/chat_provider.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
-  const ChatScreen({
-    super.key,
-    required this.conversationId,
-    this.otherName,
-  });
+  const ChatScreen({super.key, required this.conversationId, this.otherName});
 
   final String conversationId;
   final String? otherName;
@@ -67,11 +63,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     setState(() => _isSending = true);
     try {
-      await ref.read(chatServiceProvider).sendTextMessage(
-        conversationId: widget.conversationId,
-        sender: currentUser,
-        content: text,
-      );
+      await ref
+          .read(chatServiceProvider)
+          .sendTextMessage(
+            conversationId: widget.conversationId,
+            sender: currentUser,
+            content: text,
+          );
       _messageController.clear();
       _scrollToBottom();
     } finally {
@@ -119,12 +117,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return;
     }
 
-    await ref.read(chatServiceProvider).sendMediaMessage(
-      conversationId: widget.conversationId,
-      sender: currentUser,
-      file: File(pickedFile.path),
-      type: ChatMessageType.photo,
-    );
+    await ref
+        .read(chatServiceProvider)
+        .sendMediaMessage(
+          conversationId: widget.conversationId,
+          sender: currentUser,
+          file: File(pickedFile.path),
+          type: ChatMessageType.photo,
+        );
     _scrollToBottom();
   }
 
@@ -140,12 +140,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         return;
       }
 
-      await ref.read(chatServiceProvider).sendMediaMessage(
-        conversationId: widget.conversationId,
-        sender: currentUser,
-        file: File(path),
-        type: ChatMessageType.voice,
-      );
+      await ref
+          .read(chatServiceProvider)
+          .sendMediaMessage(
+            conversationId: widget.conversationId,
+            sender: currentUser,
+            file: File(path),
+            type: ChatMessageType.voice,
+          );
       _scrollToBottom();
       return;
     }
@@ -157,7 +159,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Microphone permission is required to send voice messages.'),
+          content: Text(
+            'Microphone permission is required to send voice messages.',
+          ),
           backgroundColor: AppColors.errorRed,
         ),
       );
@@ -213,12 +217,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserDocProvider).value;
     if (currentUser == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final conversationAsync = ref.watch(conversationProvider(widget.conversationId));
+    final conversationAsync = ref.watch(
+      conversationProvider(widget.conversationId),
+    );
     final messagesAsync = ref.watch(messagesProvider(widget.conversationId));
 
     return conversationAsync.when(
@@ -234,17 +238,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
         final otherName =
             conversation.otherParticipantName(currentUser.id).trim().isEmpty
-                ? (widget.otherName ?? 'NearWork user')
-                : conversation.otherParticipantName(currentUser.id);
+            ? (widget.otherName ?? 'NearWork user')
+            : conversation.otherParticipantName(currentUser.id);
         final otherPhoto = conversation.otherParticipantPhoto(currentUser.id);
         final otherType = conversation.otherParticipantType(currentUser.id);
         final otherId = conversation.otherParticipantId(currentUser.id);
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          ref.read(chatServiceProvider).markConversationRead(
-            conversationId: widget.conversationId,
-            userId: currentUser.id,
-          );
+          ref
+              .read(chatServiceProvider)
+              .markConversationRead(
+                conversationId: widget.conversationId,
+                userId: currentUser.id,
+              );
         });
 
         return Scaffold(
@@ -261,7 +267,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   child: otherPhoto != null && otherPhoto.isNotEmpty
                       ? null
                       : Text(
-                          (otherName.isNotEmpty ? otherName.substring(0, 1) : '?')
+                          (otherName.isNotEmpty
+                                  ? otherName.substring(0, 1)
+                                  : '?')
                               .toUpperCase(),
                           style: AppTextStyles.bodyMedium.copyWith(
                             color: AppColors.accentBlue,
@@ -340,22 +348,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         final message = messages[index];
                         final isMe = message.senderId == currentUser.id;
                         return Align(
-                          alignment:
-                              isMe ? Alignment.centerRight : Alignment.centerLeft,
+                          alignment: isMe
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
                           child: _MessageBubble(
                             message: message,
                             isMe: isMe,
                             isPlaying: _playingMessageId == message.id,
-                            onPlayVoice:
-                                message.type == ChatMessageType.voice
-                                    ? () => _toggleVoicePlayback(message)
-                                    : null,
+                            onPlayVoice: message.type == ChatMessageType.voice
+                                ? () => _toggleVoicePlayback(message)
+                                : null,
                           ),
                         );
                       },
                     );
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
                   error: (error, _) => Center(
                     child: Text(
                       'Unable to load messages.\n$error',
@@ -396,7 +405,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       IconButton(
                         onPressed: () => _toggleRecording(currentUser),
                         icon: Icon(
-                          _isRecording ? Icons.stop_circle : Icons.mic_none_rounded,
+                          _isRecording
+                              ? Icons.stop_circle
+                              : Icons.mic_none_rounded,
                           color: _isRecording
                               ? AppColors.errorRed
                               : AppColors.accentBlue,
@@ -428,7 +439,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       ),
                       const SizedBox(width: AppSpacing.s),
                       ElevatedButton(
-                        onPressed: _isRecording ? null : () => _sendTextMessage(currentUser),
+                        onPressed: _isRecording
+                            ? null
+                            : () => _sendTextMessage(currentUser),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.accentBlue,
                           foregroundColor: Colors.white,
@@ -454,9 +467,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
         );
       },
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (error, _) => Scaffold(
         appBar: AppBar(title: const Text('Chat')),
         body: Center(
@@ -522,7 +534,9 @@ class _MessageBubble extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                isPlaying ? Icons.stop_circle_outlined : Icons.play_circle_outline,
+                isPlaying
+                    ? Icons.stop_circle_outlined
+                    : Icons.play_circle_outline,
                 color: textColor,
               ),
               const SizedBox(width: AppSpacing.s),
@@ -561,8 +575,9 @@ class _MessageBubble extends StatelessWidget {
           ],
         ),
         child: Column(
-          crossAxisAlignment:
-              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment: isMe
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           children: [
             if (!isMe)
               Padding(

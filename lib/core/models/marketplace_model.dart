@@ -45,12 +45,17 @@ class MarketplaceModel extends UserModel {
       reviewCount: data['reviewCount'] ?? 0,
       isBanned: data['isBanned'] ?? false,
       notificationsEnabled: data['notificationsEnabled'] ?? true,
-      profileCompleted: data['profileCompleted'] ?? true,
+      profileCompleted:
+          data['profileComplete'] ?? data['profileCompleted'] ?? false,
       businessName: data['businessName'],
       category: data['category'],
       description: data['description'] ?? data['bio'], // Fallback if old code
       openingHours: data['openingHours'],
-      photos: (data['photos'] as List<dynamic>?)?.map((p) => p.toString()).toList() ?? [],
+      photos:
+          (data['photos'] as List<dynamic>?)
+              ?.map((p) => p.toString())
+              .toList() ??
+          [],
     );
   }
 

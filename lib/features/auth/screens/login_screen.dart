@@ -35,17 +35,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (_formKey.currentState!.validate()) {
       try {
         debugPrint('--- [LOGIN SCREEN] Login button pressed ---');
-        await ref.read(authServiceProvider).signIn(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
+        await ref
+            .read(authServiceProvider)
+            .signIn(
+              email: _emailController.text.trim(),
+              password: _passwordController.text.trim(),
+            );
+        debugPrint(
+          '--- [LOGIN SCREEN] Login successful, navigation should be handled by router ---',
         );
-        debugPrint('--- [LOGIN SCREEN] Login successful, navigation should be handled by router ---');
       } catch (e) {
         debugPrint('--- [LOGIN SCREEN] Login FAILED: $e ---');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(e.toString()), 
+              content: Text(e.toString()),
               backgroundColor: AppColors.errorRed,
               behavior: SnackBarBehavior.floating,
             ),
@@ -61,7 +65,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final credential = await _googleAuthService.signInWithGoogle();
       if (credential != null && mounted) {
         // App router will handle navigation strictly based on Auth state + Firestore doc state
-        debugPrint('--- [LOGIN SCREEN] Google Login successful, navigation should be handled by router ---');
+        debugPrint(
+          '--- [LOGIN SCREEN] Google Login successful, navigation should be handled by router ---',
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -99,7 +105,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Center(
                       child: Text(
                         'NearWork',
-                        style: AppTextStyles.headingSmall.copyWith(color: AppColors.accentBlue),
+                        style: AppTextStyles.headingSmall.copyWith(
+                          color: AppColors.accentBlue,
+                        ),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xxl),
@@ -113,16 +121,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       style: AppTextStyles.bodyMedium,
                     ),
                     const SizedBox(height: AppSpacing.xxl),
-                    
+
                     _buildLabel('EMAIL ADDRESS'),
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: _inputDecoration('name@example.com', Icons.email_outlined),
-                      validator: (val) => val == null || !val.contains('@') ? 'Invalid email' : null,
+                      decoration: _inputDecoration(
+                        'name@example.com',
+                        Icons.email_outlined,
+                      ),
+                      validator: (val) => val == null || !val.contains('@')
+                          ? 'Invalid email'
+                          : null,
                     ),
                     const SizedBox(height: AppSpacing.l),
-                    
+
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -142,39 +155,50 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     TextFormField(
                       controller: _passwordController,
                       obscureText: !_isPasswordVisible,
-                      decoration: _inputDecoration('••••••••', Icons.lock_outline).copyWith(
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
-                            color: AppColors.softGray,
+                      decoration:
+                          _inputDecoration(
+                            '••••••••',
+                            Icons.lock_outline,
+                          ).copyWith(
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _isPasswordVisible
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                                color: AppColors.softGray,
+                              ),
+                              onPressed: () => setState(
+                                () => _isPasswordVisible = !_isPasswordVisible,
+                              ),
+                            ),
                           ),
-                          onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
-                        ),
-                      ),
-                      validator: (val) => val == null || val.length < 6 ? 'Min 6 characters' : null,
+                      validator: (val) => val == null || val.length < 6
+                          ? 'Min 6 characters'
+                          : null,
                     ),
                     const SizedBox(height: AppSpacing.xxl),
-                    
-                    PrimaryButton(
-                      text: 'Login',
-                      onPressed: _handleLogin,
-                    ),
+
+                    PrimaryButton(text: 'Login', onPressed: _handleLogin),
                     const SizedBox(height: AppSpacing.l),
-                    
+
                     const _DividerWithText(text: 'OR CONTINUE WITH'),
                     const SizedBox(height: AppSpacing.l),
-                    
+
                     GoogleSignInButton(
                       text: 'Continue with Google',
                       isLoading: _isGoogleLoading,
                       onPressed: _handleGoogleSignIn,
                     ),
-                    
+
                     const Spacer(),
-                    const SizedBox(height: AppSpacing.l), // add some bottom padding for smaller screens
+                    const SizedBox(
+                      height: AppSpacing.l,
+                    ), // add some bottom padding for smaller screens
                     Center(
                       child: GestureDetector(
-                        onTap: () => context.push('/signup'), // Fixed bug here: User wanted signup navigation! Let's ensure it maps directly to route
+                        onTap: () => context.push(
+                          '/signup',
+                        ), // Fixed bug here: User wanted signup navigation! Let's ensure it maps directly to route
                         child: RichText(
                           text: TextSpan(
                             text: "Don't have an account? ",
@@ -240,7 +264,9 @@ class _DividerWithText extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: Divider(color: AppColors.softGray.withValues(alpha: 0.2))),
+        Expanded(
+          child: Divider(color: AppColors.softGray.withValues(alpha: 0.2)),
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
           child: Text(
@@ -252,7 +278,9 @@ class _DividerWithText extends StatelessWidget {
             ),
           ),
         ),
-        Expanded(child: Divider(color: AppColors.softGray.withValues(alpha: 0.2))),
+        Expanded(
+          child: Divider(color: AppColors.softGray.withValues(alpha: 0.2)),
+        ),
       ],
     );
   }

@@ -103,8 +103,10 @@ class _MarketplaceEditProfileScreenState
     try {
       String? profileUrl = user.photoUrl;
       if (_newProfileImage != null) {
-        profileUrl =
-            await StorageService.uploadProfilePicture(user.id, _newProfileImage!);
+        profileUrl = await StorageService.uploadProfilePicture(
+          user.id,
+          _newProfileImage!,
+        );
       }
 
       final photos = <String>[...user.photos];
@@ -183,7 +185,9 @@ class _MarketplaceEditProfileScreenState
                 backgroundImage: _profileImageProvider(user),
                 child: (_newProfileImage == null && user.photoUrl == null)
                     ? Text(
-                        (user.businessName ?? user.name).substring(0, 1).toUpperCase(),
+                        (user.businessName ?? user.name)
+                            .substring(0, 1)
+                            .toUpperCase(),
                         style: AppTextStyles.headingSmall.copyWith(
                           color: AppColors.accentBlue,
                         ),

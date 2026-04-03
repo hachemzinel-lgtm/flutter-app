@@ -24,7 +24,7 @@ class AppBottomNavbar extends StatelessWidget {
             color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -4),
-          )
+          ),
         ],
       ),
       child: SafeArea(
@@ -34,7 +34,12 @@ class AppBottomNavbar extends StatelessWidget {
             _navItem(LucideIcons.home, 'HOME', currentIndex == 0, 0),
             _navItem(LucideIcons.search, 'SEARCH', currentIndex == 1, 1),
             _navItem(LucideIcons.bot, 'AI CHAT', currentIndex == 2, 2),
-            _navItem(LucideIcons.calendarDays, 'BOOKINGS', currentIndex == 3, 3),
+            _navItem(
+              LucideIcons.calendarDays,
+              'BOOKINGS',
+              currentIndex == 3,
+              3,
+            ),
             _navItem(LucideIcons.user, 'PROFILE', currentIndex == 4, 4),
           ],
         ),

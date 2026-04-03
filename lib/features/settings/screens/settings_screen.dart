@@ -26,41 +26,65 @@ class SettingsScreen extends ConsumerWidget {
           children: [
             _buildProfileHeader(context, user),
             const SizedBox(height: AppSpacing.xl),
-            
+
             _buildSectionTitle('ACCOUNT'),
-            _settingsTile(Icons.person_outline, 'Edit Profile', () => context.push('/profile')),
-            _settingsTile(Icons.notifications_none, 'Notifications', () => context.push('/notifications')),
-            _settingsTile(Icons.favorite_border, 'Favorites', () => context.push('/favorites')),
-            
+            _settingsTile(
+              Icons.person_outline,
+              'Edit Profile',
+              () => context.push('/profile'),
+            ),
+            _settingsTile(
+              Icons.notifications_none,
+              'Notifications',
+              () => context.push('/notifications'),
+            ),
+            _settingsTile(
+              Icons.favorite_border,
+              'Favorites',
+              () => context.push('/favorites'),
+            ),
+
             const SizedBox(height: AppSpacing.l),
             _buildSectionTitle('PREFERENCES'),
-            _settingsTile(Icons.language, 'Language', () => context.push('/language')),
-            _settingsTile(Icons.dark_mode_outlined, 'Dark Mode', () {}, 
-                trailing: Switch(
-                  value: false, 
-                  onChanged: (v) {},
-                  activeThumbColor: AppColors.accentBlue,
-                )),
-            
+            _settingsTile(
+              Icons.language,
+              'Language',
+              () => context.push('/language'),
+            ),
+            _settingsTile(
+              Icons.dark_mode_outlined,
+              'Dark Mode',
+              () {},
+              trailing: Switch(
+                value: false,
+                onChanged: (v) {},
+                activeThumbColor: AppColors.accentBlue,
+              ),
+            ),
+
             const SizedBox(height: AppSpacing.l),
             _buildSectionTitle('HELP & SUPPORT'),
             _settingsTile(Icons.help_outline, 'Help Center', () {}),
             _settingsTile(Icons.privacy_tip_outlined, 'Privacy Policy', () {}),
             _settingsTile(Icons.info_outline, 'About NearWork', () {}),
-            
+
             const SizedBox(height: AppSpacing.xl),
             const LogoutButton(),
             const SizedBox(height: AppSpacing.xxl),
             Center(
               child: Text(
                 'v1.0.0 (Production)',
-                style: AppTextStyles.caption.copyWith(color: AppColors.softGray),
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.softGray,
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.xl),
           ],
         ),
-        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.accentBlue)),
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.accentBlue),
+        ),
         error: (e, s) => Center(child: Text('Error loading settings: $e')),
       ),
     );
@@ -79,16 +103,26 @@ class SettingsScreen extends ConsumerWidget {
           CircleAvatar(
             radius: 35,
             backgroundColor: AppColors.softGray.withValues(alpha: 0.1),
-            backgroundImage: user?.photoUrl != null ? NetworkImage(user!.photoUrl!) : null,
-            child: user?.photoUrl == null ? const Icon(Icons.person, size: 35, color: AppColors.softGray) : null,
+            backgroundImage: user?.photoUrl != null
+                ? NetworkImage(user!.photoUrl!)
+                : null,
+            child: user?.photoUrl == null
+                ? const Icon(Icons.person, size: 35, color: AppColors.softGray)
+                : null,
           ),
           const SizedBox(width: AppSpacing.m),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(user?.name ?? 'NearWork User', style: AppTextStyles.headingSmall),
-                Text(user?.email ?? 'No email associated', style: AppTextStyles.caption),
+                Text(
+                  user?.name ?? 'NearWork User',
+                  style: AppTextStyles.headingSmall,
+                ),
+                Text(
+                  user?.email ?? 'No email associated',
+                  style: AppTextStyles.caption,
+                ),
               ],
             ),
           ),
@@ -115,7 +149,12 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _settingsTile(IconData icon, String title, VoidCallback onTap, {Widget? trailing}) {
+  Widget _settingsTile(
+    IconData icon,
+    String title,
+    VoidCallback onTap, {
+    Widget? trailing,
+  }) {
     return ListTile(
       onTap: onTap,
       leading: Container(
@@ -126,8 +165,13 @@ class SettingsScreen extends ConsumerWidget {
         ),
         child: Icon(icon, color: AppColors.textDark, size: 20),
       ),
-      title: Text(title, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w500)),
-      trailing: trailing ?? const Icon(Icons.chevron_right, size: 20, color: AppColors.softGray),
+      title: Text(
+        title,
+        style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w500),
+      ),
+      trailing:
+          trailing ??
+          const Icon(Icons.chevron_right, size: 20, color: AppColors.softGray),
       contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.s),
     );
   }

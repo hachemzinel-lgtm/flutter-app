@@ -33,7 +33,10 @@ class AdminService {
     }
 
     try {
-      final adminDoc = await _firestore.collection('admins').doc(authUser.uid).get();
+      final adminDoc = await _firestore
+          .collection('admins')
+          .doc(authUser.uid)
+          .get();
       return adminDoc.exists;
     } catch (_) {
       return false;
@@ -71,7 +74,9 @@ class AdminService {
 
   Future<Map<String, dynamic>> getPlatformStats() async {
     final usersSnapshot = await _firestore.collection('users').get();
-    final conversationsSnapshot = await _firestore.collection('conversations').get();
+    final conversationsSnapshot = await _firestore
+        .collection('conversations')
+        .get();
     final reportsSnapshot = await _firestore.collection('reports').get();
     final reviewsSnapshot = await _firestore.collectionGroup('reviews').get();
 
@@ -85,7 +90,9 @@ class AdminService {
     for (final doc in usersSnapshot.docs) {
       final data = doc.data();
       final type = UserModel.parseUserType(
-        data['accountType']?.toString() ?? data['userType']?.toString() ?? 'client',
+        data['accountType']?.toString() ??
+            data['userType']?.toString() ??
+            'client',
       );
       switch (type) {
         case UserType.client:
@@ -95,7 +102,8 @@ class AdminService {
           providerCount++;
           final profession = data['profession']?.toString().trim();
           if (profession != null && profession.isNotEmpty) {
-            professionCounts[profession] = (professionCounts[profession] ?? 0) + 1;
+            professionCounts[profession] =
+                (professionCounts[profession] ?? 0) + 1;
           }
           break;
         case UserType.marketplace:
@@ -145,7 +153,8 @@ class AdminService {
       'pendingVerifications': pendingVerificationCount,
       'totalMessages': conversationsSnapshot.docs.fold<int>(
         0,
-        (total, doc) => total + ((doc.data()['messageCount'] as num?)?.toInt() ?? 0),
+        (total, doc) =>
+            total + ((doc.data()['messageCount'] as num?)?.toInt() ?? 0),
       ),
       'totalConversations': conversationsSnapshot.size,
       'totalReports': reportsSnapshot.size,

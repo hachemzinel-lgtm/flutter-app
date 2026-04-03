@@ -10,25 +10,42 @@ class StorageService {
     return await ref.getDownloadURL();
   }
 
-  static Future<String> uploadDocument(String uid, File file, String name) async {
+  static Future<String> uploadDocument(
+    String uid,
+    File file,
+    String name,
+  ) async {
     final ref = _storage.ref('users/$uid/documents/$name.pdf');
     await ref.putFile(file);
     return await ref.getDownloadURL();
   }
 
-  static Future<String> uploadPortfolioPhoto(String uid, File file, String photoId) async {
+  static Future<String> uploadPortfolioPhoto(
+    String uid,
+    File file,
+    String photoId,
+  ) async {
     final ref = _storage.ref('users/$uid/portfolio/$photoId.jpg');
     await ref.putFile(file);
     return await ref.getDownloadURL();
   }
 
-  static Future<String> uploadMarketplacePhoto(String uid, File file, String photoId) async {
+  static Future<String> uploadMarketplacePhoto(
+    String uid,
+    File file,
+    String photoId,
+  ) async {
     final ref = _storage.ref('users/$uid/marketplace_photos/$photoId.jpg');
     await ref.putFile(file);
     return await ref.getDownloadURL();
   }
 
-  static Future<String> uploadMessageMedia(String conversationId, String messageId, File file, String ext) async {
+  static Future<String> uploadMessageMedia(
+    String conversationId,
+    String messageId,
+    File file,
+    String ext,
+  ) async {
     final ref = _storage.ref('messages/$conversationId/$messageId.$ext');
     await ref.putFile(file);
     return await ref.getDownloadURL();

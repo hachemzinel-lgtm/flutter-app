@@ -26,8 +26,14 @@ class ReviewService {
       throw Exception('You cannot review your own profile.');
     }
 
-    final reviewerSnapshot = await _firestore.collection('users').doc(reviewerId).get();
-    final targetSnapshot = await _firestore.collection('users').doc(targetUserId).get();
+    final reviewerSnapshot = await _firestore
+        .collection('users')
+        .doc(reviewerId)
+        .get();
+    final targetSnapshot = await _firestore
+        .collection('users')
+        .doc(targetUserId)
+        .get();
     if (!reviewerSnapshot.exists || !targetSnapshot.exists) {
       throw Exception('The review target could not be found.');
     }
@@ -99,14 +105,18 @@ class ReviewService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map(
-          (snapshot) =>
-              snapshot.docs.map((doc) => ReviewModel.fromFirestore(doc)).toList(),
+          (snapshot) => snapshot.docs
+              .map((doc) => ReviewModel.fromFirestore(doc))
+              .toList(),
         );
   }
 
   Future<void> _refreshAggregate(String userId) async {
-    final reviewsSnapshot =
-        await _firestore.collection('users').doc(userId).collection('reviews').get();
+    final reviewsSnapshot = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('reviews')
+        .get();
 
     if (reviewsSnapshot.docs.isEmpty) {
       await _firestore.collection('users').doc(userId).update({

@@ -36,12 +36,12 @@ class ReviewModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'reviewerId': reviewerId,
-        'reviewerName': reviewerName,
-        'reviewerPhoto': reviewerPhoto,
-        'rating': rating,
-        'text': text,
-        'createdAt': Timestamp.fromDate(createdAt),
-        'response': response,
-      };
+    'reviewerId': reviewerId,
+    'reviewerName': reviewerName,
+    'reviewerPhoto': reviewerPhoto,
+    'rating': rating,
+    'text': text,
+    'createdAt': Timestamp.fromDate(createdAt),
+    'response': response,
+  };
 }

@@ -62,13 +62,13 @@ class _MapResultsScreenState extends ConsumerState<MapResultsScreen> {
   }
 
   DiscoverySearchRequest get _request => DiscoverySearchRequest(
-        type: _type,
-        category: _category,
-        radiusKm: _radiusKm,
-        minimumRating: _minimumRating,
-        availableOnly: _availableOnly,
-        location: _location,
-      );
+    type: _type,
+    category: _category,
+    radiusKm: _radiusKm,
+    minimumRating: _minimumRating,
+    availableOnly: _availableOnly,
+    location: _location,
+  );
 
   Future<void> _openFilterSheet() async {
     double draftRadius = _radiusKm;
@@ -103,7 +103,8 @@ class _MapResultsScreenState extends ConsumerState<MapResultsScreen> {
                     min: 5,
                     max: 50,
                     divisions: 9,
-                    onChanged: (value) => setModalState(() => draftRadius = value),
+                    onChanged: (value) =>
+                        setModalState(() => draftRadius = value),
                   ),
                   if (_type == DiscoverySearchType.workProviders) ...[
                     SwitchListTile(
@@ -116,7 +117,9 @@ class _MapResultsScreenState extends ConsumerState<MapResultsScreen> {
                     ),
                     DropdownButtonFormField<double>(
                       initialValue: draftRating,
-                      decoration: const InputDecoration(labelText: 'Minimum rating'),
+                      decoration: const InputDecoration(
+                        labelText: 'Minimum rating',
+                      ),
                       items: const [
                         DropdownMenuItem(value: 0, child: Text('Any')),
                         DropdownMenuItem(value: 3, child: Text('3+ stars')),
@@ -182,7 +185,9 @@ class _MapResultsScreenState extends ConsumerState<MapResultsScreen> {
                 padding: AppSpacing.pagePadding,
                 child: Text(
                   error.toString(),
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.errorRed),
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.errorRed,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -222,7 +227,8 @@ class _MapResultsScreenState extends ConsumerState<MapResultsScreen> {
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.nearwork.app',
                   ),
                   CircleLayer(
@@ -232,7 +238,9 @@ class _MapResultsScreenState extends ConsumerState<MapResultsScreen> {
                         radius: _radiusKm * 1000,
                         useRadiusInMeter: true,
                         color: AppColors.accentBlue.withValues(alpha: 0.08),
-                        borderColor: AppColors.accentBlue.withValues(alpha: 0.45),
+                        borderColor: AppColors.accentBlue.withValues(
+                          alpha: 0.45,
+                        ),
                         borderStrokeWidth: 2,
                       ),
                     ],
@@ -337,7 +345,8 @@ class _MapResultsScreenState extends ConsumerState<MapResultsScreen> {
                         const SizedBox(height: 8),
                         _MapActionButton(
                           icon: Icons.my_location_rounded,
-                          onTap: () => _mapController.move(_location.center, 12.5),
+                          onTap: () =>
+                              _mapController.move(_location.center, 12.5),
                         ),
                       ],
                     ),
@@ -345,7 +354,9 @@ class _MapResultsScreenState extends ConsumerState<MapResultsScreen> {
                   const SizedBox(height: AppSpacing.m),
                   Consumer(
                     builder: (context, ref, _) {
-                      final resultsValue = ref.watch(searchResultsProvider(_request));
+                      final resultsValue = ref.watch(
+                        searchResultsProvider(_request),
+                      );
                       return resultsValue.when(
                         loading: () => const SizedBox(
                           width: double.infinity,
@@ -400,37 +411,48 @@ class _MapResultsScreenState extends ConsumerState<MapResultsScreen> {
                                         const SizedBox(height: 10),
                                     itemBuilder: (context, index) {
                                       final result = results[index];
-                                      final title = _type ==
+                                      final title =
+                                          _type ==
                                               DiscoverySearchType.workProviders
                                           ? result.user.name
                                           : (result.user is MarketplaceModel
-                                              ? (result.user as MarketplaceModel)
-                                                      .businessName ??
-                                                  result.user.name
-                                              : result.user.name);
-                                      final subtitle = _type ==
+                                                ? (result.user
+                                                              as MarketplaceModel)
+                                                          .businessName ??
+                                                      result.user.name
+                                                : result.user.name);
+                                      final subtitle =
+                                          _type ==
                                               DiscoverySearchType.workProviders
                                           ? (result.user as WorkProviderModel)
-                                                  .profession ??
-                                              'Work Provider'
+                                                    .profession ??
+                                                'Work Provider'
                                           : (result.user as MarketplaceModel)
-                                                  .category ??
-                                              'Marketplace';
+                                                    .category ??
+                                                'Marketplace';
 
                                       return ListTile(
                                         contentPadding: EdgeInsets.zero,
                                         leading: CircleAvatar(
-                                          backgroundImage: result.user.photoUrl == null
+                                          backgroundImage:
+                                              result.user.photoUrl == null
                                               ? null
-                                              : NetworkImage(result.user.photoUrl!),
-                                          backgroundColor:
-                                              AppColors.accentBlue.withValues(alpha: 0.12),
+                                              : NetworkImage(
+                                                  result.user.photoUrl!,
+                                                ),
+                                          backgroundColor: AppColors.accentBlue
+                                              .withValues(alpha: 0.12),
                                           child: result.user.photoUrl == null
                                               ? Text(
-                                                  title.substring(0, 1).toUpperCase(),
-                                                  style: AppTextStyles.headingSmall.copyWith(
-                                                    color: AppColors.accentBlue,
-                                                  ),
+                                                  title
+                                                      .substring(0, 1)
+                                                      .toUpperCase(),
+                                                  style: AppTextStyles
+                                                      .headingSmall
+                                                      .copyWith(
+                                                        color: AppColors
+                                                            .accentBlue,
+                                                      ),
                                                 )
                                               : null,
                                         ),
@@ -443,10 +465,15 @@ class _MapResultsScreenState extends ConsumerState<MapResultsScreen> {
                                         ),
                                         onTap: () {
                                           if (_type ==
-                                              DiscoverySearchType.workProviders) {
-                                            context.push('/provider-profile/${result.user.id}');
+                                              DiscoverySearchType
+                                                  .workProviders) {
+                                            context.push(
+                                              '/provider-profile/${result.user.id}',
+                                            );
                                           } else {
-                                            context.push('/merchant-profile/${result.user.id}');
+                                            context.push(
+                                              '/merchant-profile/${result.user.id}',
+                                            );
                                           }
                                         },
                                       );
@@ -471,10 +498,7 @@ class _MapResultsScreenState extends ConsumerState<MapResultsScreen> {
 }
 
 class _MapActionButton extends StatelessWidget {
-  const _MapActionButton({
-    required this.icon,
-    required this.onTap,
-  });
+  const _MapActionButton({required this.icon, required this.onTap});
 
   final IconData icon;
   final VoidCallback onTap;
@@ -522,7 +546,9 @@ class _MarkerAvatar extends StatelessWidget {
             shape: BoxShape.circle,
             color: Colors.white,
             border: Border.all(
-              color: result.isVerified ? AppColors.starGold : AppColors.accentBlue,
+              color: result.isVerified
+                  ? AppColors.starGold
+                  : AppColors.accentBlue,
               width: 3,
             ),
             image: result.user.photoUrl == null
@@ -538,7 +564,9 @@ class _MarkerAvatar extends StatelessWidget {
           width: 4,
           height: 10,
           decoration: BoxDecoration(
-            color: result.isVerified ? AppColors.starGold : AppColors.accentBlue,
+            color: result.isVerified
+                ? AppColors.starGold
+                : AppColors.accentBlue,
             borderRadius: BorderRadius.circular(99),
           ),
         ),

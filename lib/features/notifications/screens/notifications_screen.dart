@@ -10,11 +10,11 @@ import '../../auth/providers/auth_provider.dart';
 import '../services/notification_service.dart';
 
 // StreamProvider scoped inside build via ref.watch — defined here for clarity
-final _notificationsStreamFamily = StreamProvider.family<
-    QuerySnapshot<Map<String, dynamic>>,
-    String>(
-  (ref, uid) => ref.watch(notificationServiceProvider).getNotifications(uid),
-);
+final _notificationsStreamFamily =
+    StreamProvider.family<QuerySnapshot<Map<String, dynamic>>, String>(
+      (ref, uid) =>
+          ref.watch(notificationServiceProvider).getNotifications(uid),
+    );
 
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
@@ -45,19 +45,34 @@ class NotificationsScreen extends ConsumerWidget {
                 final data = doc.data();
 
                 // Section headers by date
-                final date = (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
-                final showHeader = index == 0 || !_isSameDay(date,
-                  (docs[index - 1].data())['createdAt']?.toDate() ?? DateTime.now());
+                final date =
+                    (data['createdAt'] as Timestamp?)?.toDate() ??
+                    DateTime.now();
+                final showHeader =
+                    index == 0 ||
+                    !_isSameDay(
+                      date,
+                      (docs[index - 1].data())['createdAt']?.toDate() ??
+                          DateTime.now(),
+                    );
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (showHeader)
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(AppSpacing.m, AppSpacing.m, AppSpacing.m, 4),
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.m,
+                          AppSpacing.m,
+                          AppSpacing.m,
+                          4,
+                        ),
                         child: Text(
                           _dateHeader(date),
-                          style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.w700, color: AppColors.softGray),
+                          style: AppTextStyles.labelSmall.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.softGray,
+                          ),
                         ),
                       ),
                     _buildTile(context, doc.id, data, user.uid, ref),
@@ -68,7 +83,8 @@ class NotificationsScreen extends ConsumerWidget {
           );
         },
         loading: () => _buildSkeleton(),
-        error: (e, _) => _buildEmptyState(context), // show empty state on error too
+        error: (e, _) =>
+            _buildEmptyState(context), // show empty state on error too
       ),
     );
   }
@@ -79,21 +95,33 @@ class NotificationsScreen extends ConsumerWidget {
   String _dateHeader(DateTime date) {
     final now = DateTime.now();
     if (_isSameDay(date, now)) return 'Today';
-    if (_isSameDay(date, now.subtract(const Duration(days: 1)))) return 'Yesterday';
+    if (_isSameDay(date, now.subtract(const Duration(days: 1))))
+      return 'Yesterday';
     return '${date.day}/${date.month}/${date.year}';
   }
 
   IconData _iconForType(String? type) {
     switch (type) {
-      case 'message': return Icons.chat_bubble_outline;
-      case 'booking': return Icons.calendar_today_outlined;
-      case 'promo': return Icons.local_offer_outlined;
-      case 'system': return Icons.verified_outlined;
-      default: return Icons.notifications_none;
+      case 'message':
+        return Icons.chat_bubble_outline;
+      case 'booking':
+        return Icons.calendar_today_outlined;
+      case 'promo':
+        return Icons.local_offer_outlined;
+      case 'system':
+        return Icons.verified_outlined;
+      default:
+        return Icons.notifications_none;
     }
   }
 
-  Widget _buildTile(BuildContext context, String id, Map<String, dynamic> data, String uid, WidgetRef ref) {
+  Widget _buildTile(
+    BuildContext context,
+    String id,
+    Map<String, dynamic> data,
+    String uid,
+    WidgetRef ref,
+  ) {
     final bool isRead = data['isRead'] as bool? ?? false;
     final String type = data['type'] as String? ?? 'system';
     final date = (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
@@ -113,13 +141,18 @@ class NotificationsScreen extends ConsumerWidget {
       child: InkWell(
         onTap: () {
           ref.read(notificationServiceProvider).markAsRead(uid, id);
-          final route = ref.read(notificationServiceProvider).resolveDeepLink(data);
+          final route = ref
+              .read(notificationServiceProvider)
+              .resolveDeepLink(data);
           if (route != null && route.isNotEmpty) {
             context.push(route);
           }
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: 12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.m,
+            vertical: 12,
+          ),
           color: isRead ? null : AppColors.accentBlue.withValues(alpha: 0.03),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,7 +160,9 @@ class NotificationsScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: isRead ? AppColors.softGray.withValues(alpha: 0.08) : AppColors.accentBlue.withValues(alpha: 0.1),
+                  color: isRead
+                      ? AppColors.softGray.withValues(alpha: 0.08)
+                      : AppColors.accentBlue.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -143,20 +178,34 @@ class NotificationsScreen extends ConsumerWidget {
                   children: [
                     Text(
                       data['title'] as String? ?? 'Notification',
-                      style: AppTextStyles.bodyLarge.copyWith(fontWeight: isRead ? FontWeight.normal : FontWeight.bold),
+                      style: AppTextStyles.bodyLarge.copyWith(
+                        fontWeight: isRead
+                            ? FontWeight.normal
+                            : FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 2),
-                    Text(data['body'] as String? ?? '', style: AppTextStyles.bodyMedium),
+                    Text(
+                      data['body'] as String? ?? '',
+                      style: AppTextStyles.bodyMedium,
+                    ),
                     const SizedBox(height: 4),
-                    Text(timeago.format(date, locale: 'en_short'), style: AppTextStyles.caption),
+                    Text(
+                      timeago.format(date, locale: 'en_short'),
+                      style: AppTextStyles.caption,
+                    ),
                   ],
                 ),
               ),
               if (!isRead)
                 Container(
-                  width: 8, height: 8,
+                  width: 8,
+                  height: 8,
                   margin: const EdgeInsets.only(top: 6),
-                  decoration: const BoxDecoration(color: AppColors.accentBlue, shape: BoxShape.circle),
+                  decoration: const BoxDecoration(
+                    color: AppColors.accentBlue,
+                    shape: BoxShape.circle,
+                  ),
                 ),
             ],
           ),
@@ -173,12 +222,23 @@ class NotificationsScreen extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 100, height: 100,
-              decoration: BoxDecoration(color: AppColors.accentBlue.withValues(alpha: 0.08), shape: BoxShape.circle),
-              child: const Icon(Icons.notifications_none_rounded, size: 50, color: AppColors.accentBlue),
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: AppColors.accentBlue.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.notifications_none_rounded,
+                size: 50,
+                color: AppColors.accentBlue,
+              ),
             ),
             const SizedBox(height: 24),
-            const Text('No Notifications Yet', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text(
+              'No Notifications Yet',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             const Text(
               "You'll see booking updates, messages, and offers here.",
@@ -192,10 +252,18 @@ class NotificationsScreen extends ConsumerWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accentBlue,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 onPressed: () => context.go('/home'),
-                child: const Text('Explore Services', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Explore Services',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ],
@@ -212,15 +280,36 @@ class NotificationsScreen extends ConsumerWidget {
         padding: const EdgeInsets.only(bottom: 16),
         child: Row(
           children: [
-            Container(width: 44, height: 44, decoration: BoxDecoration(color: AppColors.softGray.withValues(alpha: 0.12), shape: BoxShape.circle)),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.softGray.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(height: 14, width: 180, decoration: BoxDecoration(color: AppColors.softGray.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4))),
+                  Container(
+                    height: 14,
+                    width: 180,
+                    decoration: BoxDecoration(
+                      color: AppColors.softGray.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  Container(height: 12, width: 120, decoration: BoxDecoration(color: AppColors.softGray.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(4))),
+                  Container(
+                    height: 12,
+                    width: 120,
+                    decoration: BoxDecoration(
+                      color: AppColors.softGray.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
                 ],
               ),
             ),

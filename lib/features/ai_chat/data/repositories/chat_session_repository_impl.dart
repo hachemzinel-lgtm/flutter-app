@@ -9,7 +9,7 @@ class ChatSessionRepositoryImpl implements ChatSessionRepository {
   final FirebaseFirestore _firestore;
 
   ChatSessionRepositoryImpl({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   @override
   Stream<List<ChatSession>> getUserChatSessions(String userId) {
@@ -19,9 +19,11 @@ class ChatSessionRepositoryImpl implements ChatSessionRepository {
         .collection('chat_sessions')
         .orderBy('lastMessageTime', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => ChatSessionModel.fromFirestore(doc))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => ChatSessionModel.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   @override
@@ -49,7 +51,11 @@ class ChatSessionRepositoryImpl implements ChatSessionRepository {
   }
 
   @override
-  Future<void> saveMessage(String userId, String sessionId, ChatMessage message) async {
+  Future<void> saveMessage(
+    String userId,
+    String sessionId,
+    ChatMessage message,
+  ) async {
     final messageRef = _firestore
         .collection('users')
         .doc(userId)
@@ -75,15 +81,18 @@ class ChatSessionRepositoryImpl implements ChatSessionRepository {
         .collection('chat_sessions')
         .doc(sessionId)
         .update({
-      'lastMessagePreview': message.content.length > 50 
-          ? '${message.content.substring(0, 47)}...' 
-          : message.content,
-      'lastMessageTime': FieldValue.serverTimestamp(),
-    });
+          'lastMessagePreview': message.content.length > 50
+              ? '${message.content.substring(0, 47)}...'
+              : message.content,
+          'lastMessageTime': FieldValue.serverTimestamp(),
+        });
   }
 
   @override
-  Future<List<ChatMessage>> getSessionMessages(String userId, String sessionId) async {
+  Future<List<ChatMessage>> getSessionMessages(
+    String userId,
+    String sessionId,
+  ) async {
     final snapshot = await _firestore
         .collection('users')
         .doc(userId)
@@ -99,7 +108,10 @@ class ChatSessionRepositoryImpl implements ChatSessionRepository {
   }
 
   @override
-  Stream<List<ChatMessage>> watchSessionMessages(String userId, String sessionId) {
+  Stream<List<ChatMessage>> watchSessionMessages(
+    String userId,
+    String sessionId,
+  ) {
     return _firestore
         .collection('users')
         .doc(userId)
@@ -108,21 +120,25 @@ class ChatSessionRepositoryImpl implements ChatSessionRepository {
         .collection('messages')
         .orderBy('timestamp', descending: false)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => ChatMessageModel.fromFirestore(doc))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => ChatMessageModel.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   @override
-  Future<void> updateSessionTitle(String userId, String sessionId, String newTitle) async {
+  Future<void> updateSessionTitle(
+    String userId,
+    String sessionId,
+    String newTitle,
+  ) async {
     await _firestore
         .collection('users')
         .doc(userId)
         .collection('chat_sessions')
         .doc(sessionId)
-        .update({
-      'title': newTitle,
-    });
+        .update({'title': newTitle});
   }
 
   @override
@@ -136,14 +152,14 @@ class ChatSessionRepositoryImpl implements ChatSessionRepository {
     // Delete all messages in subcollection first
     final messages = await sessionRef.collection('messages').get();
     final batch = _firestore.batch();
-    
+
     for (var doc in messages.docs) {
       batch.delete(doc.reference);
     }
-    
+
     // Delete the session document itself
     batch.delete(sessionRef);
-    
+
     await batch.commit();
   }
 }

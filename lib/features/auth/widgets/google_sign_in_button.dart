@@ -37,7 +37,22 @@ class GoogleSignInButton extends StatelessWidget {
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.g_mobiledata, size: 32, color: Colors.red),
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      'G',
+                      style: AppTextStyles.bodyLarge.copyWith(
+                        color: const Color(0xFF4285F4),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
                   const SizedBox(width: AppSpacing.s),
                   Text(
                     text,

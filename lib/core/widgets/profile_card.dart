@@ -69,17 +69,11 @@ class ProfileCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        name,
-                        style: AppTextStyles.headingSmall,
-                      ),
+                      Text(name, style: AppTextStyles.headingSmall),
                       AvailabilityBadge(isAvailable: isAvailable),
                     ],
                   ),
-                  Text(
-                    profession,
-                    style: AppTextStyles.bodyMedium,
-                  ),
+                  Text(profession, style: AppTextStyles.bodyMedium),
                   const SizedBox(height: AppSpacing.s),
                   StarRatingRow(rating: rating, reviewCount: reviewCount),
                 ],

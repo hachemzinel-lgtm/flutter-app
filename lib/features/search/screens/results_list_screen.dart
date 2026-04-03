@@ -72,7 +72,7 @@ const _allProviders = [
 
 class ResultsListScreen extends StatefulWidget {
   final String? initialCategory;
-  
+
   const ResultsListScreen({super.key, this.initialCategory});
 
   @override
@@ -105,23 +105,30 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
       final dist = (p['distanceKm'] as num).toDouble();
       final rating = (p['rating'] as num).toDouble();
       final available = p['isAvailable'] as bool;
-      
+
       // Category Chip Filter Check
-      final matchesCategory = _activeCategoryChip == null || _activeCategoryChip == 'All' ||
-          (p['profession'] as String).toLowerCase() == _activeCategoryChip!.toLowerCase() ||
-          (p['category'] as String?)?.toLowerCase() == _activeCategoryChip!.toLowerCase();
-          
+      final matchesCategory =
+          _activeCategoryChip == null ||
+          _activeCategoryChip == 'All' ||
+          (p['profession'] as String).toLowerCase() ==
+              _activeCategoryChip!.toLowerCase() ||
+          (p['category'] as String?)?.toLowerCase() ==
+              _activeCategoryChip!.toLowerCase();
+
       final q = _query.toLowerCase();
-      final matchesText = q.isEmpty ||
+      final matchesText =
+          q.isEmpty ||
           (p['name'] as String).toLowerCase().contains(q) ||
           (p['profession'] as String).toLowerCase().contains(q) ||
-          (p['skills'] as List).any((s) => s.toString().toLowerCase().contains(q));
-          
+          (p['skills'] as List).any(
+            (s) => s.toString().toLowerCase().contains(q),
+          );
+
       return matchesCategory &&
-             matchesText &&
-             dist <= _maxDistanceKm &&
-             rating >= _minRating &&
-             (!_availableOnly || available);
+          matchesText &&
+          dist <= _maxDistanceKm &&
+          rating >= _minRating &&
+          (!_availableOnly || available);
     }).toList();
   }
 
@@ -173,7 +180,8 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
             children: [
               Center(
                 child: Container(
-                  width: 40, height: 4,
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
                     color: AppColors.softGray.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(2),
@@ -187,10 +195,15 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
               // Distance
               Text(
                 'Max Distance: ${tempDist < 100 ? '${tempDist.toStringAsFixed(0)} km' : 'Any'}',
-                style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w600),
+                style: AppTextStyles.bodyLarge.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               Slider(
-                value: tempDist, min: 1, max: 100, divisions: 99,
+                value: tempDist,
+                min: 1,
+                max: 100,
+                divisions: 99,
                 activeColor: AppColors.accentBlue,
                 label: '${tempDist.toStringAsFixed(0)} km',
                 onChanged: (v) => setModal(() => tempDist = v),
@@ -198,16 +211,51 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
               const SizedBox(height: 12),
 
               // Rating
-              Text('Minimum Rating', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w600)),
+              Text(
+                'Minimum Rating',
+                style: AppTextStyles.bodyLarge.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
                 children: [
-                  _ratingOption('Any', 0.0, tempRating, setModal, (v) => tempRating = v),
-                  _ratingOption('3.0+', 3.0, tempRating, setModal, (v) => tempRating = v),
-                  _ratingOption('3.5+', 3.5, tempRating, setModal, (v) => tempRating = v),
-                  _ratingOption('4.0+', 4.0, tempRating, setModal, (v) => tempRating = v),
-                  _ratingOption('4.5+', 4.5, tempRating, setModal, (v) => tempRating = v),
+                  _ratingOption(
+                    'Any',
+                    0.0,
+                    tempRating,
+                    setModal,
+                    (v) => tempRating = v,
+                  ),
+                  _ratingOption(
+                    '3.0+',
+                    3.0,
+                    tempRating,
+                    setModal,
+                    (v) => tempRating = v,
+                  ),
+                  _ratingOption(
+                    '3.5+',
+                    3.5,
+                    tempRating,
+                    setModal,
+                    (v) => tempRating = v,
+                  ),
+                  _ratingOption(
+                    '4.0+',
+                    4.0,
+                    tempRating,
+                    setModal,
+                    (v) => tempRating = v,
+                  ),
+                  _ratingOption(
+                    '4.5+',
+                    4.5,
+                    tempRating,
+                    setModal,
+                    (v) => tempRating = v,
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -242,18 +290,27 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.accentBlue),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accentBlue,
+                      ),
                       onPressed: () {
                         setState(() {
                           _maxDistanceKm = tempDist;
                           _minRating = tempRating;
                           _availableOnly = tempAvailable;
-                          _activeDistanceLabel = tempDist < 100 ? '≤${tempDist.toStringAsFixed(0)} km' : null;
-                          _activeRatingLabel = tempRating > 0 ? '$tempRating+★' : null;
+                          _activeDistanceLabel = tempDist < 100
+                              ? '≤${tempDist.toStringAsFixed(0)} km'
+                              : null;
+                          _activeRatingLabel = tempRating > 0
+                              ? '$tempRating+★'
+                              : null;
                         });
                         Navigator.pop(ctx);
                       },
-                      child: const Text('Apply', style: TextStyle(color: Colors.white)),
+                      child: const Text(
+                        'Apply',
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                   ),
                 ],
@@ -265,14 +322,22 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
     );
   }
 
-  Widget _ratingOption(String label, double value, double current, StateSetter setModal, Function(double) onSelect) {
+  Widget _ratingOption(
+    String label,
+    double value,
+    double current,
+    StateSetter setModal,
+    Function(double) onSelect,
+  ) {
     final selected = current == value;
     return GestureDetector(
       onTap: () => setModal(() => onSelect(value)),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? AppColors.accentBlue : AppColors.softGray.withValues(alpha: 0.08),
+          color: selected
+              ? AppColors.accentBlue
+              : AppColors.softGray.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
@@ -298,9 +363,22 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: AppTextStyles.labelSmall.copyWith(color: AppColors.accentBlue, fontWeight: FontWeight.bold)),
+          Text(
+            label,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColors.accentBlue,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(width: 4),
-          GestureDetector(onTap: onRemove, child: const Icon(Icons.close, size: 13, color: AppColors.accentBlue)),
+          GestureDetector(
+            onTap: onRemove,
+            child: const Icon(
+              Icons.close,
+              size: 13,
+              color: AppColors.accentBlue,
+            ),
+          ),
         ],
       ),
     );
@@ -326,9 +404,19 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
                   child: Container(
                     width: 16,
                     height: 16,
-                    decoration: const BoxDecoration(color: AppColors.errorRed, shape: BoxShape.circle),
+                    decoration: const BoxDecoration(
+                      color: AppColors.errorRed,
+                      shape: BoxShape.circle,
+                    ),
                     child: Center(
-                      child: Text('$filterCount', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                      child: Text(
+                        '$filterCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -341,13 +429,20 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
         children: [
           // Search bar
           Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.m, AppSpacing.m, AppSpacing.m, 0),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.m,
+              AppSpacing.m,
+              AppSpacing.m,
+              0,
+            ),
             child: Container(
               height: 52,
               decoration: BoxDecoration(
                 color: AppColors.softGray.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
-                border: Border.all(color: AppColors.softGray.withValues(alpha: 0.15)),
+                border: Border.all(
+                  color: AppColors.softGray.withValues(alpha: 0.15),
+                ),
               ),
               child: TextField(
                 controller: _searchController,
@@ -355,10 +450,18 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
                 decoration: InputDecoration(
                   hintText: 'Search by name, profession or skill...',
                   hintStyle: AppTextStyles.bodyMedium,
-                  prefixIcon: const Icon(Icons.search, color: AppColors.softGray, size: 20),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: AppColors.softGray,
+                    size: 20,
+                  ),
                   suffixIcon: _query.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.close, color: AppColors.softGray, size: 18),
+                          icon: const Icon(
+                            Icons.close,
+                            color: AppColors.softGray,
+                            size: 18,
+                          ),
                           onPressed: () {
                             _searchController.clear();
                             setState(() => _query = '');
@@ -373,26 +476,55 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
           ),
 
           // Active filter chips
-          if (_activeDistanceLabel != null || _activeRatingLabel != null || _activeCategoryChip != null || _availableOnly)
+          if (_activeDistanceLabel != null ||
+              _activeRatingLabel != null ||
+              _activeCategoryChip != null ||
+              _availableOnly)
             Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.m, 8, AppSpacing.m, 0),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.m,
+                8,
+                AppSpacing.m,
+                0,
+              ),
               child: Wrap(
                 children: [
                   if (_activeCategoryChip != null)
-                    _activeChip(_activeCategoryChip!, () => setState(() => _activeCategoryChip = null)),
+                    _activeChip(
+                      _activeCategoryChip!,
+                      () => setState(() => _activeCategoryChip = null),
+                    ),
                   if (_activeDistanceLabel != null)
-                    _activeChip(_activeDistanceLabel!, () => setState(() { _maxDistanceKm = 100; _activeDistanceLabel = null; })),
+                    _activeChip(
+                      _activeDistanceLabel!,
+                      () => setState(() {
+                        _maxDistanceKm = 100;
+                        _activeDistanceLabel = null;
+                      }),
+                    ),
                   if (_activeRatingLabel != null)
-                    _activeChip(_activeRatingLabel!, () => setState(() { _minRating = 0; _activeRatingLabel = null; })),
+                    _activeChip(
+                      _activeRatingLabel!,
+                      () => setState(() {
+                        _minRating = 0;
+                        _activeRatingLabel = null;
+                      }),
+                    ),
                   if (_availableOnly)
-                    _activeChip('Available Now', () => setState(() => _availableOnly = false)),
+                    _activeChip(
+                      'Available Now',
+                      () => setState(() => _availableOnly = false),
+                    ),
                 ],
               ),
             ),
 
           // Result count
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: 6),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.m,
+              vertical: 6,
+            ),
             child: Text(
               '${results.length} expert${results.length == 1 ? '' : 's'} found',
               style: AppTextStyles.bodyMedium,
@@ -406,11 +538,23 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.search_off, size: 64, color: AppColors.softGray),
+                        const Icon(
+                          Icons.search_off,
+                          size: 64,
+                          color: AppColors.softGray,
+                        ),
                         const SizedBox(height: 16),
-                        Text('No results found', style: AppTextStyles.headingSmall.copyWith(color: AppColors.softGray)),
+                        Text(
+                          'No results found',
+                          style: AppTextStyles.headingSmall.copyWith(
+                            color: AppColors.softGray,
+                          ),
+                        ),
                         const SizedBox(height: 8),
-                        Text('Try adjusting your search or filters', style: AppTextStyles.bodyMedium),
+                        Text(
+                          'Try adjusting your search or filters',
+                          style: AppTextStyles.bodyMedium,
+                        ),
                       ],
                     ),
                   )
@@ -429,19 +573,34 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
                             rating: (p['rating'] as num).toDouble(),
                             reviewCount: p['reviewCount'] as int,
                             isAvailable: p['isAvailable'] as bool,
-                            onTap: () => context.push('/provider-profile/mock_$index'),
+                            onTap: () =>
+                                context.push('/provider-profile/mock_$index'),
                           ),
                           Padding(
                             padding: const EdgeInsets.only(bottom: 10, left: 4),
                             child: Row(
                               children: [
-                                const Icon(Icons.location_on_outlined, size: 13, color: AppColors.softGray),
+                                const Icon(
+                                  Icons.location_on_outlined,
+                                  size: 13,
+                                  color: AppColors.softGray,
+                                ),
                                 const SizedBox(width: 3),
-                                Text('${(p['distanceKm'] as num).toStringAsFixed(1)} km', style: AppTextStyles.caption),
+                                Text(
+                                  '${(p['distanceKm'] as num).toStringAsFixed(1)} km',
+                                  style: AppTextStyles.caption,
+                                ),
                                 const SizedBox(width: 12),
-                                const Icon(Icons.access_time, size: 13, color: AppColors.softGray),
+                                const Icon(
+                                  Icons.access_time,
+                                  size: 13,
+                                  color: AppColors.softGray,
+                                ),
                                 const SizedBox(width: 3),
-                                Text('${p['hourlyRate']} DT/hr', style: AppTextStyles.caption),
+                                Text(
+                                  '${p['hourlyRate']} DT/hr',
+                                  style: AppTextStyles.caption,
+                                ),
                               ],
                             ),
                           ),

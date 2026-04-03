@@ -9,15 +9,13 @@ import '../../auth/providers/auth_provider.dart';
 import '../services/admin_service.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
-  const AdminDashboardScreen({
-    super.key,
-    this.initialSection = 0,
-  });
+  const AdminDashboardScreen({super.key, this.initialSection = 0});
 
   final int initialSection;
 
   @override
-  ConsumerState<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+  ConsumerState<AdminDashboardScreen> createState() =>
+      _AdminDashboardScreenState();
 }
 
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
@@ -54,10 +52,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 Padding(
                   padding: const EdgeInsets.only(right: AppSpacing.m),
                   child: Center(
-                    child: Text(
-                      authUser!.email!,
-                      style: AppTextStyles.caption,
-                    ),
+                    child: Text(authUser!.email!, style: AppTextStyles.caption),
                   ),
                 ),
             ],
@@ -116,9 +111,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           ),
         );
       },
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (error, _) => Scaffold(
         appBar: AppBar(title: const Text('Admin')),
         body: Center(child: Text('Unable to open admin tools.\n$error')),
@@ -131,7 +125,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       children: [
         Expanded(
           child: TextField(
-            onChanged: (value) => setState(() => _searchQuery = value.trim().toLowerCase()),
+            onChanged: (value) =>
+                setState(() => _searchQuery = value.trim().toLowerCase()),
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.search_rounded),
               hintText: _selectedIndex == 0
@@ -192,8 +187,8 @@ class _StatsSection extends StatelessWidget {
         }
 
         final stats = snapshot.data!;
-        final averageRating =
-            ((stats['averageRatingX100'] as int? ?? 0) / 100).toStringAsFixed(2);
+        final averageRating = ((stats['averageRatingX100'] as int? ?? 0) / 100)
+            .toStringAsFixed(2);
 
         return SingleChildScrollView(
           child: Column(
@@ -258,7 +253,10 @@ class _StatsSection extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Most active profession', style: AppTextStyles.headingSmall),
+                    Text(
+                      'Most active profession',
+                      style: AppTextStyles.headingSmall,
+                    ),
                     const SizedBox(height: AppSpacing.s),
                     Text(
                       '${stats['topProfession'] ?? 'N/A'} (${stats['topProfessionCount'] ?? 0})',
@@ -292,10 +290,7 @@ class _StatsSection extends StatelessWidget {
 }
 
 class _UsersSection extends StatelessWidget {
-  const _UsersSection({
-    required this.service,
-    required this.searchQuery,
-  });
+  const _UsersSection({required this.service, required this.searchQuery});
 
   final AdminService service;
   final String searchQuery;
@@ -337,8 +332,8 @@ class _UsersSection extends StatelessWidget {
             final isBanned = data['isBanned'] == true;
             final displayName =
                 data['businessName']?.toString().trim().isNotEmpty == true
-                    ? data['businessName'].toString()
-                    : data['name']?.toString() ?? 'Unknown';
+                ? data['businessName'].toString()
+                : data['name']?.toString() ?? 'Unknown';
 
             return Container(
               padding: const EdgeInsets.all(AppSpacing.m),
@@ -355,7 +350,10 @@ class _UsersSection extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(displayName, style: AppTextStyles.headingSmall),
+                            Text(
+                              displayName,
+                              style: AppTextStyles.headingSmall,
+                            ),
                             const SizedBox(height: 2),
                             Text(
                               data['email']?.toString() ?? 'No email',
@@ -527,7 +525,9 @@ class _VerificationsSection extends StatelessWidget {
 
         final users = snapshot.data!.docs;
         if (users.isEmpty) {
-          return const Center(child: Text('No pending provider verifications.'));
+          return const Center(
+            child: Text('No pending provider verifications.'),
+          );
         }
 
         return ListView.separated(
@@ -536,8 +536,9 @@ class _VerificationsSection extends StatelessWidget {
           itemBuilder: (context, index) {
             final doc = users[index];
             final data = doc.data();
-            final documents =
-                Map<String, dynamic>.from(data['documents'] ?? const {});
+            final documents = Map<String, dynamic>.from(
+              data['documents'] ?? const {},
+            );
             return Container(
               padding: const EdgeInsets.all(AppSpacing.m),
               decoration: BoxDecoration(
@@ -573,12 +574,8 @@ class _VerificationsSection extends StatelessWidget {
                     runSpacing: AppSpacing.s,
                     children: [
                       ElevatedButton(
-                        onPressed: () => _reviewVerification(
-                          context,
-                          service,
-                          doc.id,
-                          true,
-                        ),
+                        onPressed: () =>
+                            _reviewVerification(context, service, doc.id, true),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.availableGreen,
                           foregroundColor: Colors.white,
@@ -616,7 +613,9 @@ class _VerificationsSection extends StatelessWidget {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: Text(approved ? 'Approve verification' : 'Reject verification'),
+          title: Text(
+            approved ? 'Approve verification' : 'Reject verification',
+          ),
           content: TextField(
             controller: controller,
             maxLines: 4,
@@ -653,10 +652,7 @@ class _VerificationsSection extends StatelessWidget {
 }
 
 class _ReportsSection extends StatelessWidget {
-  const _ReportsSection({
-    required this.service,
-    required this.searchQuery,
-  });
+  const _ReportsSection({required this.service, required this.searchQuery});
 
   final AdminService service;
   final String searchQuery;
@@ -747,7 +743,8 @@ class _ReportsSection extends StatelessWidget {
                           await service.setUserBanState(
                             userId: data['reportedUserId'].toString(),
                             isBanned: true,
-                            reason: data['reason']?.toString() ?? 'Report action',
+                            reason:
+                                data['reason']?.toString() ?? 'Report action',
                           );
                           await service.resolveReport(
                             reportId: report.id,
@@ -762,7 +759,8 @@ class _ReportsSection extends StatelessWidget {
                           await service.setUserBanState(
                             userId: data['reportedUserId'].toString(),
                             isBanned: true,
-                            reason: 'Permanent moderation action: ${data['reason'] ?? 'Report'}',
+                            reason:
+                                'Permanent moderation action: ${data['reason'] ?? 'Report'}',
                           );
                           await service.resolveReport(
                             reportId: report.id,
@@ -793,10 +791,7 @@ class _ReportsSection extends StatelessWidget {
 }
 
 class _ReviewsSection extends StatelessWidget {
-  const _ReviewsSection({
-    required this.service,
-    required this.searchQuery,
-  });
+  const _ReviewsSection({required this.service, required this.searchQuery});
 
   final AdminService service;
   final String searchQuery;
@@ -833,7 +828,8 @@ class _ReviewsSection extends StatelessWidget {
           itemBuilder: (context, index) {
             final review = reviews[index];
             final data = review.data();
-            final parentPath = review.reference.parent.parent?.path ?? 'unknown';
+            final parentPath =
+                review.reference.parent.parent?.path ?? 'unknown';
             return Container(
               padding: const EdgeInsets.all(AppSpacing.m),
               decoration: BoxDecoration(
@@ -861,7 +857,8 @@ class _ReviewsSection extends StatelessWidget {
                         : 'No review text.',
                     style: AppTextStyles.bodyMedium,
                   ),
-                  if (data['response']?.toString().trim().isNotEmpty == true) ...[
+                  if (data['response']?.toString().trim().isNotEmpty ==
+                      true) ...[
                     const SizedBox(height: AppSpacing.s),
                     Text(
                       'Response: ${data['response']}',
@@ -877,7 +874,8 @@ class _ReviewsSection extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.m),
                   OutlinedButton(
-                    onPressed: () => service.deleteReview(review.reference.path),
+                    onPressed: () =>
+                        service.deleteReview(review.reference.path),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.errorRed,
                     ),

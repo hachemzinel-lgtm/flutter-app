@@ -48,7 +48,9 @@ class MessageBubble extends StatelessWidget {
           ],
         ),
         child: Column(
-          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment: isMe
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           children: [
             if (imageUrl != null) ...[
               ClipRRect(
@@ -67,7 +69,9 @@ class MessageBubble extends StatelessWidget {
             Text(
               DateFormat.jm().format(timestamp),
               style: AppTextStyles.caption.copyWith(
-                color: isMe ? Colors.white.withValues(alpha: 0.7) : AppColors.textLight,
+                color: isMe
+                    ? Colors.white.withValues(alpha: 0.7)
+                    : AppColors.textLight,
                 fontSize: 10,
               ),
             ),

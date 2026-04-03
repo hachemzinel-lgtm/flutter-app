@@ -38,80 +38,118 @@ class DocumentVerificationService {
     required File professionalDocument,
     required File identityDocument,
   }) async {
-    final professionalResult = await verifyDocument(
-      professionalDocument,
-      documentPurpose: 'professional_certificate',
-    );
-    final identityResult = await verifyDocument(
-      identityDocument,
-      documentPurpose: 'identity_document',
-    );
-
-    final approved = professionalResult.isValid && identityResult.isValid;
-    final reason = approved
-        ? 'Documents approved by automated verification.'
-        : [
-            if (!professionalResult.isValid) professionalResult.reason,
-            if (!identityResult.isValid) identityResult.reason,
-          ].join(' ');
-
-    return CombinedVerificationResult(
-      status: approved ? 'approved' : 'rejected',
-      reason: reason,
-      professionalDocument: professionalResult,
-      identityDocument: identityResult,
-    );
-  }
-
-  static Future<VerificationResult> verifyDocument(
-    File pdfFile, {
-    required String documentPurpose,
-  }) async {
+    print('--- [DOC VERIFY] Starting provider document verification');
     try {
-      final extractedText = await ReadPdfText.getPDFtext(pdfFile.path);
-      if (extractedText.trim().isEmpty) {
-        return const VerificationResult(
-          isValid: false,
-          documentType: 'unknown',
-          reason: 'Document is not readable. Please upload a clear PDF file.',
-          extractedText: '',
+      final diplomaText = await ReadPdfText.getPDFtext(
+        professionalDocument.path,
+      );
+      final idText = await ReadPdfText.getPDFtext(identityDocument.path);
+
+      if (diplomaText.trim().isEmpty || idText.trim().isEmpty) {
+        return const CombinedVerificationResult(
+          status: 'rejected',
+          reason:
+              'One or both documents could not be read clearly. Please upload clearer PDF files.',
+          professionalDocument: VerificationResult(
+            isValid: false,
+            documentType: 'unknown',
+            reason: 'Professional document could not be read.',
+            extractedText: '',
+          ),
+          identityDocument: VerificationResult(
+            isValid: false,
+            documentType: 'unknown',
+            reason: 'Identity document could not be read.',
+            extractedText: '',
+          ),
         );
       }
 
+      await _ensureEnvLoaded();
       final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
       if (apiKey.isEmpty) {
-        return VerificationResult(
-          isValid: false,
-          documentType: 'unknown',
-          reason: 'Gemini API key is missing. Manual admin review required.',
-          extractedText: extractedText,
+        return CombinedVerificationResult(
+          status: 'rejected',
+          reason: 'Gemini API key is missing. Manual review is required.',
+          professionalDocument: VerificationResult(
+            isValid: false,
+            documentType: 'certificate',
+            reason: 'AI verification is not configured.',
+            extractedText: diplomaText,
+          ),
+          identityDocument: VerificationResult(
+            isValid: false,
+            documentType: 'id_card',
+            reason: 'AI verification is not configured.',
+            extractedText: idText,
+          ),
         );
       }
 
-      final prompt = _buildPrompt(
-        documentPurpose: documentPurpose,
-        extractedText: extractedText,
+      final responseText = await _requestVerification(
+        _buildPrompt(professionalText: diplomaText, identityText: idText),
+        apiKey,
       );
-      final responseText = await _requestVerification(prompt, apiKey);
-      final result = _parseResponse(responseText);
 
-      return VerificationResult(
-        isValid: result['isValid'] == true,
-        documentType: (result['documentType'] ?? 'unknown').toString(),
-        reason: (result['reason'] ?? 'Verification completed').toString(),
-        extractedText: extractedText,
+      final payload = _parseResponse(responseText);
+      final diplomaValid = payload['diploma_valid'] == true;
+      final idValid = payload['id_valid'] == true;
+      final reason =
+          payload['reason']?.toString() ??
+          'Verification completed without a detailed reason.';
+
+      return CombinedVerificationResult(
+        status: diplomaValid && idValid ? 'approved' : 'rejected',
+        reason: reason,
+        professionalDocument: VerificationResult(
+          isValid: diplomaValid,
+          documentType: 'certificate',
+          reason: reason,
+          extractedText: diplomaText,
+        ),
+        identityDocument: VerificationResult(
+          isValid: idValid,
+          documentType: 'id_card',
+          reason: reason,
+          extractedText: idText,
+        ),
       );
     } catch (error) {
-      return VerificationResult(
-        isValid: false,
-        documentType: 'unknown',
+      return CombinedVerificationResult(
+        status: 'rejected',
         reason: 'Automated verification failed: $error',
-        extractedText: '',
+        professionalDocument: const VerificationResult(
+          isValid: false,
+          documentType: 'certificate',
+          reason: 'Automated verification failed.',
+          extractedText: '',
+        ),
+        identityDocument: const VerificationResult(
+          isValid: false,
+          documentType: 'id_card',
+          reason: 'Automated verification failed.',
+          extractedText: '',
+        ),
       );
     }
   }
 
-  static Future<String> _requestVerification(String prompt, String apiKey) async {
+  static Future<void> _ensureEnvLoaded() async {
+    if (dotenv.isInitialized) {
+      return;
+    }
+
+    try {
+      await dotenv.load(fileName: '.env');
+    } catch (_) {
+      // Intentionally ignored so the caller can handle missing keys gracefully.
+    }
+  }
+
+  static Future<String> _requestVerification(
+    String prompt,
+    String apiKey,
+  ) async {
     const model = 'gemini-1.5-flash';
     final url =
         'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey';
@@ -127,10 +165,7 @@ class DocumentVerificationService {
             ],
           },
         ],
-        'generationConfig': {
-          'temperature': 0.1,
-          'maxOutputTokens': 256,
-        },
+        'generationConfig': {'temperature': 0.1, 'maxOutputTokens': 256},
       }),
     );
 
@@ -156,22 +191,20 @@ class DocumentVerificationService {
   }
 
   static String _buildPrompt({
-    required String documentPurpose,
-    required String extractedText,
+    required String professionalText,
+    required String identityText,
   }) {
-    final purposeDescription = documentPurpose == 'identity_document'
-        ? 'Check that this text looks like an ID card or passport and contains a real person name plus an ID number.'
-        : 'Check that this text looks like a professional diploma, certificate, or work license.';
-
     return '''
-Analyze the following OCR text from a PDF.
-$purposeDescription
+Analyze these documents. Document 1 should be a professional certificate, diploma, or license. Document 2 should be an ID card.
 
 Return only JSON with this exact structure:
-{"isValid": true, "documentType": "diploma|certificate|license|id_card|passport|unknown", "reason": "short explanation"}
+{"diploma_valid": true, "id_valid": true, "reason": "short explanation"}
 
-OCR TEXT:
-$extractedText
+DOCUMENT 1 TEXT:
+$professionalText
+
+DOCUMENT 2 TEXT:
+$identityText
 ''';
   }
 

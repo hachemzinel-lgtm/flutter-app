@@ -25,7 +25,8 @@ class MapMarkerWidget extends StatelessWidget {
     final lowerCat = category.toLowerCase();
     if (lowerCat.contains('plumber')) return const Color(0xFF007AFF);
     if (lowerCat.contains('electrician')) return const Color(0xFFFFCC00);
-    if (lowerCat.isNotEmpty && lowerCat != 'unknown') return const Color(0xFF34C759);
+    if (lowerCat.isNotEmpty && lowerCat != 'unknown')
+      return const Color(0xFF34C759);
     return const Color(0xFFFF3B30); // Default Red
   }
 
@@ -61,7 +62,7 @@ class MapMarkerWidget extends StatelessWidget {
                   color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
-                )
+                ),
               ],
             ),
             child: ClipOval(

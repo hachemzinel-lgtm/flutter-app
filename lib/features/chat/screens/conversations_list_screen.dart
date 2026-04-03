@@ -20,21 +20,19 @@ class ConversationsListScreen extends ConsumerWidget {
     final userDoc = ref.watch(currentUserDocProvider).value;
 
     if (authUser == null || userDoc == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final conversationsAsync = ref.watch(conversationsProvider(authUser.uid));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Messages'),
-      ),
+      appBar: AppBar(title: const Text('Messages')),
       body: conversationsAsync.when(
         data: (conversations) {
           if (conversations.isEmpty) {
-            return _EmptyMessagesState(userTypeLabel: userDoc.userType.displayName);
+            return _EmptyMessagesState(
+              userTypeLabel: userDoc.userType.displayName,
+            );
           }
 
           return RefreshIndicator(
@@ -47,9 +45,15 @@ class ConversationsListScreen extends ConsumerWidget {
               separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.s),
               itemBuilder: (context, index) {
                 final conversation = conversations[index];
-                final otherName = conversation.otherParticipantName(authUser.uid);
-                final otherPhoto = conversation.otherParticipantPhoto(authUser.uid);
-                final otherType = conversation.otherParticipantType(authUser.uid);
+                final otherName = conversation.otherParticipantName(
+                  authUser.uid,
+                );
+                final otherPhoto = conversation.otherParticipantPhoto(
+                  authUser.uid,
+                );
+                final otherType = conversation.otherParticipantType(
+                  authUser.uid,
+                );
                 final unreadCount = conversation.unreadFor(authUser.uid);
 
                 return InkWell(
@@ -118,7 +122,9 @@ class ConversationsListScreen extends ConsumerWidget {
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: AppTextStyles.bodyMedium.copyWith(
-                                        color: AppColors.primaryNavy.withValues(alpha: 0.75),
+                                        color: AppColors.primaryNavy.withValues(
+                                          alpha: 0.75,
+                                        ),
                                         fontWeight: unreadCount > 0
                                             ? FontWeight.w600
                                             : FontWeight.w400,
@@ -139,7 +145,9 @@ class ConversationsListScreen extends ConsumerWidget {
                                         ),
                                       ),
                                       child: Text(
-                                        unreadCount > 99 ? '99+' : '$unreadCount',
+                                        unreadCount > 99
+                                            ? '99+'
+                                            : '$unreadCount',
                                         style: AppTextStyles.caption.copyWith(
                                           color: Colors.white,
                                           fontWeight: FontWeight.w700,
@@ -194,10 +202,7 @@ class ConversationsListScreen extends ConsumerWidget {
 }
 
 class _ConversationAvatar extends StatelessWidget {
-  const _ConversationAvatar({
-    required this.name,
-    required this.photoUrl,
-  });
+  const _ConversationAvatar({required this.name, required this.photoUrl});
 
   final String name;
   final String? photoUrl;
@@ -207,8 +212,9 @@ class _ConversationAvatar extends StatelessWidget {
     return CircleAvatar(
       radius: 28,
       backgroundColor: AppColors.accentBlue.withValues(alpha: 0.12),
-      backgroundImage:
-          photoUrl != null && photoUrl!.isNotEmpty ? NetworkImage(photoUrl!) : null,
+      backgroundImage: photoUrl != null && photoUrl!.isNotEmpty
+          ? NetworkImage(photoUrl!)
+          : null,
       child: photoUrl != null && photoUrl!.isNotEmpty
           ? null
           : Text(
@@ -222,9 +228,7 @@ class _ConversationAvatar extends StatelessWidget {
 }
 
 class _EmptyMessagesState extends StatelessWidget {
-  const _EmptyMessagesState({
-    required this.userTypeLabel,
-  });
+  const _EmptyMessagesState({required this.userTypeLabel});
 
   final String userTypeLabel;
 
@@ -250,10 +254,7 @@ class _EmptyMessagesState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.l),
-            Text(
-              'No messages yet',
-              style: AppTextStyles.headingMedium,
-            ),
+            Text('No messages yet', style: AppTextStyles.headingMedium),
             const SizedBox(height: AppSpacing.s),
             Text(
               'Your $userTypeLabel conversations will appear here once you connect with someone nearby.',

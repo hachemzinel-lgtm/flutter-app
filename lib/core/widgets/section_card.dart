@@ -33,10 +33,7 @@ class SectionCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: AppTextStyles.headingSmall,
-              ),
+              Text(title, style: AppTextStyles.headingSmall),
               if (onActionTap != null && actionLabel != null)
                 TextButton(
                   onPressed: onActionTap,

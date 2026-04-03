@@ -25,28 +25,36 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
             Container(
               padding: const EdgeInsets.all(AppSpacing.l),
               decoration: BoxDecoration(
-                color: _isAvailable ? AppColors.availableGreen.withValues(alpha: 0.1) : AppColors.softGray.withValues(alpha: 0.1),
+                color: _isAvailable
+                    ? AppColors.availableGreen.withValues(alpha: 0.1)
+                    : AppColors.softGray.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
               ),
               child: Column(
                 children: [
                   Icon(
-                    _isAvailable ? Icons.check_circle_outline : Icons.pause_circle_outline,
+                    _isAvailable
+                        ? Icons.check_circle_outline
+                        : Icons.pause_circle_outline,
                     size: 80,
-                    color: _isAvailable ? AppColors.availableGreen : AppColors.softGray,
+                    color: _isAvailable
+                        ? AppColors.availableGreen
+                        : AppColors.softGray,
                   ),
                   const SizedBox(height: AppSpacing.m),
                   Text(
                     _isAvailable ? 'You are Available' : 'You are Offline',
                     style: AppTextStyles.headingLarge.copyWith(
-                      color: _isAvailable ? AppColors.availableGreen : AppColors.textDark,
+                      color: _isAvailable
+                          ? AppColors.availableGreen
+                          : AppColors.textDark,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.s),
                   Text(
-                    _isAvailable 
-                      ? 'Customers can see you on the map and send requests.'
-                      : 'You are hidden from the map and won\'t receive new alerts.',
+                    _isAvailable
+                        ? 'Customers can see you on the map and send requests.'
+                        : 'You are hidden from the map and won\'t receive new alerts.',
                     textAlign: TextAlign.center,
                     style: AppTextStyles.bodyMedium,
                   ),

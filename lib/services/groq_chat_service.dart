@@ -5,15 +5,18 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class GroqChatService {
   String get _apiKey => dotenv.env['GROQ_API_KEY'] ?? '';
-  static const String _chatUrl = 'https://api.groq.com/openai/v1/chat/completions';
-  static const String _audioUrl = 'https://api.groq.com/openai/v1/audio/transcriptions';
+  static const String _chatUrl =
+      'https://api.groq.com/openai/v1/chat/completions';
+  static const String _audioUrl =
+      'https://api.groq.com/openai/v1/audio/transcriptions';
 
   final List<Map<String, dynamic>> _conversationHistory = [];
 
   GroqChatService() {
     _conversationHistory.add({
       'role': 'system',
-      'content': '''You are a helpful home repair and maintenance assistant called "FixIt AI". 
+      'content':
+          '''You are a helpful home repair and maintenance assistant called "FixIt AI". 
 Users come to you with home problems like plumbing issues, electrical problems, painting, appliance repairs, carpentry, HVAC, and general home maintenance.
 
 Your job is to:
@@ -24,15 +27,12 @@ Your job is to:
 5) Be friendly, practical, and concise. Use simple language anyone can understand. Use emojis to make the conversation friendly.
 6) When a user describes what they see in a photo, provide specific advice about that visible issue.
 7) If asked about something completely unrelated to home repair and maintenance, politely say: "I specialize in home repair and maintenance issues! Tell me about any problem in your house and I will help you figure it out. 🏠🔧"
-8) When recommending a professional, mention the TYPE of professional they need (plumber, electrician, etc.) so they can search for one in the app.'''
+8) When recommending a professional, mention the TYPE of professional they need (plumber, electrician, etc.) so they can search for one in the app.''',
     });
   }
 
   Future<String> sendMessage(String userMessage) async {
-    _conversationHistory.add({
-      'role': 'user',
-      'content': userMessage,
-    });
+    _conversationHistory.add({'role': 'user', 'content': userMessage});
 
     try {
       final response = await http.post(
@@ -51,7 +51,8 @@ Your job is to:
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final assistantMessage = data['choices'][0]['message']['content'] as String;
+        final assistantMessage =
+            data['choices'][0]['message']['content'] as String;
         _conversationHistory.add({
           'role': 'assistant',
           'content': assistantMessage,
@@ -65,7 +66,10 @@ Your job is to:
     }
   }
 
-  Future<String> sendImageMessage(File imageFile, {String? additionalText}) async {
+  Future<String> sendImageMessage(
+    File imageFile, {
+    String? additionalText,
+  }) async {
     try {
       final bytes = await imageFile.readAsBytes();
       final base64Image = base64Encode(bytes);
@@ -73,13 +77,14 @@ Your job is to:
       final userContent = [
         {
           'type': 'text',
-          'text': additionalText ??
-              'I have this home issue. Please look at this photo and tell me what the problem might be, whether I can fix it myself safely, or if I need to call a professional.'
+          'text':
+              additionalText ??
+              'I have this home issue. Please look at this photo and tell me what the problem might be, whether I can fix it myself safely, or if I need to call a professional.',
         },
         {
           'type': 'image_url',
-          'image_url': {'url': 'data:image/jpeg;base64,$base64Image'}
-        }
+          'image_url': {'url': 'data:image/jpeg;base64,$base64Image'},
+        },
       ];
 
       _conversationHistory.add({
@@ -90,10 +95,7 @@ Your job is to:
       final messagesWithImage = List<Map<String, dynamic>>.from(
         _conversationHistory.sublist(0, _conversationHistory.length - 1),
       );
-      messagesWithImage.add({
-        'role': 'user',
-        'content': userContent,
-      });
+      messagesWithImage.add({'role': 'user', 'content': userContent});
 
       final response = await http.post(
         Uri.parse(_chatUrl),
@@ -111,7 +113,8 @@ Your job is to:
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final assistantMessage = data['choices'][0]['message']['content'] as String;
+        final assistantMessage =
+            data['choices'][0]['message']['content'] as String;
         _conversationHistory.add({
           'role': 'assistant',
           'content': assistantMessage,
@@ -131,7 +134,9 @@ Your job is to:
       request.headers['Authorization'] = 'Bearer $_apiKey';
       request.fields['model'] = 'whisper-large-v3';
       request.fields['language'] = 'en';
-      request.files.add(await http.MultipartFile.fromPath('file', audioFile.path));
+      request.files.add(
+        await http.MultipartFile.fromPath('file', audioFile.path),
+      );
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);

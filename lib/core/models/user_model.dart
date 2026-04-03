@@ -1,10 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum UserType {
-  client,
-  workProvider,
-  marketplace,
-}
+enum UserType { client, workProvider, marketplace }
 
 extension UserTypeExtension on UserType {
   String get displayName {
@@ -62,7 +58,7 @@ class UserModel {
   final UserType userType;
   final DateTime? createdAt;
   final String? photoUrl;
-  
+
   // New base fields
   final GeoPoint? location;
   final String? address;
@@ -103,7 +99,9 @@ class UserModel {
       email: data['email'] ?? '',
       name: data['name'] ?? '',
       phone: data['phone'] ?? '',
-      userType: parseUserType(data['accountType'] ?? data['userType'] ?? 'client'),
+      userType: parseUserType(
+        data['accountType'] ?? data['userType'] ?? 'client',
+      ),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       photoUrl: data['profilePicture'] ?? data['photoUrl'],
       location: data['location'] as GeoPoint?,
@@ -113,7 +111,8 @@ class UserModel {
       reviewCount: data['reviewCount'] ?? 0,
       isBanned: data['isBanned'] ?? false,
       notificationsEnabled: data['notificationsEnabled'] ?? true,
-      profileCompleted: data['profileCompleted'] ?? true,
+      profileCompleted:
+          data['profileComplete'] ?? data['profileCompleted'] ?? false,
     );
   }
 
@@ -140,7 +139,9 @@ class UserModel {
       'email': email,
       'name': name,
       'phone': phone,
-      'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
+      'createdAt': createdAt != null
+          ? Timestamp.fromDate(createdAt!)
+          : FieldValue.serverTimestamp(),
       'profilePicture': photoUrl,
       'location': location,
       'address': address,
@@ -149,6 +150,7 @@ class UserModel {
       'reviewCount': reviewCount,
       'isBanned': isBanned,
       'notificationsEnabled': notificationsEnabled,
+      'profileComplete': profileCompleted,
       'profileCompleted': profileCompleted,
     };
   }

@@ -13,7 +13,8 @@ class VerificationPendingScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(currentUserDocProvider);
-    final verificationReason = userAsync.value?.toJson()['verificationReason'] as String?;
+    final verificationReason =
+        userAsync.value?.toJson()['verificationReason'] as String?;
     final status = userAsync.value?.toJson()['verificationStatus'] as String?;
     final isRejected = status == 'rejected';
 
@@ -29,10 +30,13 @@ class VerificationPendingScreen extends ConsumerWidget {
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: (isRejected ? AppColors.errorRed : AppColors.starGold).withValues(alpha: 0.1),
+                  color: (isRejected ? AppColors.errorRed : AppColors.starGold)
+                      .withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: (isRejected ? AppColors.errorRed : AppColors.starGold).withValues(alpha: 0.3),
+                    color:
+                        (isRejected ? AppColors.errorRed : AppColors.starGold)
+                            .withValues(alpha: 0.3),
                     width: 2,
                   ),
                 ),
@@ -56,23 +60,32 @@ class VerificationPendingScreen extends ConsumerWidget {
                 style: AppTextStyles.bodyMedium,
                 textAlign: TextAlign.center,
               ),
-              if (verificationReason != null && verificationReason.isNotEmpty) ...[
+              if (verificationReason != null &&
+                  verificationReason.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.l),
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.m),
                   decoration: BoxDecoration(
                     color: AppColors.errorRed.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.errorRed.withValues(alpha: 0.2)),
+                    border: Border.all(
+                      color: AppColors.errorRed.withValues(alpha: 0.2),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline, color: AppColors.errorRed, size: 18),
+                      const Icon(
+                        Icons.info_outline,
+                        color: AppColors.errorRed,
+                        size: 18,
+                      ),
                       const SizedBox(width: AppSpacing.m),
                       Expanded(
                         child: Text(
                           'Reason: $verificationReason',
-                          style: AppTextStyles.caption.copyWith(color: AppColors.errorRed),
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.errorRed,
+                          ),
                         ),
                       ),
                     ],
@@ -94,12 +107,21 @@ class VerificationPendingScreen extends ConsumerWidget {
                   ),
                   child: Row(
                     children: [
-                      const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accentBlue)),
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.accentBlue,
+                        ),
+                      ),
                       const SizedBox(width: AppSpacing.m),
                       Expanded(
                         child: Text(
                           'Checking verification status automatically...',
-                          style: AppTextStyles.caption.copyWith(color: AppColors.accentBlue),
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.accentBlue,
+                          ),
                         ),
                       ),
                     ],
@@ -111,7 +133,12 @@ class VerificationPendingScreen extends ConsumerWidget {
                   await ref.read(authServiceProvider).signOut();
                   if (context.mounted) context.go('/login');
                 },
-                child: Text('Sign Out', style: AppTextStyles.caption.copyWith(color: AppColors.softGray)),
+                child: Text(
+                  'Sign Out',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.softGray,
+                  ),
+                ),
               ),
               const SizedBox(height: AppSpacing.l),
             ],

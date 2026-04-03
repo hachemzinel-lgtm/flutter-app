@@ -15,10 +15,7 @@ class ServicePrice {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'price': price,
-    };
+    return {'name': name, 'price': price};
   }
 }
 
@@ -29,7 +26,8 @@ class WorkProviderModel extends UserModel {
   final double? hourlyRate;
   final List<ServicePrice> services;
   final bool isAvailableNow;
-  final Map<String, String>? documents; // { 'diplomaURL': '...', 'idURL': '...' }
+  final Map<String, String>?
+  documents; // { 'diplomaURL': '...', 'idURL': '...' }
   final String verificationStatus; // 'pending' | 'approved' | 'rejected'
   final String? verificationReason;
   final bool customQuoteEnabled;
@@ -78,21 +76,31 @@ class WorkProviderModel extends UserModel {
       reviewCount: data['reviewCount'] ?? 0,
       isBanned: data['isBanned'] ?? false,
       notificationsEnabled: data['notificationsEnabled'] ?? true,
-      profileCompleted: data['profileCompleted'] ?? true,
+      profileCompleted:
+          data['profileComplete'] ?? data['profileCompleted'] ?? false,
       profession: data['profession'],
       yearsExperience: data['yearsExperience'],
       bio: data['bio'],
-      hourlyRate: data['hourlyRate'] != null ? (data['hourlyRate'] as num).toDouble() : null,
-      services: (data['services'] as List<dynamic>?)
+      hourlyRate: data['hourlyRate'] != null
+          ? (data['hourlyRate'] as num).toDouble()
+          : null,
+      services:
+          (data['services'] as List<dynamic>?)
               ?.map((s) => ServicePrice.fromMap(s as Map<String, dynamic>))
               .toList() ??
           [],
       isAvailableNow: data['isAvailableNow'] ?? false,
-      documents: data['documents'] != null ? Map<String, String>.from(data['documents']) : null,
+      documents: data['documents'] != null
+          ? Map<String, String>.from(data['documents'])
+          : null,
       verificationStatus: data['verificationStatus'] ?? 'pending',
       verificationReason: data['verificationReason'],
       customQuoteEnabled: data['customQuoteEnabled'] ?? false,
-      portfolio: (data['portfolio'] as List<dynamic>?)?.map((item) => item.toString()).toList() ?? const [],
+      portfolio:
+          (data['portfolio'] as List<dynamic>?)
+              ?.map((item) => item.toString())
+              .toList() ??
+          const [],
     );
   }
 

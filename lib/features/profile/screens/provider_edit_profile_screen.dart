@@ -108,8 +108,10 @@ class _ProviderEditProfileScreenState
     try {
       String? photoUrl = user.photoUrl;
       if (_newProfileImage != null) {
-        photoUrl =
-            await StorageService.uploadProfilePicture(user.id, _newProfileImage!);
+        photoUrl = await StorageService.uploadProfilePicture(
+          user.id,
+          _newProfileImage!,
+        );
       }
 
       final portfolio = <String>[...user.portfolio];

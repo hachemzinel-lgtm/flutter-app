@@ -7,10 +7,7 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../../services/review_service.dart';
 
 class ReviewsScreen extends ConsumerWidget {
-  const ReviewsScreen({
-    super.key,
-    required this.providerId,
-  });
+  const ReviewsScreen({super.key, required this.providerId});
 
   final String providerId;
 
@@ -38,10 +35,7 @@ class ReviewsScreen extends ConsumerWidget {
           final reviews = snapshot.data!;
           if (reviews.isEmpty) {
             return Center(
-              child: Text(
-                'No reviews yet.',
-                style: AppTextStyles.bodyMedium,
-              ),
+              child: Text('No reviews yet.', style: AppTextStyles.bodyMedium),
             );
           }
 
@@ -64,13 +58,17 @@ class ReviewsScreen extends ConsumerWidget {
                       children: [
                         CircleAvatar(
                           radius: 18,
-                          backgroundColor: AppColors.accentBlue.withValues(alpha: 0.12),
+                          backgroundColor: AppColors.accentBlue.withValues(
+                            alpha: 0.12,
+                          ),
                           backgroundImage: review.reviewerPhoto.isEmpty
                               ? null
                               : NetworkImage(review.reviewerPhoto),
                           child: review.reviewerPhoto.isEmpty
                               ? Text(
-                                  review.reviewerName.substring(0, 1).toUpperCase(),
+                                  review.reviewerName
+                                      .substring(0, 1)
+                                      .toUpperCase(),
                                   style: AppTextStyles.bodyMedium.copyWith(
                                     color: AppColors.accentBlue,
                                     fontWeight: FontWeight.w700,
@@ -91,7 +89,10 @@ class ReviewsScreen extends ConsumerWidget {
                                 ),
                               ),
                               Text(
-                                review.createdAt.toIso8601String().split('T').first,
+                                review.createdAt
+                                    .toIso8601String()
+                                    .split('T')
+                                    .first,
                                 style: AppTextStyles.caption,
                               ),
                             ],
@@ -122,7 +123,8 @@ class ReviewsScreen extends ConsumerWidget {
                         color: AppColors.primaryNavy,
                       ),
                     ),
-                    if (review.response != null && review.response!.trim().isNotEmpty) ...[
+                    if (review.response != null &&
+                        review.response!.trim().isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.m),
                       Container(
                         width: double.infinity,

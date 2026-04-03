@@ -39,17 +39,21 @@ class _LanguageSelectorScreenState extends State<LanguageSelectorScreen> {
               itemBuilder: (context, index) {
                 final lang = _languages[index];
                 final isSelected = _selectedLang == lang['name'];
-                
+
                 return InkWell(
                   onTap: () => setState(() => _selectedLang = lang['name']!),
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppColors.accentBlue.withValues(alpha: 0.05) : Colors.white,
+                      color: isSelected
+                          ? AppColors.accentBlue.withValues(alpha: 0.05)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isSelected ? AppColors.accentBlue : AppColors.softGray.withValues(alpha: 0.2),
+                        color: isSelected
+                            ? AppColors.accentBlue
+                            : AppColors.softGray.withValues(alpha: 0.2),
                         width: isSelected ? 2 : 1,
                       ),
                     ),
@@ -74,13 +78,24 @@ class _LanguageSelectorScreenState extends State<LanguageSelectorScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(lang['name']!, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold)),
-                              Text(lang['native']!, style: AppTextStyles.caption),
+                              Text(
+                                lang['name']!,
+                                style: AppTextStyles.bodyLarge.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                lang['native']!,
+                                style: AppTextStyles.caption,
+                              ),
                             ],
                           ),
                         ),
                         if (isSelected)
-                          const Icon(Icons.check_circle, color: AppColors.accentBlue),
+                          const Icon(
+                            Icons.check_circle,
+                            color: AppColors.accentBlue,
+                          ),
                       ],
                     ),
                   ),
@@ -101,10 +116,15 @@ class _LanguageSelectorScreenState extends State<LanguageSelectorScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accentBlue,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   elevation: 0,
                 ),
-                child: const Text('Confirm', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Confirm',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ),
@@ -116,10 +136,14 @@ class _LanguageSelectorScreenState extends State<LanguageSelectorScreen> {
 
   String _getFlag(String countryCode) {
     switch (countryCode) {
-      case 'US': return '🇺🇸';
-      case 'FR': return '🇫🇷';
-      case 'DZ': return '🇩🇿';
-      default: return '🏳️';
+      case 'US':
+        return '🇺🇸';
+      case 'FR':
+        return '🇫🇷';
+      case 'DZ':
+        return '🇩🇿';
+      default:
+        return '🏳️';
     }
   }
 }

@@ -22,14 +22,25 @@ class ProviderPopupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final String uid = user.id;
     final String name = user.name;
-    final String profession = user is WorkProviderModel ? (user as WorkProviderModel).profession ?? '' : '';
+    final String profession = user is WorkProviderModel
+        ? (user as WorkProviderModel).profession ?? ''
+        : '';
     final double rating = user.rating;
-    final int reviewCount = user.reviewCount; 
-    final bool isAvailable = user is WorkProviderModel ? (user as WorkProviderModel).isAvailableNow : false;
-    final String? hourlyRate = user is WorkProviderModel ? (user as WorkProviderModel).hourlyRate?.toString() : null;
+    final int reviewCount = user.reviewCount;
+    final bool isAvailable = user is WorkProviderModel
+        ? (user as WorkProviderModel).isAvailableNow
+        : false;
+    final String? hourlyRate = user is WorkProviderModel
+        ? (user as WorkProviderModel).hourlyRate?.toString()
+        : null;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.l, AppSpacing.m, AppSpacing.l, AppSpacing.l),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.l,
+        AppSpacing.m,
+        AppSpacing.l,
+        AppSpacing.l,
+      ),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -59,7 +70,9 @@ class ProviderPopupCard extends StatelessWidget {
                 backgroundColor: AppColors.softGray.withValues(alpha: 0.15),
                 child: Text(
                   name.isNotEmpty ? name[0].toUpperCase() : '?',
-                  style: AppTextStyles.headingSmall.copyWith(color: AppColors.accentBlue),
+                  style: AppTextStyles.headingSmall.copyWith(
+                    color: AppColors.accentBlue,
+                  ),
                 ),
               ),
               const SizedBox(width: AppSpacing.m),
@@ -68,7 +81,12 @@ class ProviderPopupCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(name, style: AppTextStyles.headingSmall),
-                    Text(profession, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.softGray)),
+                    Text(
+                      profession,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.softGray,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     StarRatingRow(rating: rating, reviewCount: reviewCount),
                   ],
@@ -76,9 +94,13 @@ class ProviderPopupCard extends StatelessWidget {
               ),
               // Availability badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
-                  color: (isAvailable ? Colors.green : Colors.orange).withValues(alpha: 0.1),
+                  color: (isAvailable ? Colors.green : Colors.orange)
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -97,7 +119,10 @@ class ProviderPopupCard extends StatelessWidget {
           // Info chips row
           Row(
             children: [
-              _infoChip(Icons.location_on_outlined, '${distanceKm.toStringAsFixed(1)} km away'),
+              _infoChip(
+                Icons.location_on_outlined,
+                '${distanceKm.toStringAsFixed(1)} km away',
+              ),
               const SizedBox(width: AppSpacing.s),
               if (hourlyRate != null)
                 _infoChip(Icons.attach_money, '$hourlyRate /hr'),
@@ -130,7 +155,14 @@ class ProviderPopupCard extends StatelessWidget {
         children: [
           Icon(icon, size: 14, color: AppColors.accentBlue),
           const SizedBox(width: 4),
-          Text(label, style: const TextStyle(fontSize: 13, color: Color(0xFF007AFF), fontWeight: FontWeight.normal)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF007AFF),
+              fontWeight: FontWeight.normal,
+            ),
+          ),
         ],
       ),
     );

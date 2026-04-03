@@ -18,8 +18,7 @@ class MarketplaceHomeScreen extends ConsumerStatefulWidget {
       _MarketplaceHomeScreenState();
 }
 
-class _MarketplaceHomeScreenState
-    extends ConsumerState<MarketplaceHomeScreen> {
+class _MarketplaceHomeScreenState extends ConsumerState<MarketplaceHomeScreen> {
   final _manualAddressController = TextEditingController();
   String _category = 'Any';
   double _radiusKm = 10;
@@ -36,7 +35,9 @@ class _MarketplaceHomeScreenState
     final user = ref.read(currentUserDocProvider).value;
     setState(() => _loadingSearch = true);
     try {
-      final location = await ref.read(discoveryServiceProvider).resolveSearchLocation(
+      final location = await ref
+          .read(discoveryServiceProvider)
+          .resolveSearchLocation(
             useCurrentLocation: _useCurrentLocation,
             savedLocation: user?.location,
             savedAddress: user?.address,
@@ -99,7 +100,9 @@ class _MarketplaceHomeScreenState
                   children: [
                     Text(
                       marketplace?.businessName ?? 'Marketplace',
-                      style: AppTextStyles.headingLarge.copyWith(color: Colors.white),
+                      style: AppTextStyles.headingLarge.copyWith(
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.s),
                     Text(
@@ -158,20 +161,25 @@ class _MarketplaceHomeScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Search local businesses', style: AppTextStyles.headingSmall),
+                    Text(
+                      'Search local businesses',
+                      style: AppTextStyles.headingSmall,
+                    ),
                     const SizedBox(height: AppSpacing.m),
                     DropdownButtonFormField<String>(
                       initialValue: _category,
                       decoration: const InputDecoration(labelText: 'Category'),
-                      items: [
-                        'Any',
-                        ...MarketplaceTaxonomy.marketplaceCategories,
-                      ]
-                          .map(
-                            (item) => DropdownMenuItem(value: item, child: Text(item)),
-                          )
-                          .toList(),
-                      onChanged: (value) => setState(() => _category = value ?? 'Any'),
+                      items:
+                          ['Any', ...MarketplaceTaxonomy.marketplaceCategories]
+                              .map(
+                                (item) => DropdownMenuItem(
+                                  value: item,
+                                  child: Text(item),
+                                ),
+                              )
+                              .toList(),
+                      onChanged: (value) =>
+                          setState(() => _category = value ?? 'Any'),
                     ),
                     const SizedBox(height: AppSpacing.l),
                     Wrap(
@@ -181,11 +189,13 @@ class _MarketplaceHomeScreenState
                         ChoiceChip(
                           label: const Text('Use my current location'),
                           selected: _useCurrentLocation,
-                          onSelected: (_) => setState(() => _useCurrentLocation = true),
+                          onSelected: (_) =>
+                              setState(() => _useCurrentLocation = true),
                         ),
                         ChoiceChip(
                           label: const Text('Use saved profile location'),
-                          selected: !_useCurrentLocation &&
+                          selected:
+                              !_useCurrentLocation &&
                               _manualAddressController.text.trim().isEmpty,
                           onSelected: (_) {
                             setState(() {
@@ -225,7 +235,8 @@ class _MarketplaceHomeScreenState
                             (radius) => ChoiceChip(
                               label: Text('${radius.toInt()}km'),
                               selected: _radiusKm == radius,
-                              onSelected: (_) => setState(() => _radiusKm = radius),
+                              onSelected: (_) =>
+                                  setState(() => _radiusKm = radius),
                             ),
                           )
                           .toList(),
@@ -264,10 +275,7 @@ class _MarketplaceHomeScreenState
 }
 
 class _MetricPill extends StatelessWidget {
-  const _MetricPill({
-    required this.label,
-    required this.value,
-  });
+  const _MetricPill({required this.label, required this.value});
 
   final String label;
   final String value;

@@ -13,17 +13,17 @@ import '../../auth/providers/auth_provider.dart';
 import '../../chat/providers/chat_provider.dart';
 
 class ProviderProfileScreen extends ConsumerWidget {
-  const ProviderProfileScreen({
-    super.key,
-    required this.uid,
-  });
+  const ProviderProfileScreen({super.key, required this.uid});
 
   final String uid;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Scaffold(
@@ -140,13 +140,18 @@ class ProviderProfileScreen extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: () => _startChat(context, ref, provider),
-                              icon: const Icon(Icons.chat_bubble_outline_rounded),
+                              onPressed: () =>
+                                  _startChat(context, ref, provider),
+                              icon: const Icon(
+                                Icons.chat_bubble_outline_rounded,
+                              ),
                               label: const Text('Message'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.accentBlue,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
                               ),
                             ),
                           ),
@@ -158,7 +163,8 @@ class ProviderProfileScreen extends ConsumerWidget {
                           ),
                           const SizedBox(width: AppSpacing.s),
                           OutlinedButton.icon(
-                            onPressed: () => _reportProfile(context, ref, provider.id),
+                            onPressed: () =>
+                                _reportProfile(context, ref, provider.id),
                             icon: const Icon(Icons.flag_outlined),
                             label: const Text('Report'),
                           ),
@@ -212,8 +218,7 @@ class ProviderProfileScreen extends ConsumerWidget {
                             if (provider.hourlyRate != null)
                               _PriceRow(
                                 label: 'Hourly rate',
-                                value:
-                                    provider.hourlyRate!.toStringAsFixed(2),
+                                value: provider.hourlyRate!.toStringAsFixed(2),
                               ),
                             if (provider.services.isNotEmpty)
                               ...provider.services.map(
@@ -260,17 +265,20 @@ class ProviderProfileScreen extends ConsumerWidget {
                                 itemCount: provider.portfolio.length,
                                 gridDelegate:
                                     const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 3,
-                                  crossAxisSpacing: 10,
-                                  mainAxisSpacing: 10,
-                                ),
+                                      crossAxisCount: 3,
+                                      crossAxisSpacing: 10,
+                                      mainAxisSpacing: 10,
+                                    ),
                                 itemBuilder: (context, index) {
                                   final image = provider.portfolio[index];
                                   return InkWell(
                                     onTap: () => _openGallery(context, image),
                                     child: ClipRRect(
                                       borderRadius: BorderRadius.circular(14),
-                                      child: Image.network(image, fit: BoxFit.cover),
+                                      child: Image.network(
+                                        image,
+                                        fit: BoxFit.cover,
+                                      ),
                                     ),
                                   );
                                 },
@@ -280,7 +288,8 @@ class ProviderProfileScreen extends ConsumerWidget {
                       _Section(
                         title: 'Reviews',
                         trailing: TextButton(
-                          onPressed: () => context.push('/reviews/${provider.id}'),
+                          onPressed: () =>
+                              context.push('/reviews/${provider.id}'),
                           child: const Text('See all'),
                         ),
                         child: StreamBuilder(
@@ -340,10 +349,12 @@ class ProviderProfileScreen extends ConsumerWidget {
       return;
     }
     try {
-      final conversation = await ref.read(chatServiceProvider).getOrCreateConversation(
-        currentUser: currentUser,
-        otherUser: provider,
-      );
+      final conversation = await ref
+          .read(chatServiceProvider)
+          .getOrCreateConversation(
+            currentUser: currentUser,
+            otherUser: provider,
+          );
       if (!context.mounted) {
         return;
       }
@@ -432,11 +443,7 @@ class ProviderProfileScreen extends ConsumerWidget {
 }
 
 class _Section extends StatelessWidget {
-  const _Section({
-    required this.title,
-    required this.child,
-    this.trailing,
-  });
+  const _Section({required this.title, required this.child, this.trailing});
 
   final String title;
   final Widget child;
@@ -456,9 +463,7 @@ class _Section extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text(title, style: AppTextStyles.headingSmall),
-              ),
+              Expanded(child: Text(title, style: AppTextStyles.headingSmall)),
               ?trailing,
             ],
           ),
@@ -508,10 +513,7 @@ class _InfoBadge extends StatelessWidget {
 }
 
 class _DetailTile extends StatelessWidget {
-  const _DetailTile({
-    required this.label,
-    required this.value,
-  });
+  const _DetailTile({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -543,10 +545,7 @@ class _DetailTile extends StatelessWidget {
 }
 
 class _PriceRow extends StatelessWidget {
-  const _PriceRow({
-    required this.label,
-    required this.value,
-  });
+  const _PriceRow({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -603,7 +602,9 @@ class _ReviewCard extends StatelessWidget {
               CircleAvatar(
                 radius: 16,
                 backgroundColor: AppColors.accentBlue.withValues(alpha: 0.12),
-                backgroundImage: photoUrl.isEmpty ? null : NetworkImage(photoUrl),
+                backgroundImage: photoUrl.isEmpty
+                    ? null
+                    : NetworkImage(photoUrl),
                 child: photoUrl.isEmpty
                     ? Text(
                         name.substring(0, 1).toUpperCase(),
@@ -624,7 +625,11 @@ class _ReviewCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const Icon(Icons.star_rounded, color: AppColors.starGold, size: 16),
+              const Icon(
+                Icons.star_rounded,
+                color: AppColors.starGold,
+                size: 16,
+              ),
               const SizedBox(width: 4),
               Text(rating.toStringAsFixed(1), style: AppTextStyles.caption),
             ],
@@ -632,7 +637,9 @@ class _ReviewCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.s),
           Text(
             text.isEmpty ? 'No written review.' : text,
-            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primaryNavy),
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.primaryNavy,
+            ),
           ),
           const SizedBox(height: 6),
           Text(

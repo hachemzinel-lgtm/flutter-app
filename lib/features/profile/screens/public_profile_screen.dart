@@ -6,10 +6,7 @@ import 'merchant_profile_screen.dart';
 import 'provider_profile_screen.dart';
 
 class PublicProfileScreen extends StatelessWidget {
-  const PublicProfileScreen({
-    super.key,
-    required this.userId,
-  });
+  const PublicProfileScreen({super.key, required this.userId});
 
   final String userId;
 
@@ -32,7 +29,9 @@ class PublicProfileScreen extends StatelessWidget {
         }
 
         final type = UserModel.parseUserType(
-          data['accountType']?.toString() ?? data['userType']?.toString() ?? 'client',
+          data['accountType']?.toString() ??
+              data['userType']?.toString() ??
+              'client',
         );
 
         switch (type) {
@@ -43,7 +42,9 @@ class PublicProfileScreen extends StatelessWidget {
           case UserType.client:
             return const Scaffold(
               body: Center(
-                child: Text('Client profiles are only available to the account owner.'),
+                child: Text(
+                  'Client profiles are only available to the account owner.',
+                ),
               ),
             );
         }
