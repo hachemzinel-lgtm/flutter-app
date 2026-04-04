@@ -7,14 +7,14 @@ import '../../features/ai_chat/presentation/pages/chat_history_page.dart';
 import '../../features/auth/presentation/pages/account_type_selection_screen.dart';
 import '../../features/auth/presentation/pages/client_profile_setup_screen.dart';
 import '../../features/auth/presentation/pages/email_verification_screen.dart';
+import '../../features/auth/presentation/pages/forgot_password_screen.dart';
 import '../../features/auth/presentation/pages/login_screen.dart';
 import '../../features/auth/presentation/pages/marketplace_profile_setup_screen.dart';
+import '../../features/auth/presentation/pages/pending_verification_screen.dart';
 import '../../features/auth/presentation/pages/signup_screen.dart';
 import '../../features/auth/presentation/pages/welcome_screen.dart';
 import '../../features/auth/presentation/pages/work_provider_profile_setup_screen.dart';
 import '../../features/auth/providers/auth_providers.dart';
-import '../../features/auth/screens/forgot_password_screen.dart';
-import '../../features/auth/screens/verification_pending_screen.dart';
 import '../../features/chat/screens/chat_screen.dart';
 import '../../features/chat/screens/conversations_list_screen.dart';
 import '../../features/favorites/screens/favorites_screen.dart';
@@ -34,6 +34,7 @@ import '../../features/settings/screens/language_selector_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/shared/presentation/widgets/components/main_scaffold_wrapper.dart';
 import 'route_paths.dart';
+import 'simple_router.dart';
 
 GoRouter buildAppRouter(WidgetRef ref) {
   final authState = ref.watch(authStateProvider);
@@ -97,7 +98,7 @@ GoRouter buildAppRouter(WidgetRef ref) {
       GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginScreen()),
       GoRoute(
         path: AppRoutes.forgotPassword,
-        builder: (_, _) => const ForgotPasswordScreen(),
+        builder: (_, _) => const ForgotPasswordPage(),
       ),
       GoRoute(
         path: AppRoutes.emailVerification,
@@ -123,8 +124,9 @@ GoRouter buildAppRouter(WidgetRef ref) {
       ),
       GoRoute(
         path: AppRoutes.pendingVerification,
-        builder: (_, _) => const VerificationPendingScreen(),
+        builder: (_, _) => const PendingVerificationPage(),
       ),
+      ...buildSimpleAuthRoutes(),
       GoRoute(
         path: AppRoutes.home,
         redirect: (_, state) {

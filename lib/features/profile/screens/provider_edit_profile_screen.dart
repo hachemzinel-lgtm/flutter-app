@@ -11,6 +11,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/models/work_provider_model.dart';
+import '../../../core/router/route_paths.dart';
 import '../../../services/storage_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../reviews/screens/reviews_screen.dart';
@@ -327,7 +328,7 @@ class _ProviderEditProfileScreenState
           if (user.verificationStatus == 'rejected') ...[
             const SizedBox(height: AppSpacing.s),
             OutlinedButton(
-              onPressed: () => context.push('/profile-setup/provider'),
+              onPressed: () => context.push(AppRoutes.setupProvider),
               child: const Text('Re-upload Documents'),
             ),
           ],
@@ -336,7 +337,7 @@ class _ProviderEditProfileScreenState
             onPressed: () async {
               await ref.read(authServiceProvider).signOut();
               if (!context.mounted) return;
-              context.go('/login');
+              context.go(AppRoutes.login);
             },
             child: const Text('Logout'),
           ),

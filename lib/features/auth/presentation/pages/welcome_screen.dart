@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -175,6 +176,15 @@ class WelcomeScreen extends ConsumerWidget {
                 isLoading: authState.isLoading,
                 onPressed: handleGoogleSignIn,
               ),
+              if (kDebugMode) ...[
+                const SizedBox(height: AppSpacing.m),
+                TextButton(
+                  onPressed: authState.isLoading
+                      ? null
+                      : () => context.push('/debug-auth/signup'),
+                  child: const Text('Open Simple Auth Diagnostics'),
+                ),
+              ],
               const SizedBox(height: AppSpacing.xl),
             ],
           ),
