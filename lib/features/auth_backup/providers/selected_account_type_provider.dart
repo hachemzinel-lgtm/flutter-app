@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/models/user_model.dart';
+import 'package:flutter_application_1/core/models/user_model.dart';
 
 // Stores the user's selected account type during onboarding
 class SelectedAccountType extends Notifier<UserType> {

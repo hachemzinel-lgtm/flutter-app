@@ -1,16 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_spacing.dart';
-import '../../../core/constants/app_text_styles.dart';
-import '../../../core/constants/marketplace_taxonomy.dart';
-import '../../../core/models/work_provider_model.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../models/discovery_models.dart';
-import '../providers/home_provider.dart';
-import '../widgets/provider_feature_card.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../../../core/models/user_model.dart';
+import '../../../../features/auth/providers/auth_providers.dart';
 
 class ClientHomeScreen extends ConsumerStatefulWidget {
   const ClientHomeScreen({super.key});
@@ -20,482 +15,351 @@ class ClientHomeScreen extends ConsumerStatefulWidget {
 }
 
 class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
-  final _manualAddressController = TextEditingController();
-  DiscoverySearchType _searchType = DiscoverySearchType.workProviders;
-  String _providerCategory = 'Any';
-  String _marketplaceCategory = 'Any';
-  double _radiusKm = 10;
-  double _minimumRating = 0;
-  bool _availableOnly = false;
-  bool _useCurrentLocation = true;
-  bool _isResolvingLocation = false;
-
-  @override
-  void dispose() {
-    _manualAddressController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _startSearch() async {
-    final user = ref.read(currentUserDocProvider).value;
-    setState(() => _isResolvingLocation = true);
-    try {
-      final location = await ref
-          .read(discoveryServiceProvider)
-          .resolveSearchLocation(
-            useCurrentLocation: _useCurrentLocation,
-            savedLocation: user?.location,
-            savedAddress: user?.address,
-            manualAddress: _manualAddressController.text,
-          );
-
-      if (!mounted) {
-        return;
-      }
-
-      context.push(
-        '/search-results'
-        '?type=${_searchType.queryValue}'
-        '&category=${Uri.encodeComponent(_selectedCategory)}'
-        '&radius=$_radiusKm'
-        '&minRating=$_minimumRating'
-        '&availableOnly=$_availableOnly'
-        '&lat=${location.center.latitude}'
-        '&lng=${location.center.longitude}'
-        '&label=${Uri.encodeComponent(location.label)}',
-      );
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error.toString()),
-          backgroundColor: AppColors.errorRed,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _isResolvingLocation = false);
-      }
-    }
-  }
-
-  String get _selectedCategory {
-    return _searchType == DiscoverySearchType.workProviders
-        ? _providerCategory
-        : _marketplaceCategory;
-  }
+  String _selectedSearchTarget = 'workProvider';
+  String _selectedTopRatedTarget = 'workProvider';
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserDocProvider).value;
-    final firstName = user?.name.split(' ').first ?? 'there';
-    final topRatedAsync = ref.watch(topRatedProvidersProvider);
+    final userDoc = ref.watch(currentUserDocProvider).value;
+    final firstName = userDoc?.displayName.split(' ').first ?? 'there';
 
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: AppSpacing.pagePadding,
+          padding: const EdgeInsets.all(16),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(AppSpacing.l),
-                decoration: BoxDecoration(
+              Text(
+                'Hello, $firstName',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
                   color: AppColors.primaryNavy,
-                  borderRadius: BorderRadius.circular(24),
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.primaryNavy,
-                      AppColors.primaryNavy.withValues(alpha: 0.88),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Hello, $firstName',
-                      style: AppTextStyles.headingLarge.copyWith(
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.s),
-                    InkWell(
-                      onTap: () => _manualAddressController.selection =
-                          TextSelection.collapsed(
-                            offset: _manualAddressController.text.length,
-                          ),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.location_on_outlined,
-                              color: AppColors.accentBlue,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                user?.address?.isNotEmpty == true
-                                    ? user!.address!
-                                    : 'No saved location yet',
-                                style: AppTextStyles.caption.copyWith(
-                                  color: Colors.white70,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.l),
-              TextField(
-                readOnly: true,
-                decoration: InputDecoration(
-                  hintText: 'What are you looking for?',
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.l),
-              SegmentedButton<DiscoverySearchType>(
-                segments: const [
-                  ButtonSegment(
-                    value: DiscoverySearchType.workProviders,
-                    label: Text('Work Providers'),
-                    icon: Icon(Icons.handyman_outlined),
-                  ),
-                  ButtonSegment(
-                    value: DiscoverySearchType.marketplaces,
-                    label: Text('Marketplaces'),
-                    icon: Icon(Icons.storefront_outlined),
-                  ),
-                ],
-                selected: {_searchType},
-                onSelectionChanged: (value) {
-                  setState(() => _searchType = value.first);
+              const SizedBox(height: 24),
+              _SearchCard(
+                selectedTarget: _selectedSearchTarget,
+                onTargetChanged: (value) {
+                  setState(() => _selectedSearchTarget = value);
                 },
               ),
-              const SizedBox(height: AppSpacing.l),
-              _SectionCard(
-                title: _searchType == DiscoverySearchType.workProviders
-                    ? 'Search for work providers'
-                    : 'Search for marketplaces',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _label('CATEGORY'),
-                    _CategoryDropdown(
-                      items: [
-                        'Any',
-                        ...(_searchType == DiscoverySearchType.workProviders
-                            ? MarketplaceTaxonomy.workProviderCategories
-                            : MarketplaceTaxonomy.marketplaceCategories),
-                      ],
-                      value: _selectedCategory,
-                      onChanged: (value) {
-                        setState(() {
-                          if (_searchType ==
-                              DiscoverySearchType.workProviders) {
-                            _providerCategory = value!;
-                          } else {
-                            _marketplaceCategory = value!;
-                          }
-                        });
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.l),
-                    _label('LOCATION'),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+              const SizedBox(height: 20),
+              Card(
+                color: AppColors.primaryNavy,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: InkWell(
+                  onTap: () => context.push('/ai-chat/session'),
+                  borderRadius: BorderRadius.circular(18),
+                  child: const Padding(
+                    padding: EdgeInsets.all(18),
+                    child: Row(
                       children: [
-                        ChoiceChip(
-                          label: const Text('Use my current location'),
-                          selected: _useCurrentLocation,
-                          onSelected: (_) =>
-                              setState(() => _useCurrentLocation = true),
+                        Icon(
+                          Icons.auto_awesome_rounded,
+                          color: Colors.amber,
+                          size: 40,
                         ),
-                        ChoiceChip(
-                          label: const Text('Use saved profile location'),
-                          selected:
-                              !_useCurrentLocation &&
-                              _manualAddressController.text.trim().isEmpty,
-                          onSelected: (_) {
-                            setState(() {
-                              _useCurrentLocation = false;
-                              _manualAddressController.clear();
-                            });
-                          },
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'AI Chatbot',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Describe what you need and we will help you find the right local service.',
+                                style: TextStyle(color: Colors.white70),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: AppSpacing.m),
-                    TextField(
-                      controller: _manualAddressController,
-                      decoration: InputDecoration(
-                        hintText: 'Or set location manually',
-                        prefixIcon: const Icon(
-                          Icons.edit_location_alt_outlined,
-                        ),
-                        filled: true,
-                        fillColor: AppColors.backgroundSecondary,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
-                        ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 28),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Top Rated',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                       ),
-                      onChanged: (_) {
-                        if (_manualAddressController.text.trim().isNotEmpty) {
-                          setState(() => _useCurrentLocation = false);
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => context.push('/top-rated'),
+                    child: const Text('See all'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: ChoiceChip(
+                      label: const Text('WP'),
+                      selected: _selectedTopRatedTarget == 'workProvider',
+                      onSelected: (selected) {
+                        if (selected) {
+                          setState(
+                            () => _selectedTopRatedTarget = 'workProvider',
+                          );
                         }
                       },
                     ),
-                    const SizedBox(height: AppSpacing.l),
-                    _label('DISTANCE RADIUS'),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '${_radiusKm.toInt()} km',
-                          style: AppTextStyles.headingSmall,
-                        ),
-                        Text('Search range', style: AppTextStyles.caption),
-                      ],
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ChoiceChip(
+                      label: const Text('MP'),
+                      selected: _selectedTopRatedTarget == 'marketplace',
+                      onSelected: (selected) {
+                        if (selected) {
+                          setState(
+                            () => _selectedTopRatedTarget = 'marketplace',
+                          );
+                        }
+                      },
                     ),
-                    Slider(
-                      value: _radiusKm,
-                      min: 5,
-                      max: 50,
-                      divisions: 9,
-                      onChanged: (value) => setState(() => _radiusKm = value),
-                    ),
-                    Wrap(
-                      spacing: 8,
-                      children: MarketplaceTaxonomy.searchRadiusOptionsKm
-                          .map(
-                            (radius) => ChoiceChip(
-                              label: Text('${radius.toInt()}km'),
-                              selected: _radiusKm == radius,
-                              onSelected: (_) =>
-                                  setState(() => _radiusKm = radius),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                    if (_searchType == DiscoverySearchType.workProviders) ...[
-                      const SizedBox(height: AppSpacing.l),
-                      _label('FILTERS'),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Available now only'),
-                        value: _availableOnly,
-                        onChanged: (value) {
-                          setState(() => _availableOnly = value);
-                        },
-                      ),
-                      DropdownButtonFormField<double>(
-                        initialValue: _minimumRating,
-                        decoration: const InputDecoration(
-                          labelText: 'Minimum rating',
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 0, child: Text('Any')),
-                          DropdownMenuItem(value: 3, child: Text('3+ stars')),
-                          DropdownMenuItem(value: 4, child: Text('4+ stars')),
-                          DropdownMenuItem(
-                            value: 4.5,
-                            child: Text('4.5+ stars'),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          setState(() => _minimumRating = value ?? 0);
-                        },
-                      ),
-                    ],
-                    const SizedBox(height: AppSpacing.l),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isResolvingLocation ? null : _startSearch,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentBlue,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                        ),
-                        child: _isResolvingLocation
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.4,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Text('Search'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Top Rated Near You', style: AppTextStyles.headingSmall),
-                  TextButton(
-                    onPressed: () => context.go('/best-providers'),
-                    child: const Text('See All'),
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.m),
-              topRatedAsync.when(
-                loading: () => const SizedBox(
-                  height: 180,
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-                error: (error, _) => Text(
-                  error.toString(),
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.errorRed,
-                  ),
-                ),
-                data: (results) {
-                  if (results.isEmpty) {
-                    return _SectionCard(
-                      title: 'No nearby providers yet',
-                      child: Text(
-                        'Verified work providers will appear here once they are close to your saved location.',
-                        style: AppTextStyles.bodyMedium,
-                      ),
-                    );
-                  }
-
-                  return SizedBox(
-                    height: 220,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: results.take(10).length,
-                      separatorBuilder: (_, _) => const SizedBox(width: 12),
-                      itemBuilder: (context, index) {
-                        final result = results[index];
-                        final provider = result.user as WorkProviderModel;
-                        return ProviderFeatureCard(
-                          name: result.user.name,
-                          profession: provider.profession ?? '',
-                          rating: result.user.rating,
-                          distance:
-                              '${result.distanceKm.toStringAsFixed(1)} km',
-                          photoUrl: result.user.photoUrl,
-                          isVerified: result.isVerified,
-                          isAvailable: provider.isAvailableNow,
-                          onTap: () {
-                            context.push('/provider-profile/${result.user.id}');
-                          },
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
+              const SizedBox(height: 12),
+              _TopRatedPreviewList(targetType: _selectedTopRatedTarget),
             ],
           ),
         ),
       ),
     );
   }
-
-  Widget _label(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        text,
-        style: AppTextStyles.labelSmall.copyWith(
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1,
-        ),
-      ),
-    );
-  }
 }
 
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.title, required this.child});
+class _SearchCard extends StatelessWidget {
+  const _SearchCard({
+    required this.selectedTarget,
+    required this.onTargetChanged,
+  });
 
-  final String title;
-  final Widget child;
+  final String selectedTarget;
+  final ValueChanged<String> onTargetChanged;
 
   @override
   Widget build(BuildContext context) {
+    final isProviderSearch = selectedTarget == 'workProvider';
+
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.l),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.accentBlue.withValues(alpha: 0.18)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(title, style: AppTextStyles.headingSmall),
-          const SizedBox(height: AppSpacing.m),
-          child,
+          const Text(
+            'Find services near you',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: ChoiceChip(
+                  label: const Text('WP'),
+                  selected: isProviderSearch,
+                  onSelected: (selected) {
+                    if (selected) {
+                      onTargetChanged('workProvider');
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ChoiceChip(
+                  label: const Text('MP'),
+                  selected: !isProviderSearch,
+                  onSelected: (selected) {
+                    if (selected) {
+                      onTargetChanged('marketplace');
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          InkWell(
+            onTap: () => context.push('/search'),
+            borderRadius: BorderRadius.circular(16),
+            child: Ink(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppColors.backgroundSecondary,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.search_rounded, color: AppColors.accentBlue),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      isProviderSearch
+                          ? 'Search work providers'
+                          : 'Search marketplaces',
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _CategoryDropdown extends StatelessWidget {
-  const _CategoryDropdown({
-    required this.items,
-    required this.value,
-    required this.onChanged,
-  });
+class _TopRatedPreviewList extends StatelessWidget {
+  const _TopRatedPreviewList({required this.targetType});
 
-  final List<String> items;
-  final String value;
-  final ValueChanged<String?> onChanged;
+  final String targetType;
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButtonFormField<String>(
-      initialValue: value,
-      items: items
-          .map((item) => DropdownMenuItem(value: item, child: Text(item)))
-          .toList(),
-      onChanged: onChanged,
-      decoration: const InputDecoration(border: OutlineInputBorder()),
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: _buildQuery(targetType).snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Text('No top rated listings found yet.');
+        }
+
+        final users = snapshot.data!.docs
+            .map(_userFromSnapshot)
+            .whereType<UserModel>()
+            .take(5)
+            .toList();
+
+        return Column(
+          children: users.map((user) {
+            final isProvider = user.userType == UserType.workProvider;
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                onTap: () => context.push(
+                  isProvider
+                      ? '/provider-profile/${user.uid}'
+                      : '/marketplace-profile/${user.uid}',
+                ),
+                leading: CircleAvatar(
+                  backgroundImage:
+                      user.photoUrl != null && user.photoUrl!.isNotEmpty
+                      ? NetworkImage(user.photoUrl!)
+                      : null,
+                  child: user.photoUrl == null || user.photoUrl!.isEmpty
+                      ? Icon(isProvider ? Icons.handyman : Icons.storefront)
+                      : null,
+                ),
+                title: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        user.businessName ?? user.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    if (isProvider && user.badgeVisible == true)
+                      const Padding(
+                        padding: EdgeInsetsDirectional.only(start: 6),
+                        child: Icon(
+                          Icons.verified_rounded,
+                          size: 18,
+                          color: AppColors.accentBlue,
+                        ),
+                      ),
+                  ],
+                ),
+                subtitle: Row(
+                  children: [
+                    const Icon(
+                      Icons.star_rounded,
+                      size: 16,
+                      color: Colors.amber,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(user.averageRating.toStringAsFixed(1)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        user.category ?? 'Uncategorized',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
     );
+  }
+
+  Query<Map<String, dynamic>> _buildQuery(String targetType) {
+    final collection = FirebaseFirestore.instance.collection('users');
+    if (targetType == 'workProvider') {
+      return collection
+          .where('accountType', whereIn: ['workProvider', 'work_provider'])
+          .where('profileComplete', isEqualTo: true)
+          .where('reviewCount', isGreaterThanOrEqualTo: 1)
+          .orderBy('reviewCount')
+          .orderBy('averageRating', descending: true)
+          .limit(5);
+    }
+
+    return collection
+        .where('accountType', isEqualTo: 'marketplace')
+        .where('profileComplete', isEqualTo: true)
+        .where('reviewCount', isGreaterThanOrEqualTo: 1)
+        .orderBy('reviewCount')
+        .orderBy('averageRating', descending: true)
+        .limit(5);
+  }
+
+  static UserModel _userFromSnapshot(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final data = <String, dynamic>{...doc.data(), 'uid': doc.id, 'id': doc.id};
+    return UserModel.fromJson(data);
   }
 }

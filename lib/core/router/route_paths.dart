@@ -33,6 +33,7 @@ class AppRoutes {
       case 'client':
         return 'client';
       case 'workProvider':
+      case 'work_provider':
       case 'provider':
       case 'serviceProvider':
         return 'workProvider';
@@ -88,11 +89,6 @@ String resolveAuthenticatedRoute(Map<String, dynamic>? userData) {
 
   if (!profileComplete) {
     return AppRoutes.setupForAccountType(accountType);
-  }
-
-  final verificationStatus = userData['verificationStatus']?.toString();
-  if (accountType == 'workProvider' && verificationStatus == 'pending') {
-    return AppRoutes.pendingVerification;
   }
 
   return AppRoutes.homeForAccountType(accountType);

@@ -3,61 +3,117 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' show Ref;
 import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../core/router/route_paths.dart';
-import 'auth_action_state.dart';
 import 'auth_providers.dart';
 
-final signupControllerProvider =
-    StateNotifierProvider.autoDispose<SignupController, AuthActionState>((ref) {
-      return SignupController(ref);
-    });
+class SignupState {
+  const SignupState({
+    this.isLoading = false,
+    this.errorMessage,
+    this.successRoute,
+  });
 
-class SignupController extends StateNotifier<AuthActionState> {
-  SignupController(this._ref) : super(const AuthActionState());
+  final bool isLoading;
+  final String? errorMessage;
+  final String? successRoute;
+
+  SignupState copyWith({
+    bool? isLoading,
+    String? errorMessage,
+    bool clearError = false,
+    String? successRoute,
+    bool clearRoute = false,
+  }) {
+    return SignupState(
+      isLoading: isLoading ?? this.isLoading,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      successRoute: clearRoute ? null : (successRoute ?? this.successRoute),
+    );
+  }
+}
+
+class SignupController extends StateNotifier<SignupState> {
+  SignupController(this._ref) : super(const SignupState());
 
   final Ref _ref;
 
-  Future<String?> signUp({
+  Future<void> signUpWithEmail({
     required String email,
     required String password,
   }) async {
-    print('--- [SIGNUP CONTROLLER] Starting signup flow');
-    state = const AuthActionState(isLoading: true);
+    state = const SignupState(isLoading: true);
 
     try {
       final user = await _ref
           .read(authRepositoryProvider)
-          .signUpWithEmailPassword(email, password);
+          .signUpWithEmailPassword(email.trim(), password.trim());
 
       if (user == null) {
-        throw Exception('Firebase did not return a valid user account.');
+        throw Exception('Unable to create your account. Please try again.');
       }
 
-      await _ref.read(userRepositoryProvider).createUserDocument(user.uid, {
-        'email': email,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-        'emailVerified': false,
-        'accountType': null,
-        'profileComplete': false,
-        'profileCompleted': false,
-        'notificationsEnabled': true,
-      });
+      final userRepository = _ref.read(userRepositoryProvider);
+      final userExists = await userRepository.userDocumentExists(user.uid);
 
-      state = const AuthActionState(
+      if (!userExists) {
+        await userRepository.createUserDocument(user.uid, {
+          'uid': user.uid,
+          'email': email.trim(),
+          'name': '',
+          'phone': '',
+          'emailVerified': false,
+          'accountType': null,
+          'profileComplete': false,
+          'profileCompleted': false,
+          'notificationsEnabled': true,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        await userRepository.updateUserDocument(user.uid, {
+          'email': email.trim(),
+          'emailVerified': false,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      state = const SignupState(
         isLoading: false,
-        infoMessage:
-            'Account created successfully. Verify your email to continue.',
+        successRoute: AppRoutes.emailVerification,
       );
-      return AppRoutes.emailVerification;
-    } catch (error, stackTrace) {
-      print('--- [SIGNUP CONTROLLER] ERROR: $error');
-      print('--- [SIGNUP CONTROLLER] Stack trace: $stackTrace');
-      state = AuthActionState(isLoading: false, errorMessage: error.toString());
+    } catch (error) {
+      state = SignupState(isLoading: false, errorMessage: error.toString());
+    }
+  }
+
+  Future<String?> signUpWithGoogle() async {
+    state = const SignupState(isLoading: true);
+
+    try {
+      final user = await _ref.read(authRepositoryProvider).signInWithGoogle();
+      if (user == null) {
+        state = const SignupState(isLoading: false);
+        return null;
+      }
+
+      final userData = await _ref
+          .read(userRepositoryProvider)
+          .getUserDocument(user.uid);
+      final route = resolveAuthenticatedRoute(userData);
+
+      state = SignupState(isLoading: false, successRoute: route);
+      return route;
+    } catch (error) {
+      state = SignupState(isLoading: false, errorMessage: error.toString());
       return null;
     }
   }
 
   void clearMessages() {
-    state = state.copyWith(clearError: true, clearInfo: true);
+    state = state.copyWith(clearError: true, clearRoute: true);
   }
 }
+
+final signupControllerProvider =
+    StateNotifierProvider<SignupController, SignupState>((ref) {
+      return SignupController(ref);
+    });

@@ -1,90 +1,173 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/admin/screens/admin_dashboard_screen.dart';
 import '../../features/ai_chat/presentation/pages/ai_chat_page.dart';
 import '../../features/ai_chat/presentation/pages/chat_history_page.dart';
 import '../../features/auth/presentation/pages/account_type_selection_screen.dart';
-import '../../features/auth/presentation/pages/client_profile_setup_screen.dart';
 import '../../features/auth/presentation/pages/email_verification_screen.dart';
 import '../../features/auth/presentation/pages/forgot_password_screen.dart';
 import '../../features/auth/presentation/pages/login_screen.dart';
-import '../../features/auth/presentation/pages/marketplace_profile_setup_screen.dart';
 import '../../features/auth/presentation/pages/pending_verification_screen.dart';
 import '../../features/auth/presentation/pages/signup_screen.dart';
 import '../../features/auth/presentation/pages/welcome_screen.dart';
-import '../../features/auth/presentation/pages/work_provider_profile_setup_screen.dart';
+import '../../features/auth/presentation/screens/setup_client_screen.dart';
+import '../../features/auth/presentation/screens/setup_marketplace_screen.dart';
+import '../../features/auth/presentation/screens/setup_provider_screen.dart';
 import '../../features/auth/providers/auth_providers.dart';
 import '../../features/chat/screens/chat_screen.dart';
 import '../../features/chat/screens/conversations_list_screen.dart';
 import '../../features/favorites/screens/favorites_screen.dart';
 import '../../features/home/screens/best_providers_screen.dart';
 import '../../features/home/screens/client_home_screen.dart';
-import '../../features/home/screens/map_results_screen.dart';
 import '../../features/home/screens/marketplace_home_screen.dart';
 import '../../features/home/screens/provider_home_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
+import '../../features/profile/presentation/screens/marketplace_profile_screen.dart'
+    as new_marketplace_profile;
+import '../../features/profile/presentation/screens/provider_profile_screen.dart'
+    as new_provider_profile;
 import '../../features/profile/screens/edit_profile_screen.dart';
-import '../../features/profile/screens/merchant_profile_screen.dart';
-import '../../features/profile/screens/provider_profile_screen.dart';
 import '../../features/profile/screens/public_profile_screen.dart';
-import '../../features/reviews/screens/rate_service_screen.dart';
+import '../../features/ratings/presentation/screens/rate_client_screen.dart'
+    as new_rate_client;
+import '../../features/ratings/presentation/screens/rate_service_screen.dart'
+    as new_rate_service;
 import '../../features/reviews/screens/reviews_screen.dart';
+import '../../features/search/data/models/search_params.dart';
+import '../../features/search/presentation/screens/search_results_screen.dart';
+import '../../features/search/presentation/screens/search_screen.dart';
 import '../../features/settings/screens/language_selector_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/shared/presentation/widgets/components/main_scaffold_wrapper.dart';
+import '../../features/top_rated/presentation/screens/top_rated_screen.dart';
 import 'route_paths.dart';
 import 'simple_router.dart';
 
-GoRouter buildAppRouter(WidgetRef ref) {
-  final authState = ref.watch(authStateProvider);
-  final userDocState = ref.watch(currentUserDocProvider);
+class GoRouterRefreshStream extends ChangeNotifier {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.listen((_) => notifyListeners());
+  }
 
+  late final StreamSubscription<dynamic> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
+
+Stream<void> _combinedStream() {
+  final controller = StreamController<void>.broadcast();
+  StreamSubscription<User?>? authSubscription;
+  StreamSubscription<dynamic>? userDocSubscription;
+
+  void emit() {
+    if (!controller.isClosed) {
+      controller.add(null);
+    }
+  }
+
+  authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) {
+    userDocSubscription?.cancel();
+    emit();
+
+    if (user != null) {
+      userDocSubscription = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots()
+          .listen((_) => emit(), onError: (_) {});
+    }
+  }, onError: (_) {});
+
+  controller.onCancel = () async {
+    await authSubscription?.cancel();
+    await userDocSubscription?.cancel();
+  };
+
+  return controller.stream;
+}
+
+GoRouter buildAppRouter(WidgetRef ref) {
   return GoRouter(
     initialLocation: AppRoutes.welcome,
+    refreshListenable: GoRouterRefreshStream(_combinedStream()),
     redirect: (context, state) {
       final location = state.matchedLocation;
-      final user = authState.value;
-      final userDoc = userDocState.value;
+      final authValue = ref.read(authStateProvider);
+      final userDataValue = ref.read(currentUserDataProvider);
 
-      if (user == null) {
-        if (AppRoutes.publicRoutes.contains(location)) {
-          return null;
-        }
-        return AppRoutes.welcome;
-      }
-
-      if (!user.emailVerified) {
-        if (location == AppRoutes.emailVerification) {
-          return null;
-        }
-        return AppRoutes.emailVerification;
-      }
-
-      if (userDocState.isLoading) {
+      if (authValue.isLoading) {
         return null;
       }
 
-      final destination = resolveAuthenticatedRoute(userDoc?.toJson());
-      final isHomeDestination = {
-        AppRoutes.clientHome,
-        AppRoutes.providerHome,
-        AppRoutes.marketplaceHome,
-      }.contains(destination);
-      final protectedSetupRoute = AppRoutes.setupRoutes.contains(location);
+      final user = authValue.value;
 
-      if (!isHomeDestination) {
-        return location == destination ? null : destination;
+      if (user == null) {
+        const publicRoutes = <String>{
+          AppRoutes.welcome,
+          AppRoutes.login,
+          AppRoutes.signup,
+          AppRoutes.forgotPassword,
+        };
+        return publicRoutes.contains(location) ? null : AppRoutes.welcome;
       }
+
+      if (!user.emailVerified) {
+        return location == AppRoutes.emailVerification
+            ? null
+            : AppRoutes.emailVerification;
+      }
+
+      if (userDataValue.isLoading) {
+        return null;
+      }
+
+      final userData = userDataValue.value;
+      final normalizedAccountType = AppRoutes.normalizeAccountType(
+        userData?['accountType']?.toString(),
+      );
+
+      if (normalizedAccountType == null) {
+        return location == AppRoutes.accountType ? null : AppRoutes.accountType;
+      }
+
+      final profileComplete =
+          userData?['profileComplete'] == true ||
+          userData?['profileCompleted'] == true;
+      final expectedSetupRoute = AppRoutes.setupForAccountType(
+        normalizedAccountType,
+      );
+
+      if (!profileComplete) {
+        return location == expectedSetupRoute ? null : expectedSetupRoute;
+      }
+
+      const authFlowRoutes = <String>{
+        AppRoutes.welcome,
+        AppRoutes.login,
+        AppRoutes.signup,
+        AppRoutes.forgotPassword,
+        AppRoutes.emailVerification,
+        AppRoutes.accountType,
+        AppRoutes.setupClient,
+        AppRoutes.setupProvider,
+        AppRoutes.setupMarketplace,
+      };
 
       if (location == AppRoutes.home) {
-        return destination;
+        return AppRoutes.homeForAccountType(normalizedAccountType);
       }
 
-      if (AppRoutes.publicRoutes.contains(location) ||
-          location == AppRoutes.emailVerification ||
-          protectedSetupRoute) {
-        return location == destination ? null : destination;
+      if (authFlowRoutes.contains(location)) {
+        return AppRoutes.homeForAccountType(normalizedAccountType);
       }
 
       return null;
@@ -112,15 +195,15 @@ GoRouter buildAppRouter(WidgetRef ref) {
       ),
       GoRoute(
         path: AppRoutes.setupClient,
-        builder: (_, _) => const ClientProfileSetupScreen(),
+        builder: (_, _) => const SetupClientScreen(),
       ),
       GoRoute(
         path: AppRoutes.setupProvider,
-        builder: (_, _) => const WorkProviderProfileSetupScreen(),
+        builder: (_, _) => const SetupProviderScreen(),
       ),
       GoRoute(
         path: AppRoutes.setupMarketplace,
-        builder: (_, _) => const MarketplaceProfileSetupScreen(),
+        builder: (_, _) => const SetupMarketplaceScreen(),
       ),
       GoRoute(
         path: AppRoutes.pendingVerification,
@@ -129,9 +212,9 @@ GoRouter buildAppRouter(WidgetRef ref) {
       ...buildSimpleAuthRoutes(),
       GoRoute(
         path: AppRoutes.home,
-        redirect: (_, state) {
-          final userDoc = ref.read(currentUserDocProvider).value;
-          return resolveAuthenticatedRoute(userDoc?.toJson());
+        redirect: (_, _) {
+          final userData = ref.read(currentUserDataProvider).value;
+          return resolveAuthenticatedRoute(userData);
         },
       ),
       ShellRoute(
@@ -167,6 +250,10 @@ GoRouter buildAppRouter(WidgetRef ref) {
             builder: (_, _) => const ChatHistoryPage(),
           ),
           GoRoute(
+            path: '/top-rated',
+            builder: (_, _) => const TopRatedScreen(),
+          ),
+          GoRoute(
             path: AppRoutes.profile,
             builder: (_, _) => const EditProfileScreen(),
           ),
@@ -175,22 +262,8 @@ GoRouter buildAppRouter(WidgetRef ref) {
       GoRoute(
         path: '/search-results',
         builder: (context, state) {
-          return MapResultsScreen(
-            category: state.uri.queryParameters['category'] ?? 'Any',
-            searchType: state.uri.queryParameters['type'] ?? 'provider',
-            radiusKm:
-                double.tryParse(state.uri.queryParameters['radius'] ?? '') ??
-                10,
-            minimumRating:
-                double.tryParse(state.uri.queryParameters['minRating'] ?? '') ??
-                0,
-            availableOnly: state.uri.queryParameters['availableOnly'] == 'true',
-            originLatitude:
-                double.tryParse(state.uri.queryParameters['lat'] ?? '') ?? 0,
-            originLongitude:
-                double.tryParse(state.uri.queryParameters['lng'] ?? '') ?? 0,
-            originLabel: state.uri.queryParameters['label'] ?? 'Search area',
-          );
+          final params = state.extra as SearchParams;
+          return SearchResultsScreen(params: params);
         },
       ),
       GoRoute(
@@ -203,13 +276,16 @@ GoRouter buildAppRouter(WidgetRef ref) {
       GoRoute(path: '/ai-chat/session', builder: (_, _) => const AIChatPage()),
       GoRoute(
         path: '/provider-profile/:id',
-        builder: (context, state) =>
-            ProviderProfileScreen(uid: state.pathParameters['id']!),
+        builder: (context, state) => new_provider_profile.ProviderProfileScreen(
+          id: state.pathParameters['id']!,
+        ),
       ),
       GoRoute(
-        path: '/merchant-profile/:id',
+        path: '/marketplace-profile/:id',
         builder: (context, state) =>
-            MerchantProfileScreen(uid: state.pathParameters['id']!),
+            new_marketplace_profile.MarketplaceProfileScreen(
+              id: state.pathParameters['id']!,
+            ),
       ),
       GoRoute(
         path: '/reviews/:providerId',
@@ -223,8 +299,9 @@ GoRouter buildAppRouter(WidgetRef ref) {
       ),
       GoRoute(
         path: '/rate-service/:providerId',
-        builder: (context, state) =>
-            RateServiceScreen(providerId: state.pathParameters['providerId']!),
+        builder: (context, state) => new_rate_service.RateServiceScreen(
+          targetId: state.pathParameters['providerId']!,
+        ),
       ),
       GoRoute(path: '/favorites', builder: (_, _) => const FavoritesScreen()),
       GoRoute(
@@ -236,22 +313,12 @@ GoRouter buildAppRouter(WidgetRef ref) {
         path: '/language',
         builder: (_, _) => const LanguageSelectorScreen(),
       ),
-      GoRoute(path: '/admin', builder: (_, _) => const AdminDashboardScreen()),
+      GoRoute(path: '/search', builder: (_, _) => const SearchScreen()),
       GoRoute(
-        path: '/admin/users',
-        builder: (_, _) => const AdminDashboardScreen(initialSection: 1),
-      ),
-      GoRoute(
-        path: '/admin/verifications',
-        builder: (_, _) => const AdminDashboardScreen(initialSection: 2),
-      ),
-      GoRoute(
-        path: '/admin/reports',
-        builder: (_, _) => const AdminDashboardScreen(initialSection: 3),
-      ),
-      GoRoute(
-        path: '/admin/reviews',
-        builder: (_, _) => const AdminDashboardScreen(initialSection: 4),
+        path: '/rate-client/:clientId',
+        builder: (context, state) => new_rate_client.RateClientScreen(
+          clientId: state.pathParameters['clientId']!,
+        ),
       ),
     ],
   );

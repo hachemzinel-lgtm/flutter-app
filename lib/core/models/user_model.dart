@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum UserType { client, workProvider, marketplace }
 
-extension UserTypeExtension on UserType {
+extension UserTypeDisplay on UserType {
   String get displayName {
     switch (this) {
       case UserType.client:
@@ -15,51 +15,16 @@ extension UserTypeExtension on UserType {
   }
 }
 
-enum VerificationStatus {
-  pending,
-  approved,
-  rejected,
-  notRequired;
-
-  static VerificationStatus fromValue(String? value) {
-    switch (value) {
-      case 'approved':
-        return VerificationStatus.approved;
-      case 'rejected':
-        return VerificationStatus.rejected;
-      case 'pending':
-        return VerificationStatus.pending;
-      default:
-        return VerificationStatus.notRequired;
-    }
-  }
-}
-
-extension VerificationStatusExtension on VerificationStatus {
-  String get displayName {
-    switch (this) {
-      case VerificationStatus.pending:
-        return 'Pending';
-      case VerificationStatus.approved:
-        return 'Approved';
-      case VerificationStatus.rejected:
-        return 'Rejected';
-      case VerificationStatus.notRequired:
-        return 'Not Required';
-    }
-  }
-}
+enum VerificationStatus { pending, approved, rejected }
 
 class UserModel {
+  // Core identity
   final String id;
   final String email;
   final String name;
   final String phone;
-  final UserType userType;
-  final DateTime? createdAt;
   final String? photoUrl;
-
-  // New base fields
+  final DateTime? createdAt;
   final GeoPoint? location;
   final String? address;
   final String? language;
@@ -68,15 +33,29 @@ class UserModel {
   final bool isBanned;
   final bool notificationsEnabled;
   final bool profileCompleted;
+  final UserType userType;
 
-  UserModel({
+  // Optional extended fields
+  final String? verificationStatus;
+  final int? verificationAttempts;
+  final bool? availabilityToggle;
+  final bool? openStatus;
+  final String? businessName;
+  final String? category;
+  final bool? badgeVisible;
+  final String? bio;
+  final String? description;
+  final int? serviceRadius;
+  final int? deliveryRadius;
+  final int? yearsExperience;
+
+  const UserModel({
     required this.id,
     required this.email,
     required this.name,
     required this.phone,
-    required this.userType,
-    this.createdAt,
     this.photoUrl,
+    this.createdAt,
     this.location,
     this.address,
     this.language,
@@ -84,47 +63,45 @@ class UserModel {
     this.reviewCount = 0,
     this.isBanned = false,
     this.notificationsEnabled = true,
-    this.profileCompleted = true,
+    this.profileCompleted = false,
+    required this.userType,
+    this.verificationStatus,
+    this.verificationAttempts,
+    this.availabilityToggle,
+    this.openStatus,
+    this.businessName,
+    this.category,
+    this.badgeVisible,
+    this.bio,
+    this.description,
+    this.serviceRadius,
+    this.deliveryRadius,
+    this.yearsExperience,
   });
 
-  factory UserModel.fromFirestore(DocumentSnapshot doc) {
-    if (!doc.exists) throw Exception("Document does not exist");
-    final data = doc.data() as Map<String, dynamic>;
-    return UserModel.fromMap(doc.id, data);
+  // ── Compatibility getters for new-style code ──────────────────────────────
+  String get uid => id;
+  String get displayName => name;
+  double get averageRating => rating;
+  bool get profileComplete => profileCompleted;
+  String get accountType {
+    switch (userType) {
+      case UserType.workProvider:
+        return 'work_provider';
+      case UserType.marketplace:
+        return 'marketplace';
+      case UserType.client:
+        return 'client';
+    }
   }
 
-  factory UserModel.fromMap(String id, Map<String, dynamic> data) {
-    return UserModel(
-      id: id,
-      email: data['email'] ?? '',
-      name: data['name'] ?? '',
-      phone: data['phone'] ?? '',
-      userType: parseUserType(
-        data['accountType'] ?? data['userType'] ?? 'client',
-      ),
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-      photoUrl: data['profilePicture'] ?? data['photoUrl'],
-      location: data['location'] as GeoPoint?,
-      address: data['address'],
-      language: data['language'],
-      rating: (data['rating'] ?? 0).toDouble(),
-      reviewCount: data['reviewCount'] ?? 0,
-      isBanned: data['isBanned'] ?? false,
-      notificationsEnabled: data['notificationsEnabled'] ?? true,
-      profileCompleted:
-          data['profileComplete'] ?? data['profileCompleted'] ?? false,
-    );
-  }
-
-  static UserType parseUserType(String type) {
-    switch (type) {
+  // ── Static helpers ────────────────────────────────────────────────────────
+  static UserType parseUserType(String value) {
+    switch (value) {
       case 'workProvider':
-      case 'provider':
-      case 'serviceProvider':
+      case 'work_provider':
         return UserType.workProvider;
       case 'marketplace':
-      case 'merchant':
-      case 'business':
         return UserType.marketplace;
       case 'client':
       default:
@@ -132,17 +109,52 @@ class UserModel {
     }
   }
 
+  // ── Serialisation ─────────────────────────────────────────────────────────
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    return UserModel(
+      id: json['id'] as String? ?? json['uid'] as String? ?? '',
+      email: json['email'] as String? ?? '',
+      name: json['name'] as String? ?? json['displayName'] as String? ?? '',
+      phone: json['phone'] as String? ?? '',
+      photoUrl: json['photoUrl'] as String?,
+      createdAt: (json['createdAt'] as Timestamp?)?.toDate(),
+      location: json['location'] as GeoPoint?,
+      address: json['address'] as String?,
+      language: json['language'] as String?,
+      rating: (json['rating'] as num?)?.toDouble() ??
+          (json['averageRating'] as num?)?.toDouble() ?? 0.0,
+      reviewCount: json['reviewCount'] as int? ?? 0,
+      isBanned: json['isBanned'] as bool? ?? false,
+      notificationsEnabled: json['notificationsEnabled'] as bool? ?? true,
+      profileCompleted: json['profileCompleted'] as bool? ??
+          json['profileComplete'] as bool? ?? false,
+      userType: parseUserType(
+        json['userType']?.toString() ??
+            json['accountType']?.toString() ??
+            'client',
+      ),
+      verificationStatus: json['verificationStatus'] as String?,
+      verificationAttempts: json['verificationAttempts'] as int?,
+      availabilityToggle: json['availabilityToggle'] as bool?,
+      openStatus: json['openStatus'] as bool?,
+      businessName: json['businessName'] as String?,
+      category: json['category'] as String?,
+      badgeVisible: json['badgeVisible'] as bool?,
+      bio: json['bio'] as String?,
+      description: json['description'] as String?,
+      serviceRadius: json['serviceRadius'] as int?,
+      deliveryRadius: json['deliveryRadius'] as int?,
+      yearsExperience: json['yearsExperience'] as int?,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
-      'uid': id, // Keeping for backward compatibility temporarily
-      'accountType': userType.name,
       'email': email,
       'name': name,
       'phone': phone,
-      'createdAt': createdAt != null
-          ? Timestamp.fromDate(createdAt!)
-          : FieldValue.serverTimestamp(),
-      'profilePicture': photoUrl,
+      'photoUrl': photoUrl,
+      'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : null,
       'location': location,
       'address': address,
       'language': language,
@@ -150,8 +162,20 @@ class UserModel {
       'reviewCount': reviewCount,
       'isBanned': isBanned,
       'notificationsEnabled': notificationsEnabled,
-      'profileComplete': profileCompleted,
       'profileCompleted': profileCompleted,
+      'userType': userType.name,
+      'verificationStatus': verificationStatus,
+      'verificationAttempts': verificationAttempts,
+      'availabilityToggle': availabilityToggle,
+      'openStatus': openStatus,
+      'businessName': businessName,
+      'category': category,
+      'badgeVisible': badgeVisible,
+      'bio': bio,
+      'description': description,
+      'serviceRadius': serviceRadius,
+      'deliveryRadius': deliveryRadius,
+      'yearsExperience': yearsExperience,
     };
   }
 }

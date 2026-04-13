@@ -7,6 +7,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:intl/intl.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_text_styles.dart';
@@ -167,6 +169,22 @@ class _ClientEditProfileScreenState
               ),
             ),
           ),
+          const SizedBox(height: AppSpacing.m),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.star, color: Colors.amber, size: 20),
+              const SizedBox(width: 4),
+              Text(
+                '${(user.rating ?? 0.0).toStringAsFixed(1)} ',
+                style: AppTextStyles.headingSmall,
+              ),
+              Text(
+                '(${user.reviewCount ?? 0} reviews)',
+                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.softGray),
+              ),
+            ],
+          ),
           const SizedBox(height: AppSpacing.xl),
           _field('Name', _nameController),
           const SizedBox(height: AppSpacing.m),
@@ -189,7 +207,7 @@ class _ClientEditProfileScreenState
           _field('Saved location', _addressController),
           const SizedBox(height: AppSpacing.s),
           Align(
-            alignment: Alignment.centerLeft,
+            alignment: AlignmentDirectional.centerStart,
             child: OutlinedButton.icon(
               onPressed: _useCurrentLocation,
               icon: const Icon(Icons.my_location_outlined),
@@ -213,6 +231,60 @@ class _ClientEditProfileScreenState
             title: const Text('Enable push notifications'),
             value: _notificationsEnabled,
             onChanged: (value) => setState(() => _notificationsEnabled = value),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Text('Reviews Received', style: AppTextStyles.headingSmall),
+          const SizedBox(height: AppSpacing.m),
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.id)
+                .collection('reviews')
+                .orderBy('timestamp', descending: true)
+                .limit(5)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Text('No reviews received yet.');
+              }
+              return Column(
+                children: snapshot.data!.docs.map((doc) {
+                  final rev = doc.data() as Map<String, dynamic>;
+                  final date = rev['timestamp'] != null 
+                    ? DateFormat.yMMMd().format((rev['timestamp'] as Timestamp).toDate()) 
+                    : '';
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(
+                      backgroundImage: rev['fromPhotoUrl'] != null && rev['fromPhotoUrl'].toString().isNotEmpty 
+                        ? NetworkImage(rev['fromPhotoUrl']) : null,
+                      child: rev['fromPhotoUrl'] == null || rev['fromPhotoUrl'].toString().isEmpty 
+                        ? const Icon(Icons.person) : null,
+                    ),
+                    title: Row(
+                      children: [
+                        Expanded(child: Text(rev['fromName'] ?? 'Anonymous')),
+                        Row(children: List.generate(5, (i) => Icon(Icons.star, size: 14, color: i < (rev['rating'] ?? 0) ? Colors.amber : Colors.grey))),
+                      ],
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(date, style: const TextStyle(fontSize: 12)),
+                        if (rev['comment'] != null && rev['comment'].toString().isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(rev['comment']),
+                          ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              );
+            },
           ),
           const SizedBox(height: AppSpacing.xl),
           ElevatedButton(

@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
-import '../../../core/models/user_model.dart';
+import 'package:flutter_application_1/core/models/user_model.dart';
 import '../../../features/notifications/services/notification_service.dart';
 import '../models/chat_models.dart';
 

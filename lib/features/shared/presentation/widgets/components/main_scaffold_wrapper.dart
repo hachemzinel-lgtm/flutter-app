@@ -109,26 +109,21 @@ class MainScaffoldWrapper extends ConsumerWidget {
           _NavItem(
             'Home',
             Icons.home_outlined,
-            Icons.home_rounded,
+            Icons.home,
             AppRoutes.clientHome,
           ),
-          _NavItem(
-            'Best',
-            Icons.star_outline_rounded,
-            Icons.star_rounded,
-            AppRoutes.bestProviders,
-          ),
-          _NavItem(
-            'Messages',
-            Icons.chat_bubble_outline_rounded,
-            Icons.chat_bubble_rounded,
-            AppRoutes.messages,
-          ),
+          _NavItem('Search', Icons.search, Icons.search, '/search'),
           _NavItem(
             'AI Chat',
             Icons.auto_awesome_outlined,
-            Icons.auto_awesome_rounded,
+            Icons.auto_awesome,
             AppRoutes.aiChat,
+          ),
+          _NavItem(
+            'Top Rated',
+            Icons.emoji_events_outlined,
+            Icons.emoji_events,
+            '/top-rated',
           ),
           _NavItem(
             'Profile',
@@ -142,19 +137,14 @@ class MainScaffoldWrapper extends ConsumerWidget {
           _NavItem(
             'Home',
             Icons.home_outlined,
-            Icons.home_rounded,
+            Icons.home,
             AppRoutes.providerHome,
           ),
-          _NavItem(
-            'Messages',
-            Icons.chat_bubble_outline_rounded,
-            Icons.chat_bubble_rounded,
-            AppRoutes.messages,
-          ),
+          _NavItem('Search', Icons.search, Icons.search, '/search'),
           _NavItem(
             'AI Chat',
             Icons.auto_awesome_outlined,
-            Icons.auto_awesome_rounded,
+            Icons.auto_awesome,
             AppRoutes.aiChat,
           ),
           _NavItem(
@@ -169,20 +159,21 @@ class MainScaffoldWrapper extends ConsumerWidget {
           _NavItem(
             'Home',
             Icons.home_outlined,
-            Icons.home_rounded,
+            Icons.home,
             AppRoutes.marketplaceHome,
           ),
-          _NavItem(
-            'Messages',
-            Icons.chat_bubble_outline_rounded,
-            Icons.chat_bubble_rounded,
-            AppRoutes.messages,
-          ),
+          _NavItem('Search', Icons.search, Icons.search, '/search'),
           _NavItem(
             'AI Chat',
             Icons.auto_awesome_outlined,
-            Icons.auto_awesome_rounded,
+            Icons.auto_awesome,
             AppRoutes.aiChat,
+          ),
+          _NavItem(
+            'Top Rated',
+            Icons.emoji_events_outlined,
+            Icons.emoji_events,
+            '/top-rated',
           ),
           _NavItem(
             'Profile',

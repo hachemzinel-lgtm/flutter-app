@@ -1,15 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_spacing.dart';
-import '../../../core/constants/app_text_styles.dart';
-import '../../../core/constants/marketplace_taxonomy.dart';
-import '../../../core/models/work_provider_model.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../../profile/providers/availability_provider.dart';
-import '../providers/home_provider.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../../../core/models/user_model.dart';
+import '../../../../features/auth/providers/auth_providers.dart';
 
 class ProviderHomeScreen extends ConsumerStatefulWidget {
   const ProviderHomeScreen({super.key});
@@ -19,326 +15,320 @@ class ProviderHomeScreen extends ConsumerStatefulWidget {
 }
 
 class _ProviderHomeScreenState extends ConsumerState<ProviderHomeScreen> {
-  final _manualAddressController = TextEditingController();
-  String _category = 'Any';
-  double _radiusKm = 10;
-  bool _useCurrentLocation = true;
-  bool _loadingSearch = false;
+  bool _availabilityLoading = false;
 
-  @override
-  void dispose() {
-    _manualAddressController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _search() async {
-    final user = ref.read(currentUserDocProvider).value;
-    setState(() => _loadingSearch = true);
+  Future<void> _toggleAvailability(bool newValue, String uid) async {
+    setState(() => _availabilityLoading = true);
     try {
-      final location = await ref
-          .read(discoveryServiceProvider)
-          .resolveSearchLocation(
-            useCurrentLocation: _useCurrentLocation,
-            savedLocation: user?.location,
-            savedAddress: user?.address,
-            manualAddress: _manualAddressController.text,
-          );
-
-      if (!mounted) {
-        return;
-      }
-
-      context.push(
-        '/search-results'
-        '?type=marketplace'
-        '&category=${Uri.encodeComponent(_category)}'
-        '&radius=$_radiusKm'
-        '&minRating=0'
-        '&availableOnly=false'
-        '&lat=${location.center.latitude}'
-        '&lng=${location.center.longitude}'
-        '&label=${Uri.encodeComponent(location.label)}',
-      );
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'availabilityToggle': newValue,
+      });
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error.toString()),
-          backgroundColor: AppColors.errorRed,
-        ),
+        SnackBar(content: Text('Could not update availability: $error')),
       );
     } finally {
       if (mounted) {
-        setState(() => _loadingSearch = false);
+        setState(() => _availabilityLoading = false);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserDocProvider).value;
-    final provider = user is WorkProviderModel ? user : null;
-    final name = user?.name.split(' ').first ?? 'there';
+    final userAsync = ref.watch(currentUserDocProvider);
 
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: AppSpacing.pagePadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(AppSpacing.l),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  color: AppColors.primaryNavy,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Welcome back, $name',
-                      style: AppTextStyles.headingLarge.copyWith(
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.s),
-                    Text(
-                      provider?.profession ?? 'Work Provider',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.accentBlue,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.l),
-                    Container(
-                      padding: const EdgeInsets.all(AppSpacing.m),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Available Now',
-                                  style: AppTextStyles.headingSmall.copyWith(
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  provider?.isAvailableNow == true
-                                      ? 'Clients can discover you right now.'
-                                      : 'Turn this on when you are ready to accept jobs.',
-                                  style: AppTextStyles.caption.copyWith(
-                                    color: Colors.white70,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Switch(
-                            value: provider?.isAvailableNow ?? false,
-                            onChanged: (value) {
-                              ref
-                                  .read(availabilityProvider.notifier)
-                                  .toggle(value);
-                            },
-                            activeThumbColor: AppColors.availableGreen,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.m),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: [
-                        _StatTile(label: 'Profile views', value: '--'),
-                        _StatTile(label: 'Messages', value: '--'),
-                        _StatTile(
-                          label: 'Rating',
-                          value: provider == null || provider.rating == 0
-                              ? '--'
-                              : provider.rating.toStringAsFixed(1),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSpacing.l),
-              TextField(
-                readOnly: true,
-                decoration: InputDecoration(
-                  hintText: 'Find marketplaces',
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: BorderSide.none,
+      appBar: AppBar(title: const Text('Dashboard')),
+      body: userAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(child: Text('Error: $error')),
+        data: (userDoc) {
+          if (userDoc == null) {
+            return const Center(child: Text('Please log in.'));
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildVerificationBanner(userDoc),
+                Text(
+                  'Welcome ${userDoc.displayName}',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryNavy,
                   ),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.l),
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.l),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
+                const SizedBox(height: 20),
+                _SupplierSearchCard(
+                  subtitle:
+                      'Search marketplace suppliers only. Work-provider search is disabled for this role.',
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Search nearby marketplaces',
-                      style: AppTextStyles.headingSmall,
+                const SizedBox(height: 16),
+                Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
                     ),
-                    const SizedBox(height: AppSpacing.m),
-                    DropdownButtonFormField<String>(
-                      initialValue: _category,
-                      decoration: const InputDecoration(
-                        labelText: 'Marketplace category',
-                      ),
-                      items:
-                          ['Any', ...MarketplaceTaxonomy.marketplaceCategories]
-                              .map(
-                                (item) => DropdownMenuItem(
-                                  value: item,
-                                  child: Text(item),
-                                ),
-                              )
-                              .toList(),
-                      onChanged: (value) =>
-                          setState(() => _category = value ?? 'Any'),
-                    ),
-                    const SizedBox(height: AppSpacing.l),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                    child: Row(
                       children: [
-                        ChoiceChip(
-                          label: const Text('Use my current location'),
-                          selected: _useCurrentLocation,
-                          onSelected: (_) =>
-                              setState(() => _useCurrentLocation = true),
+                        const Expanded(
+                          child: Text(
+                            'Available for work',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                        ChoiceChip(
-                          label: const Text('Use saved profile location'),
-                          selected:
-                              !_useCurrentLocation &&
-                              _manualAddressController.text.trim().isEmpty,
-                          onSelected: (_) {
-                            setState(() {
-                              _useCurrentLocation = false;
-                              _manualAddressController.clear();
-                            });
-                          },
-                        ),
+                        if (_availabilityLoading)
+                          const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2.4),
+                          )
+                        else
+                          Switch(
+                            value: userDoc.availabilityToggle ?? false,
+                            onChanged: (value) =>
+                                _toggleAvailability(value, userDoc.uid),
+                          ),
                       ],
                     ),
-                    const SizedBox(height: AppSpacing.m),
-                    TextField(
-                      controller: _manualAddressController,
-                      decoration: const InputDecoration(
-                        labelText: 'Or set location manually',
-                        prefixIcon: Icon(Icons.edit_location_alt_outlined),
-                      ),
-                      onChanged: (_) {
-                        if (_manualAddressController.text.trim().isNotEmpty) {
-                          setState(() => _useCurrentLocation = false);
-                        }
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.l),
-                    Text('Distance radius', style: AppTextStyles.labelSmall),
-                    Slider(
-                      value: _radiusKm,
-                      min: 5,
-                      max: 50,
-                      divisions: 9,
-                      onChanged: (value) => setState(() => _radiusKm = value),
-                    ),
-                    Wrap(
-                      spacing: 8,
-                      children: MarketplaceTaxonomy.searchRadiusOptionsKm
-                          .map(
-                            (radius) => ChoiceChip(
-                              label: Text('${radius.toInt()}km'),
-                              selected: _radiusKm == radius,
-                              onSelected: (_) =>
-                                  setState(() => _radiusKm = radius),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                    const SizedBox(height: AppSpacing.l),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _loadingSearch ? null : _search,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentBlue,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 18),
+                  ),
+                ),
+                const SizedBox(height: 28),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Top Rated Marketplace',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
                         ),
-                        child: _loadingSearch
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.4,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Text('Search'),
                       ),
+                    ),
+                    TextButton(
+                      onPressed: () => context.push('/top-rated'),
+                      child: const Text('See all'),
                     ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                const _MarketplacePreviewList(),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildVerificationBanner(UserModel userDoc) {
+    if (userDoc.verificationStatus == 'unverified' &&
+        userDoc.verificationAttempts == 0) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: MaterialBanner(
+          backgroundColor: Colors.amber[100],
+          content: const Text(
+            'Upload your professional documents to unlock the verified badge.',
           ),
+          actions: [
+            TextButton(
+              onPressed: () => context.push('/profile'),
+              child: const Text('Upload'),
+            ),
+          ],
         ),
+      );
+    }
+
+    if (userDoc.verificationStatus == 'rejected' ||
+        (userDoc.verificationStatus == 'unverified' &&
+            (userDoc.verificationAttempts ?? 0) > 0)) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: MaterialBanner(
+          backgroundColor: Colors.red[50],
+          content: const Text(
+            'Your verification needs attention. Re-upload your documents to try again.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => context.push('/profile'),
+              child: const Text('Open profile'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (userDoc.verificationStatus == 'approved' ||
+        userDoc.verificationStatus == 'ai_verified' ||
+        userDoc.verificationStatus == 'admin_verified') {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: MaterialBanner(
+          backgroundColor: Colors.green[50],
+          content: const Text(
+            'Your profile is verified and visible as trusted.',
+          ),
+          actions: [TextButton(onPressed: () {}, child: const Text('OK'))],
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+}
+
+class _SupplierSearchCard extends StatelessWidget {
+  const _SupplierSearchCard({required this.subtitle});
+
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.accentBlue.withValues(alpha: 0.18)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Find Suppliers',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(subtitle),
+          const SizedBox(height: 14),
+          InkWell(
+            onTap: () => context.push('/search'),
+            borderRadius: BorderRadius.circular(16),
+            child: Ink(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppColors.backgroundSecondary,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.search_rounded, color: AppColors.accentBlue),
+                  SizedBox(width: 12),
+                  Expanded(child: Text('Search marketplace suppliers')),
+                  Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _StatTile extends StatelessWidget {
-  const _StatTile({required this.label, required this.value});
-
-  final String label;
-  final String value;
+class _MarketplacePreviewList extends StatelessWidget {
+  const _MarketplacePreviewList();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            value,
-            style: AppTextStyles.headingSmall.copyWith(color: Colors.white),
-          ),
-          Text(
-            label,
-            style: AppTextStyles.caption.copyWith(color: Colors.white70),
-          ),
-        ],
-      ),
+    final stream = FirebaseFirestore.instance
+        .collection('users')
+        .where('accountType', isEqualTo: 'marketplace')
+        .where('profileComplete', isEqualTo: true)
+        .where('reviewCount', isGreaterThanOrEqualTo: 1)
+        .orderBy('reviewCount')
+        .orderBy('averageRating', descending: true)
+        .limit(5)
+        .snapshots();
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: stream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Text('No top suppliers found yet.');
+        }
+
+        final users = snapshot.data!.docs
+            .map(
+              (doc) => UserModel.fromJson({
+                ...doc.data(),
+                'uid': doc.id,
+                'id': doc.id,
+              }),
+            )
+            .toList();
+
+        return Column(
+          children: users.map((user) {
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                onTap: () => context.push('/marketplace-profile/${user.uid}'),
+                leading: CircleAvatar(
+                  backgroundImage:
+                      user.photoUrl != null && user.photoUrl!.isNotEmpty
+                      ? NetworkImage(user.photoUrl!)
+                      : null,
+                  child: user.photoUrl == null || user.photoUrl!.isEmpty
+                      ? const Icon(Icons.storefront)
+                      : null,
+                ),
+                title: Text(
+                  user.businessName ?? user.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                subtitle: Row(
+                  children: [
+                    const Icon(
+                      Icons.star_rounded,
+                      size: 16,
+                      color: Colors.amber,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(user.averageRating.toStringAsFixed(1)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        user.category ?? 'Uncategorized',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
     );
   }
 }

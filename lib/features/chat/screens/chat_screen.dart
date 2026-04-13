@@ -9,10 +9,12 @@ import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_text_styles.dart';
-import '../../../core/models/user_model.dart';
+import 'package:flutter_application_1/core/models/user_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/chat_models.dart';
 import '../providers/chat_provider.dart';
@@ -256,48 +258,95 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         return Scaffold(
           appBar: AppBar(
             titleSpacing: 0,
-            title: Row(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: AppColors.accentBlue.withValues(alpha: 0.12),
-                  backgroundImage: otherPhoto != null && otherPhoto.isNotEmpty
-                      ? NetworkImage(otherPhoto)
-                      : null,
-                  child: otherPhoto != null && otherPhoto.isNotEmpty
-                      ? null
-                      : Text(
-                          (otherName.isNotEmpty
-                                  ? otherName.substring(0, 1)
-                                  : '?')
-                              .toUpperCase(),
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.accentBlue,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                ),
-                const SizedBox(width: AppSpacing.m),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            title: FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance.collection('users').doc(otherId).get(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData || !snapshot.data!.exists) {
+                  return Row(
                     children: [
-                      Text(
-                        otherName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.headingSmall,
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: AppColors.accentBlue.withValues(alpha: 0.12),
+                        backgroundImage: otherPhoto != null && otherPhoto.isNotEmpty
+                            ? NetworkImage(otherPhoto)
+                            : null,
+                        child: otherPhoto != null && otherPhoto.isNotEmpty
+                            ? null
+                            : Text(
+                                (otherName.isNotEmpty
+                                        ? otherName.substring(0, 1)
+                                        : '?')
+                                    .toUpperCase(),
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: AppColors.accentBlue,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                       ),
-                      Text(
-                        otherType?.displayName ?? 'NearWork user',
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.availableGreen,
+                      const SizedBox(width: AppSpacing.m),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              otherName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.headingSmall,
+                            ),
+                            Text(
+                              otherType?.displayName ?? 'NearWork user',
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.availableGreen,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                  ),
-                ),
-              ],
+                  );
+                }
+                
+                final otherUser = UserModel.fromJson(snapshot.data!.data() as Map<String, dynamic>);
+                return Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: AppColors.accentBlue.withValues(alpha: 0.12),
+                      backgroundImage: otherUser.photoUrl != null && otherUser.photoUrl!.isNotEmpty
+                          ? NetworkImage(otherUser.photoUrl!)
+                          : null,
+                      child: otherUser.photoUrl != null && otherUser.photoUrl!.isNotEmpty
+                          ? null
+                          : const Icon(Icons.person),
+                    ),
+                    const SizedBox(width: AppSpacing.m),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            otherUser.businessName ?? otherUser.displayName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.headingSmall,
+                          ),
+                          Row(
+                            children: [
+                              const Icon(Icons.star, color: Colors.amber, size: 14),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${otherUser.averageRating.toStringAsFixed(1)}',
+                                style: AppTextStyles.caption,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
             actions: [
               if (currentUser.userType == UserType.client &&
@@ -349,8 +398,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         final isMe = message.senderId == currentUser.id;
                         return Align(
                           alignment: isMe
-                              ? Alignment.centerRight
-                              : Alignment.centerLeft,
+                              ? AlignmentDirectional.centerEnd
+                              : AlignmentDirectional.centerStart,
                           child: _MessageBubble(
                             message: message,
                             isMe: isMe,

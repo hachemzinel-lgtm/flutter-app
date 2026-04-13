@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_text_styles.dart';
-import '../../providers/auth_action_state.dart';
 import '../../providers/account_type_controller.dart';
+import '../../providers/auth_action_state.dart';
 
 class AccountTypeSelectionScreen extends ConsumerStatefulWidget {
-  const AccountTypeSelectionScreen({super.key});
+  const AccountTypeSelectionScreen({Key? key}) : super(key: key);
 
   @override
   ConsumerState<AccountTypeSelectionScreen> createState() =>
@@ -20,14 +21,97 @@ class _AccountTypeSelectionScreenState
     extends ConsumerState<AccountTypeSelectionScreen> {
   String? _selectedType;
 
+  Future<void> _continue() async {
+    if (_selectedType == null) return;
+
+    final route = await ref
+        .read(accountTypeControllerProvider.notifier)
+        .saveSelection(_selectedType!);
+
+    if (mounted && route != null) {
+      context.go(route);
+    }
+  }
+
+  // â”€â”€ Card builder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+  Widget _buildTypeCard({
+    required String type,
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
+    final isSelected = _selectedType == type;
+
+    return GestureDetector(
+      onTap: () => setState(() => _selectedType = type),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          // Bug 1 Fix: withValues(alpha:) instead of withOpacity()
+          color: isSelected
+              ? AppColors.accentBlue.withValues(alpha: 0.1)
+              : AppColors.cardSurface,
+          border: Border.all(
+            color: isSelected ? AppColors.accentBlue : AppColors.borderLight,
+            width: isSelected ? 2 : 1,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.accentBlue.withValues(alpha: 0.15),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : [],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                // Bug 1 Fix: withValues(alpha:) instead of withOpacity()
+                color: AppColors.accentBlue.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 36, color: AppColors.accentBlue),
+            ),
+            const SizedBox(height: 14),
+            Text(title, style: AppTextStyles.headingSmall),
+            const SizedBox(height: 6),
+            Text(
+              description,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.softGray,
+                fontSize: 13,
+              ),
+            ),
+            if (isSelected) ...[
+              const SizedBox(height: 12),
+              const Icon(
+                LucideIcons.checkCircle,
+                color: AppColors.accentBlue,
+                size: 22,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // â”€â”€ Build â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
   @override
   Widget build(BuildContext context) {
-    ref.listen<AuthActionState>(accountTypeControllerProvider, (
-      previous,
-      next,
-    ) {
+    ref.listen<AuthActionState>(accountTypeControllerProvider, (prev, next) {
       if (next.errorMessage != null &&
-          next.errorMessage != previous?.errorMessage) {
+          next.errorMessage != prev?.errorMessage) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.errorMessage!),
@@ -38,156 +122,103 @@ class _AccountTypeSelectionScreenState
     });
 
     final state = ref.watch(accountTypeControllerProvider);
+    final isLoading = state.isLoading;
 
-    Future<void> continueFlow() async {
-      if (_selectedType == null) {
-        return;
-      }
-
-      final route = await ref
-          .read(accountTypeControllerProvider.notifier)
-          .saveSelection(_selectedType!);
-      if (context.mounted && route != null) {
-        context.go(route);
-      }
-    }
-
-    return PopScope(
-      canPop: false,
-      child: Scaffold(
-        appBar: AppBar(automaticallyImplyLeading: false),
-        body: Padding(
+    return Scaffold(
+      backgroundColor: AppColors.primaryBackground,
+      body: SafeArea(
+        child: Padding(
           padding: AppSpacing.pagePadding,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const SizedBox(height: 24),
+
               Text(
                 'Choose Your Account Type',
                 style: AppTextStyles.headingLarge,
               ),
-              const SizedBox(height: AppSpacing.s),
+              const SizedBox(height: 8),
               Text(
                 'Select how you want to use NearWork.',
-                style: AppTextStyles.bodyMedium,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.softGray,
+                ),
               ),
-              const SizedBox(height: AppSpacing.xl),
-              _AccountTypeCard(
-                title: 'Client',
-                description: 'Looking for services or products',
-                icon: Icons.person_outline_rounded,
-                selected: _selectedType == 'client',
-                onTap: () => setState(() => _selectedType = 'client'),
+
+              const SizedBox(height: 32),
+
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      _buildTypeCard(
+                        type: 'client',
+                        icon: LucideIcons.user,
+                        title: 'Client',
+                        description:
+                            'Find trusted local workers and marketplace merchants near you.',
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTypeCard(
+                        type: 'workProvider',
+                        icon: LucideIcons.briefcase,
+                        title: 'Work Provider',
+                        description:
+                            'Offer your professional skills and services to nearby clients.',
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTypeCard(
+                        type: 'marketplace',
+                        icon: LucideIcons.store,
+                        title: 'Marketplace',
+                        description:
+                            'Showcase your local business and products to the community.',
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: AppSpacing.m),
-              _AccountTypeCard(
-                title: 'Work Provider',
-                description: 'I offer professional services',
-                icon: Icons.handyman_outlined,
-                selected: _selectedType == 'workProvider',
-                onTap: () => setState(() => _selectedType = 'workProvider'),
-              ),
-              const SizedBox(height: AppSpacing.m),
-              _AccountTypeCard(
-                title: 'Marketplace',
-                description: 'I own a local business',
-                icon: Icons.storefront_outlined,
-                selected: _selectedType == 'marketplace',
-                onTap: () => setState(() => _selectedType = 'marketplace'),
-              ),
-              const Spacer(),
+
+              const SizedBox(height: 24),
+
               SizedBox(
+                width: double.infinity,
                 height: AppSpacing.buttonHeight,
                 child: ElevatedButton(
-                  onPressed: state.isLoading || _selectedType == null
+                  onPressed: (_selectedType == null || isLoading)
                       ? null
-                      : continueFlow,
+                      : _continue,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.accentBlue,
                     foregroundColor: Colors.white,
+                    disabledBackgroundColor: AppColors.borderLight,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(
                         AppSpacing.borderRadius,
                       ),
                     ),
                   ),
-                  child: state.isLoading
+                  child: isLoading
                       ? const SizedBox(
-                          width: 22,
                           height: 22,
+                          width: 22,
                           child: CircularProgressIndicator(
-                            strokeWidth: 2.2,
+                            strokeWidth: 2,
                             color: Colors.white,
                           ),
                         )
-                      : const Text('Continue'),
+                      : const Text(
+                          'Continue',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                 ),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AccountTypeCard extends StatelessWidget {
-  const _AccountTypeCard({
-    required this.title,
-    required this.description,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String title;
-  final String description;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.all(AppSpacing.l),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: selected ? AppColors.accentBlue : AppColors.borderLight,
-            width: selected ? 2 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                color: AppColors.accentBlue.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(icon, color: AppColors.accentBlue),
-            ),
-            const SizedBox(width: AppSpacing.m),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: AppTextStyles.headingSmall),
-                  const SizedBox(height: 4),
-                  Text(description, style: AppTextStyles.bodyMedium),
-                ],
-              ),
-            ),
-            Icon(
-              selected ? Icons.check_circle : Icons.radio_button_unchecked,
-              color: selected ? AppColors.accentBlue : AppColors.softGray,
-            ),
-          ],
         ),
       ),
     );

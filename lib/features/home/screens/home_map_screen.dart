@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_text_styles.dart';
-import '../../../core/models/user_model.dart';
+import 'package:flutter_application_1/core/models/user_model.dart';
 import '../../../core/models/work_provider_model.dart';
 import '../../../core/models/marketplace_model.dart';
 import '../../../core/widgets/primary_button.dart';
@@ -541,7 +541,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
           });
           _determinePosition();
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('📍 Centered on your location')),
+            const SnackBar(content: Text('Ã°Å¸â€œÂ Centered on your location')),
           );
         },
         backgroundColor: AppColors.accentBlue,

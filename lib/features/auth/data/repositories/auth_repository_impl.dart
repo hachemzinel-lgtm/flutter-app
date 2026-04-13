@@ -12,7 +12,7 @@ class AuthRepositoryImpl implements AuthRepository {
   final GoogleAuthService _googleAuthService;
 
   @override
-  Stream<User?> get authStateChanges => _auth.userChanges();
+  Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   @override
   User? get currentUser => _auth.currentUser;

@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../features/search/data/models/search_params.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:record/record.dart';
@@ -175,10 +177,10 @@ class _AIChatPageState extends ConsumerState<AIChatPage> {
 
   Widget _buildInputArea() {
     return Container(
-      padding: EdgeInsets.only(
+      padding: EdgeInsetsDirectional.only(
         bottom: MediaQuery.of(context).viewPadding.bottom,
-        left: AppSpacing.s,
-        right: AppSpacing.s,
+        start: AppSpacing.s,
+        end: AppSpacing.s,
         top: AppSpacing.s,
       ),
       decoration: BoxDecoration(
@@ -242,7 +244,7 @@ class _MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     if (message.isUserMessage) {
       return Align(
-        alignment: Alignment.centerRight,
+        alignment: AlignmentDirectional.centerEnd,
         child: Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(12),
@@ -263,30 +265,71 @@ class _MessageBubble extends StatelessWidget {
           ),
         ),
       );
-    } else {
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(12),
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.8,
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.backgroundSecondary,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(16),
-              bottomRight: Radius.circular(16),
-            ),
-            border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-          ),
-          child: Text(
-            message.content,
-            style: const TextStyle(color: AppColors.textDark),
-          ),
-        ),
-      );
     }
+
+    // AI Message handling
+    String? matchedCategory;
+    final lowerContent = message.content.toLowerCase();
+    final categories = [
+      'Plumbing',
+      'Electrical',
+      'Cleaning',
+      'Painting',
+      'Carpentry',
+      'HVAC',
+      'Landscaping'
+    ];
+    for (var cat in categories) {
+      if (lowerContent.contains(cat.toLowerCase())) {
+        matchedCategory = cat;
+        break;
+      }
+    }
+
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.8,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.backgroundSecondary,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+                bottomRight: Radius.circular(16),
+              ),
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+            ),
+            child: Text(
+              message.content,
+              style: const TextStyle(color: AppColors.textDark),
+            ),
+          ),
+          if (matchedCategory != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: ActionChip(
+                label: Text('Search $matchedCategory'),
+                avatar: const Icon(Icons.search, size: 16),
+                onPressed: () {
+                  context.push('/search-results',
+                      extra: SearchParams(
+                        targetType: 'work_provider',
+                        presetCategory: matchedCategory,
+                        radius: 10,
+                        verifiedOnly: false,
+                      ));
+                },
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }

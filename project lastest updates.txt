@@ -1,0 +1,142 @@
+PROJECT: NEARWORK - MULTI-ROLE SERVICE MARKETPLACE
+
+================================================================================
+1. PROJECT OVERVIEW
+================================================================================
+NearWork is a Flutter-based mobile marketplace designed to connect three main user roles:
+- CLIENTS: Users seeking services or products.
+- WORK PROVIDERS: Individuals/Business offering services (Plumbers, Electricians, etc.).
+- MARKETPLACE MERCHANTS: Sellers offering products or specialized services.
+
+The platform emphasizes ease of use, location-aware discovery, and AI-driven assistance for diagnosing household problems.
+
+================================================================================
+2. TECHNOLOGY STACK
+================================================================================
+- Framework: Flutter (SDK ^3.11.1)
+- State Management: Riverpod (flutter_riverpod ^3.3.1)
+- Navigation: GoRouter (^13.0.0)
+- Backend: Firebase
+    - Authentication (Email/Password, Google Sign-In)
+    - Cloud Firestore (Real-time data, Chat, User profiles)
+    - Cloud Storage (Images, Voice recordings)
+    - Cloud Messaging (FCM for notifications)
+- AI Engine: Groq API (Multi-modal)
+    - Vision: Image analysis for problem diagnosis.
+    - Whisper: Voice transcription for audio messages.
+    - Llama: Natural language processing for chat.
+- Maps: flutter_map with OpenStreetMap (geolocator, geocoding).
+- UI Components: Material 3, Google Fonts, Lucide Icons, Dash Chat 2.
+- Localization: intl (Multi-language and RTL support).
+
+================================================================================
+3. CORE ARCHITECTURE & LOGIC
+================================================================================
+- Structure: Feature-based directory approach (lib/features/).
+- Logic Patterns:
+    - Controllers: Notifiers/AsyncNotifiers for business logic.
+    - Repositories: Direct Firebase/API interactions.
+    - Auth Guards: Centralized GoRouter redirection logic in lib/core/router/app_router.dart handles:
+        1. Login check.
+        2. Email verification check.
+        3. Account type selection check.
+        4. Profile completion check.
+- Theme: Primary Blue (# accentBlue) and Navy, with specific tokens in AppColors.
+
+================================================================================
+4. PAGE RELATIONS & NAVIGATION
+================================================================================
+Navigation is managed via GoRouter with a ShellRoute for persistent bottom navigation.
+
+Public Routes:
+- /welcome (Initial landing)
+- /login
+- /signup
+- /forgot-password
+
+Onboarding Flow:
+- /email-verification (6-digit code or link)
+- /account-type (Role selection: Client, Work Provider, Marketplace)
+- /setup-client | /setup-provider | /setup-marketplace (Specific profiles)
+
+Authenticated Main Navigation (Shell):
+- /home (Dynamic based on role)
+- /messages (List of chats)
+- /ai-chat (History of diagnostic sessions)
+- /profile (Edit user information)
+
+Secondary Routes:
+- /search-results (Map view with filters)
+- /messages/:conversationId (Detailed 1-to-1 chat)
+- /ai-chat/session (Active AI conversation)
+- /provider-profile/:id (Public view)
+- /rate-service/:providerId
+- /notifications
+- /settings & /language
+
+Admin Routes:
+- /admin (Dashboard)
+- /admin/users | /admin/verifications | /admin/reports | /admin/reviews
+
+================================================================================
+5. KEY FUNCTIONALITIES
+================================================================================
+- Multi-role Support: Distinct home screens and features for Clients vs. Providers.
+- AI Diagnostic Tool: 
+    - Analyzes text descriptions, photos (vision), and voice recordings (whisper).
+    - Stores persistent chat sessions in Firestore.
+    - Guides users to search for the right professional after diagnosis.
+- Search & Discovery:
+    - Radius-based search on a map.
+    - Filtering by category, rating, and availability.
+- Real-time Communication:
+    - 1-to-1 chat with image sharing.
+    - Push notifications for new messages and status updates.
+- Reviews & Trust:
+    - Rating system with detailed reviews.
+    - Verification badges for providers (managed by Admin).
+- Globalization:
+    - Support for multiple languages.
+    - Manual RTL (Right-to-Left) UI adjustments for specific locales.
+
+================================================================================
+6. CURRENT STATUS & PROBLEMS (BUGS)
+================================================================================
+- API Deprecations: 
+    - Migration from .withOpacity() to .withValues() is in progress but incomplete in several files (Account type select, Email verification).
+- UI Typos: 
+    - Pervasive camelCase typo: "backgroundcolor" is used instead of "backgroundColor" in many widget parameters and styles.
+- Routing Polish: 
+    - Deep linking for notifications (FCM) is integrated but needs final production testing.
+- UI Consistency: 
+    - Some RTL layouts on older screens might still show alignment issues.
+
+================================================================================
+7. USER SCENARIOS (AI CONTEXT)
+================================================================================
+Scenario A: Problem Diagnosis (Client)
+1. User enters /ai-chat/session.
+2. User records voice "My sink is leaking".
+3. AI transcribes and asks for a photo.
+4. User uploads photo of sink.
+5. AI identifies "P-trap leak" and recommends "Plumber".
+6. User clicks suggestion -> redirected to /search-results with 'Plumber' category.
+
+Scenario B: Provider Onboarding
+1. User signs up as 'Work Provider'.
+2. User provides business documents for verification.
+3. Admin (/admin/verifications) approves the documents.
+4. User dashboard (/home) activates with "Verified" badge.
+
+Scenario C: Real-time Hiring
+1. Client finds Provider -> Starts Chat.
+2. Negotiates via 1-to-1 chat.
+3. Provider finishes job -> Client goes to /rate-service -> leaves review.
+
+================================================================================
+8. MAINTAINER NOTES (FOR AI/DEVS)
+================================================================================
+- Always check authStateProvider and currentUserDocProvider for user context.
+- Use lib/core/constants/app_colors.dart for all values to maintain branding.
+- When adding new messages, ensure they are saved to Firestore subcollections (conversations/messages).
+- AI prompts for Groq are configured in GroqChatService; respect the system instructions to maintain "Home Service Assistant" personality.

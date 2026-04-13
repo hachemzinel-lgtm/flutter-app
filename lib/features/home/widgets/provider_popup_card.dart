@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/constants/app_text_styles.dart';
-import '../../../core/models/user_model.dart';
+import 'package:flutter_application_1/core/models/user_model.dart';
 import '../../../core/models/work_provider_model.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/star_rating_row.dart';

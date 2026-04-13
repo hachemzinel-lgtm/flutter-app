@@ -16,7 +16,7 @@ import '../../../core/models/work_provider_model.dart';
 import '../../../core/widgets/map_preview_widget.dart';
 import '../../../services/document_verification_service.dart';
 import '../../../services/storage_service.dart';
-import '../../../core/models/user_model.dart';
+import 'package:flutter_application_1/core/models/user_model.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class ProviderProfileSetupScreen extends ConsumerStatefulWidget {

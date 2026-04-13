@@ -6,8 +6,6 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/router/route_paths.dart';
-import '../../providers/auth_action_state.dart';
-import '../../providers/login_controller.dart';
 import '../../providers/signup_controller.dart';
 import '../../widgets/google_sign_in_button.dart';
 
@@ -25,7 +23,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  bool _acceptTerms = false;
 
   @override
   void dispose() {
@@ -35,31 +32,36 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     super.dispose();
   }
 
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    await ref
+        .read(signupControllerProvider.notifier)
+        .signUpWithEmail(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+
+    final state = ref.read(signupControllerProvider);
+    if (mounted && state.successRoute != null) {
+      context.go(state.successRoute!, extra: _emailController.text.trim());
+    }
+  }
+
+  Future<void> _handleGoogleSignUp() async {
+    final route = await ref
+        .read(signupControllerProvider.notifier)
+        .signUpWithGoogle();
+    if (mounted && route != null) {
+      context.go(route);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    ref.listen<AuthActionState>(signupControllerProvider, (previous, next) {
-      final messenger = ScaffoldMessenger.of(context);
-      if (next.errorMessage != null &&
-          next.errorMessage != previous?.errorMessage) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(next.errorMessage!),
-            backgroundColor: AppColors.errorRed,
-          ),
-        );
-      }
-      if (next.infoMessage != null &&
-          next.infoMessage != previous?.infoMessage) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(next.infoMessage!),
-            backgroundColor: AppColors.availableGreen,
-          ),
-        );
-      }
-    });
-
-    ref.listen<AuthActionState>(loginControllerProvider, (previous, next) {
+    ref.listen<SignupState>(signupControllerProvider, (previous, next) {
       if (next.errorMessage != null &&
           next.errorMessage != previous?.errorMessage) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -71,36 +73,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       }
     });
 
-    final signupState = ref.watch(signupControllerProvider);
-    final googleState = ref.watch(loginControllerProvider);
-    final isLoading = signupState.isLoading || googleState.isLoading;
-
-    Future<void> submit() async {
-      if (!_formKey.currentState!.validate()) {
-        return;
-      }
-
-      final email = _emailController.text.trim();
-      final password = _passwordController.text.trim();
-      final route = await ref
-          .read(signupControllerProvider.notifier)
-          .signUp(email: email, password: password);
-      if (context.mounted && route != null) {
-        context.go(route, extra: email);
-      }
-    }
-
-    Future<void> handleGoogleSignIn() async {
-      final route = await ref
-          .read(loginControllerProvider.notifier)
-          .signInWithGoogle();
-      if (context.mounted && route != null) {
-        context.go(route);
-      }
-    }
+    final state = ref.watch(signupControllerProvider);
+    final isLoading = state.isLoading;
 
     return Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
       body: SingleChildScrollView(
         padding: AppSpacing.pagePadding,
         child: Form(
@@ -111,7 +88,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               Text('Create Account', style: AppTextStyles.headingLarge),
               const SizedBox(height: AppSpacing.s),
               Text(
-                'Create your NearWork account with your email and password.',
+                'Create your account with email and password, then verify your email to continue.',
                 style: AppTextStyles.bodyMedium,
               ),
               const SizedBox(height: AppSpacing.xl),
@@ -179,10 +156,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     ).copyWith(
                       suffixIcon: IconButton(
                         onPressed: () {
-                          setState(
-                            () => _obscureConfirmPassword =
-                                !_obscureConfirmPassword,
-                          );
+                          setState(() {
+                            _obscureConfirmPassword = !_obscureConfirmPassword;
+                          });
                         },
                         icon: Icon(
                           _obscureConfirmPassword
@@ -192,35 +168,22 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       ),
                     ),
                 validator: (value) {
-                  final confirm = value?.trim() ?? '';
-                  if (confirm.isEmpty) {
+                  final confirmPassword = value?.trim() ?? '';
+                  if (confirmPassword.isEmpty) {
                     return 'Please confirm your password';
                   }
-                  if (confirm != _passwordController.text.trim()) {
+                  if (confirmPassword != _passwordController.text.trim()) {
                     return 'Passwords do not match';
                   }
                   return null;
                 },
               ),
-              const SizedBox(height: AppSpacing.m),
-              CheckboxListTile(
-                value: _acceptTerms,
-                onChanged: isLoading
-                    ? null
-                    : (value) => setState(() => _acceptTerms = value ?? false),
-                controlAffinity: ListTileControlAffinity.leading,
-                contentPadding: EdgeInsets.zero,
-                title: Text(
-                  'I agree to the terms and conditions',
-                  style: AppTextStyles.bodyMedium,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.l),
+              const SizedBox(height: AppSpacing.xl),
               SizedBox(
                 width: double.infinity,
                 height: AppSpacing.buttonHeight,
                 child: ElevatedButton(
-                  onPressed: isLoading ? null : submit,
+                  onPressed: isLoading ? null : _submit,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.accentBlue,
                     foregroundColor: Colors.white,
@@ -265,7 +228,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               GoogleSignInButton(
                 text: 'Continue with Google',
                 isLoading: isLoading,
-                onPressed: handleGoogleSignIn,
+                onPressed: _handleGoogleSignUp,
               ),
               const SizedBox(height: AppSpacing.l),
               Align(
@@ -303,6 +266,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
         borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
+        borderSide: const BorderSide(color: AppColors.borderLight),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.borderRadius),
+        borderSide: const BorderSide(color: AppColors.accentBlue, width: 2),
       ),
     );
   }

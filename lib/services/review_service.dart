@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../core/models/review_model.dart';
-import '../core/models/user_model.dart';
+import 'package:flutter_application_1/core/models/user_model.dart';
 import '../features/notifications/services/notification_service.dart';
 
 class ReviewService {
@@ -37,22 +37,13 @@ class ReviewService {
     if (!reviewerSnapshot.exists || !targetSnapshot.exists) {
       throw Exception('The review target could not be found.');
     }
+    final reviewerType = reviewerSnapshot.data()?['accountType']?.toString() ?? 'client';
+    final targetType = targetSnapshot.data()?['accountType']?.toString() ?? 'client';
 
-    final reviewerType = UserModel.parseUserType(
-      reviewerSnapshot.data()?['accountType']?.toString() ??
-          reviewerSnapshot.data()?['userType']?.toString() ??
-          'client',
-    );
-    final targetType = UserModel.parseUserType(
-      targetSnapshot.data()?['accountType']?.toString() ??
-          targetSnapshot.data()?['userType']?.toString() ??
-          'client',
-    );
-
-    if (reviewerType != UserType.client) {
+    if (reviewerType != 'client') {
       throw Exception('Only clients can submit reviews.');
     }
-    if (targetType == UserType.client) {
+    if (targetType == 'client') {
       throw Exception('Clients cannot receive public marketplace reviews.');
     }
 

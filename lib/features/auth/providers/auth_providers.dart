@@ -55,7 +55,7 @@ final currentUserProvider = Provider<User?>((ref) {
   return ref.watch(authStateProvider).value;
 });
 
-final currentUserDocProvider = StreamProvider<UserModel?>((ref) {
+final currentUserDataProvider = StreamProvider<Map<String, dynamic>?>((ref) {
   final user = ref.watch(currentUserProvider);
   if (user == null) {
     return Stream.value(null);
@@ -66,26 +66,31 @@ final currentUserDocProvider = StreamProvider<UserModel?>((ref) {
       .collection('users')
       .doc(user.uid)
       .snapshots()
-      .map((doc) {
-        if (!doc.exists) {
-          return null;
-        }
-        final data = doc.data() ?? <String, dynamic>{};
-        final type = UserModel.parseUserType(
-          data['accountType']?.toString() ??
-              data['userType']?.toString() ??
-              'client',
-        );
+      .map((doc) => doc.data());
+});
 
-        switch (type) {
-          case UserType.workProvider:
-            return WorkProviderModel.fromMap(doc.id, data);
-          case UserType.marketplace:
-            return MarketplaceModel.fromMap(doc.id, data);
-          case UserType.client:
-            return ClientModel.fromMap(doc.id, data);
-        }
-      });
+final currentUserDocProvider = StreamProvider<UserModel?>((ref) {
+  final user = ref.watch(currentUserProvider);
+  final userData = ref.watch(currentUserDataProvider).value;
+
+  if (user == null || userData == null) {
+    return Stream.value(null);
+  }
+
+  final rawType = userData['accountType']?.toString();
+  if (rawType == null || rawType.isEmpty) {
+    return Stream.value(null);
+  }
+
+  final type = UserModel.parseUserType(rawType);
+  switch (type) {
+    case UserType.workProvider:
+      return Stream.value(WorkProviderModel.fromMap(user.uid, userData));
+    case UserType.marketplace:
+      return Stream.value(MarketplaceModel.fromMap(user.uid, userData));
+    case UserType.client:
+      return Stream.value(ClientModel.fromMap(user.uid, userData));
+  }
 });
 
 final isEmailVerifiedProvider = Provider<bool>((ref) {
@@ -93,8 +98,9 @@ final isEmailVerifiedProvider = Provider<bool>((ref) {
 });
 
 final isProfileCompleteProvider = Provider<bool>((ref) {
-  final userDoc = ref.watch(currentUserDocProvider).value;
-  return userDoc?.profileCompleted ?? false;
+  final userData = ref.watch(currentUserDataProvider).value;
+  return userData?['profileComplete'] == true ||
+      userData?['profileCompleted'] == true;
 });
 
 final userAccountTypeProvider = FutureProvider<UserType?>((ref) async {

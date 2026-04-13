@@ -9,7 +9,7 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/chat_models.dart';
 import '../providers/chat_provider.dart';
-import '../../../core/models/user_model.dart';
+import 'package:flutter_application_1/core/models/user_model.dart';
 
 class ConversationsListScreen extends ConsumerWidget {
   const ConversationsListScreen({super.key});

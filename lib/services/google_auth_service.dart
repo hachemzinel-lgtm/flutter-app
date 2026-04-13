@@ -1,3 +1,13 @@
+// ⚠️  DEVELOPER ACTION REQUIRED — Bug 6 (Google Sign-In):
+// Before Google Sign-In works on Android you MUST add the SHA-1 fingerprint
+// of your debug keystore to Firebase Console → Project Settings → Your Android App.
+//
+// Run this command to get the debug SHA-1:
+//   keytool -list -v -alias androiddebugkey \
+//     -keystore ~/.android/debug.keystore -storepass android -keypass android
+//
+// Then paste the SHA-1 in Firebase Console and re-download google-services.json.
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -55,7 +65,10 @@ class GoogleAuthService {
           '--- [GOOGLE AUTH] Creating initial Firestore document for new user',
         );
         await _firestore.collection('users').doc(user.uid).set({
+          'uid': user.uid,
           'email': user.email,
+          'name': user.displayName ?? '',
+          'phone': '',
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
           'emailVerified': true,

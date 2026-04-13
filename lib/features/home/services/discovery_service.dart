@@ -3,7 +3,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../core/models/client_model.dart';
 import '../../../core/models/marketplace_model.dart';
-import '../../../core/models/user_model.dart';
+import 'package:flutter_application_1/core/models/user_model.dart';
 import '../../../core/models/work_provider_model.dart';
 import '../../../core/services/distance_service.dart';
 import '../../../core/services/geocoding_service.dart';

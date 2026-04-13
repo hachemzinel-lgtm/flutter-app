@@ -20,7 +20,6 @@ class EmailVerificationController extends StateNotifier<AuthActionState> {
   final Ref _ref;
 
   Future<void> resendEmail() async {
-    print('--- [EMAIL VERIFICATION] Resending verification email');
     state = const AuthActionState(isLoading: true);
 
     try {
@@ -29,21 +28,19 @@ class EmailVerificationController extends StateNotifier<AuthActionState> {
         isLoading: false,
         infoMessage: 'Verification email sent!',
       );
-    } catch (error, stackTrace) {
-      print('--- [EMAIL VERIFICATION] RESEND ERROR: $error');
-      print('--- [EMAIL VERIFICATION] Stack trace: $stackTrace');
+    } catch (error) {
       state = AuthActionState(isLoading: false, errorMessage: error.toString());
     }
   }
 
   Future<String?> confirmVerification() async {
-    print('--- [EMAIL VERIFICATION] Checking verification status');
     state = const AuthActionState(isLoading: true);
 
     try {
       final authRepository = _ref.read(authRepositoryProvider);
       final userRepository = _ref.read(userRepositoryProvider);
       final user = authRepository.currentUser;
+
       if (user == null) {
         throw Exception('No authenticated user found.');
       }
@@ -64,14 +61,9 @@ class EmailVerificationController extends StateNotifier<AuthActionState> {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      final userData = await userRepository.getUserDocument(user.uid);
       state = const AuthActionState(isLoading: false);
-      return resolveAuthenticatedRoute(userData) == AppRoutes.emailVerification
-          ? AppRoutes.accountType
-          : resolveAuthenticatedRoute(userData);
-    } catch (error, stackTrace) {
-      print('--- [EMAIL VERIFICATION] ERROR: $error');
-      print('--- [EMAIL VERIFICATION] Stack trace: $stackTrace');
+      return AppRoutes.accountType;
+    } catch (error) {
       state = AuthActionState(isLoading: false, errorMessage: error.toString());
       return null;
     }
