@@ -1,20 +1,9 @@
-// ⚠️  DEVELOPER ACTION REQUIRED — Bug 6 (Google Sign-In):
-// Before Google Sign-In works on Android you MUST add the SHA-1 fingerprint
-// of your debug keystore to Firebase Console → Project Settings → Your Android App.
-//
-// Run this command to get the debug SHA-1:
-//   keytool -list -v -alias androiddebugkey \
-//     -keystore ~/.android/debug.keystore -storepass android -keypass android
-//
-// Then paste the SHA-1 in Firebase Console and re-download google-services.json.
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class GoogleAuthException implements Exception {
   const GoogleAuthException(this.message);
-
   final String message;
 
   @override
@@ -24,99 +13,74 @@ class GoogleAuthException implements Exception {
 class GoogleAuthService {
   GoogleAuthService({
     FirebaseAuth? auth,
-    GoogleSignIn? googleSignIn,
     FirebaseFirestore? firestore,
-  }) : _auth = auth ?? FirebaseAuth.instance,
-       _googleSignIn = googleSignIn ?? GoogleSignIn(),
-       _firestore = firestore ?? FirebaseFirestore.instance;
+    GoogleSignIn? googleSignIn,
+  })  : _auth = auth ?? FirebaseAuth.instance,
+        _firestore = firestore ?? FirebaseFirestore.instance,
+        _googleSignIn = googleSignIn ?? GoogleSignIn();
 
   final FirebaseAuth _auth;
-  final GoogleSignIn _googleSignIn;
   final FirebaseFirestore _firestore;
+  final GoogleSignIn _googleSignIn;
 
+  /// Sign in with Google and return the [UserCredential], or `null` if the
+  /// user cancelled the flow.
   Future<UserCredential?> signInWithGoogle() async {
-    print('--- [GOOGLE AUTH] Starting Google sign-in flow');
     try {
       final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
-        print('--- [GOOGLE AUTH] User cancelled Google sign-in');
+        // User cancelled the sign-in flow.
         return null;
       }
 
       final googleAuth = await googleUser.authentication;
-      print('--- [GOOGLE AUTH] Retrieved Google authentication tokens');
-
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
       final userCredential = await _auth.signInWithCredential(credential);
+
+      // Create a Firestore user document on first sign-in.
       final user = userCredential.user;
-      if (user == null) {
-        throw const GoogleAuthException(
-          'Google sign-in did not return a valid user. Please try again.',
-        );
+      if (user != null) {
+        final docRef = _firestore.collection('users').doc(user.uid);
+        final docSnapshot = await docRef.get();
+        if (!docSnapshot.exists) {
+          await docRef.set({
+            'uid': user.uid,
+            'email': user.email ?? '',
+            'name': user.displayName ?? '',
+            'photoUrl': user.photoURL ?? '',
+            'emailVerified': user.emailVerified,
+            'accountType': null,
+            'profileComplete': false,
+            'profileCompleted': false,
+            'notificationsEnabled': true,
+            'createdAt': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
       }
 
-      final userDoc = await _firestore.collection('users').doc(user.uid).get();
-      if (!userDoc.exists) {
-        print(
-          '--- [GOOGLE AUTH] Creating initial Firestore document for new user',
-        );
-        await _firestore.collection('users').doc(user.uid).set({
-          'uid': user.uid,
-          'email': user.email,
-          'name': user.displayName ?? '',
-          'phone': '',
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-          'emailVerified': true,
-          'accountType': null,
-          'profileComplete': false,
-          'profileCompleted': false,
-          'notificationsEnabled': true,
-        });
-      }
-
-      print('--- [GOOGLE AUTH] Google sign-in completed for ${user.uid}');
       return userCredential;
-    } on FirebaseAuthException catch (error, stackTrace) {
-      print('--- [GOOGLE AUTH] FirebaseAuthException: ${error.code}');
-      print('--- [GOOGLE AUTH] Stack trace: $stackTrace');
-      switch (error.code) {
-        case 'account-exists-with-different-credential':
-          throw const GoogleAuthException(
-            'An account already exists with the same email using a different sign-in method.',
-          );
-        case 'invalid-credential':
-          throw const GoogleAuthException(
-            'The Google credential is invalid. Please try again.',
-          );
-        case 'network-request-failed':
-          throw const GoogleAuthException(
-            'Network error while signing in with Google. Please check your connection.',
-          );
-        default:
-          throw GoogleAuthException(
-            error.message ??
-                'Google sign-in failed. Please try again in a moment.',
-          );
-      }
-    } catch (error, stackTrace) {
-      print('--- [GOOGLE AUTH] Unexpected error: $error');
-      print('--- [GOOGLE AUTH] Stack trace: $stackTrace');
-      if (error is GoogleAuthException) {
-        rethrow;
-      }
-      throw const GoogleAuthException(
-        'Google sign-in failed. Please try again.',
+    } on FirebaseAuthException catch (e) {
+      throw GoogleAuthException(
+        e.message ?? 'Google sign-in failed. Please try again.',
+      );
+    } catch (e) {
+      throw GoogleAuthException(
+        'Google sign-in failed: ${e.toString()}',
       );
     }
   }
 
+  /// Sign out of Google.
   Future<void> signOut() async {
-    print('--- [GOOGLE AUTH] Signing out Google session');
-    await _googleSignIn.signOut();
+    try {
+      await _googleSignIn.signOut();
+    } catch (_) {
+      // Silently ignore — Google sign-out is best-effort.
+    }
   }
 }

@@ -1,19 +1,32 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/models/review_model.dart';
-import 'package:flutter_application_1/core/models/user_model.dart';
-import '../features/notifications/services/notification_service.dart';
+import 'package:flutter_application_1/models/review_model.dart';
+
+final reviewServiceProvider = Provider<ReviewService>((ref) {
+  return ReviewService();
+});
 
 class ReviewService {
-  ReviewService({
-    FirebaseFirestore? firestore,
-    NotificationService? notificationService,
-  }) : _firestore = firestore ?? FirebaseFirestore.instance,
-       _notificationService = notificationService ?? NotificationService();
+  ReviewService({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _firestore;
-  final NotificationService _notificationService;
 
+  /// Returns a live stream of reviews for the given [userId], newest first.
+  Stream<List<ReviewModel>> getReviews(String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('reviews')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => ReviewModel.fromFirestore(doc)).toList());
+  }
+
+  /// Submit a new review. Uses a transaction to atomically update the
+  /// target user's rating and review count.
   Future<void> submitReview({
     required String targetUserId,
     required String reviewerId,
@@ -22,110 +35,50 @@ class ReviewService {
     required double rating,
     required String text,
   }) async {
-    if (reviewerId == targetUserId) {
-      throw Exception('You cannot review your own profile.');
-    }
+    final targetRef = _firestore.collection('users').doc(targetUserId);
+    final newReviewRef = targetRef.collection('reviews').doc();
 
-    final reviewerSnapshot = await _firestore
-        .collection('users')
-        .doc(reviewerId)
-        .get();
-    final targetSnapshot = await _firestore
-        .collection('users')
-        .doc(targetUserId)
-        .get();
-    if (!reviewerSnapshot.exists || !targetSnapshot.exists) {
-      throw Exception('The review target could not be found.');
-    }
-    final reviewerType = reviewerSnapshot.data()?['accountType']?.toString() ?? 'client';
-    final targetType = targetSnapshot.data()?['accountType']?.toString() ?? 'client';
+    await _firestore.runTransaction((transaction) async {
+      final targetDoc = await transaction.get(targetRef);
+      if (!targetDoc.exists) {
+        throw Exception('Target user not found.');
+      }
 
-    if (reviewerType != 'client') {
-      throw Exception('Only clients can submit reviews.');
-    }
-    if (targetType == 'client') {
-      throw Exception('Clients cannot receive public marketplace reviews.');
-    }
+      final data = targetDoc.data()!;
+      final currentCount = (data['reviewCount'] as int?) ?? 0;
+      final currentRating = (data['rating'] as num?)?.toDouble() ??
+          (data['averageRating'] as num?)?.toDouble() ??
+          0.0;
 
-    final reviewRef = _firestore
-        .collection('users')
-        .doc(targetUserId)
-        .collection('reviews')
-        .doc(reviewerId);
+      final newCount = currentCount + 1;
+      final newRating =
+          ((currentRating * currentCount) + rating) / newCount;
 
-    final review = ReviewModel(
-      id: reviewRef.id,
-      reviewerId: reviewerId,
-      reviewerName: reviewerName,
-      reviewerPhoto: reviewerPhoto,
-      rating: rating,
-      text: text,
-      createdAt: DateTime.now(),
-    );
+      transaction.set(newReviewRef, {
+        'reviewerId': reviewerId,
+        'reviewerName': reviewerName,
+        'reviewerPhoto': reviewerPhoto,
+        'rating': rating,
+        'reviewText': text,
+        'text': text,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
-    await reviewRef.set(review.toJson());
-    await _refreshAggregate(targetUserId);
-    await _notificationService.createNotification(
-      userId: targetUserId,
-      title: 'New review received',
-      body: '$reviewerName left a ${rating.toStringAsFixed(1)}-star review.',
-      type: 'review',
-      route: '/reviews/$targetUserId',
-      metadata: {'targetUserId': targetUserId},
-    );
+      transaction.update(targetRef, {
+        'rating': newRating,
+        'averageRating': newRating,
+        'reviewCount': newCount,
+      });
+    });
   }
 
-  Future<void> respondToReview({
-    required String targetUserId,
-    required String reviewId,
-    required String response,
-  }) async {
+  /// Delete a review (admin-only in practice, enforced by Firestore rules).
+  Future<void> deleteReview(String userId, String reviewId) async {
     await _firestore
         .collection('users')
-        .doc(targetUserId)
+        .doc(userId)
         .collection('reviews')
         .doc(reviewId)
-        .update({'response': response.trim()});
-  }
-
-  Stream<List<ReviewModel>> getReviews(String userId) {
-    return _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('reviews')
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => ReviewModel.fromFirestore(doc))
-              .toList(),
-        );
-  }
-
-  Future<void> _refreshAggregate(String userId) async {
-    final reviewsSnapshot = await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('reviews')
-        .get();
-
-    if (reviewsSnapshot.docs.isEmpty) {
-      await _firestore.collection('users').doc(userId).update({
-        'rating': 0,
-        'reviewCount': 0,
-      });
-      return;
-    }
-
-    double total = 0;
-    for (final doc in reviewsSnapshot.docs) {
-      total += (doc.data()['rating'] as num?)?.toDouble() ?? 0;
-    }
-
-    final average = total / reviewsSnapshot.docs.length;
-    await _firestore.collection('users').doc(userId).update({
-      'rating': average,
-      'reviewCount': reviewsSnapshot.docs.length,
-    });
+        .delete();
   }
 }

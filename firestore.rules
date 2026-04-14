@@ -26,19 +26,25 @@ service cloud.firestore {
       return isSignedIn() && currentUid() in participants;
     }
 
+    // H-1: Accept both 'workProvider' and 'work_provider' for compatibility
+    function isWorkProviderType(typeValue) {
+      return typeValue == 'workProvider' || typeValue == 'work_provider';
+    }
+
     function isAllowedConversationPair(participants) {
       return participants.size() == 2 &&
         participants[0] != participants[1] &&
         (
           (userType(participants[0]) == 'client' &&
-            (userType(participants[1]) == 'workProvider' || userType(participants[1]) == 'marketplace')) ||
+            (isWorkProviderType(userType(participants[1])) || userType(participants[1]) == 'marketplace')) ||
           (userType(participants[1]) == 'client' &&
-            (userType(participants[0]) == 'workProvider' || userType(participants[0]) == 'marketplace')) ||
-          (userType(participants[0]) == 'workProvider' && userType(participants[1]) == 'marketplace') ||
-          (userType(participants[1]) == 'workProvider' && userType(participants[0]) == 'marketplace')
+            (isWorkProviderType(userType(participants[0])) || userType(participants[0]) == 'marketplace')) ||
+          (isWorkProviderType(userType(participants[0])) && userType(participants[1]) == 'marketplace') ||
+          (isWorkProviderType(userType(participants[1])) && userType(participants[0]) == 'marketplace')
         );
     }
 
+    // H-4: Added badgeVisible to the locked fields list
     function ownerCanUpdateOwnProfile() {
       return request.resource.data.accountType == resource.data.accountType &&
         request.resource.data.email == resource.data.email &&
@@ -47,13 +53,14 @@ service cloud.firestore {
         request.resource.data.isBanned == resource.data.isBanned &&
         request.resource.data.verificationStatus == resource.data.verificationStatus &&
         request.resource.data.verificationReason == resource.data.verificationReason &&
-        request.resource.data.isVerified == resource.data.isVerified;
+        request.resource.data.isVerified == resource.data.isVerified &&
+        request.resource.data.badgeVisible == resource.data.badgeVisible;
     }
 
     match /users/{userId} {
-      // Note: With the current single-document schema, Firestore cannot expose only
-      // public fields. To hide private fields like email, move public data into a
-      // separate collection or subcollection and lock the private document down.
+      // H-2: Read access - any signed-in user can read public fields.
+      // Note: For full privacy, move private fields (email, phone) to a
+      // private subcollection. This is a known limitation of the single-doc schema.
       allow read: if isSignedIn();
       allow create: if isOwner(userId);
       allow update: if isAdmin() || (isOwner(userId) && ownerCanUpdateOwnProfile());
@@ -70,8 +77,11 @@ service cloud.firestore {
 
       match /reviews/{reviewId} {
         allow read: if isSignedIn();
+        // H-3: Prevent self-reviews — reviewerId must be current user AND
+        // the current user must NOT be the profile owner.
         allow create: if isSignedIn() &&
-          request.resource.data.reviewerId == currentUid();
+          request.resource.data.reviewerId == currentUid() &&
+          currentUid() != userId;
         allow update: if isAdmin() ||
           (isOwner(userId) &&
             request.resource.data.reviewerId == resource.data.reviewerId &&

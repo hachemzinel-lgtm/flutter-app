@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import 'core/constants/app_colors.dart';
-import 'core/router/app_router.dart';
-import 'features/settings/providers/locale_provider.dart';
-import 'l10n/app_localizations.dart';
+import 'package:flutter_application_1/views/app_colors.dart';
+import 'package:flutter_application_1/routes/app_router.dart';
+import 'package:flutter_application_1/providers/locale_provider.dart';
+import 'package:flutter_application_1/l10n/app_localizations.dart';
+
+/// A Riverpod provider that creates the [GoRouter] exactly **once** and keeps
+/// it alive for the entire app session. The router's own [refreshListenable]
+/// already handles auth/user-data changes, so there is no need to rebuild it
+/// when providers change.
+final _appRouterProvider = Provider<GoRouter>((ref) {
+  return buildAppRouter(ref);
+});
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -22,7 +31,8 @@ class NearWorkApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final locale = ref.watch(appLocaleProvider);
-    final router = buildAppRouter(ref);
+    // Read the router from the provider — it is created once and reused.
+    final router = ref.watch(_appRouterProvider);
 
     return MaterialApp.router(
       title: 'NearWork',
