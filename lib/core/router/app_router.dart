@@ -95,7 +95,8 @@ Stream<void> _combinedStream() {
   return controller.stream;
 }
 
-GoRouter buildAppRouter(WidgetRef ref) {
+// ✅ FIX: Changed parameter from WidgetRef to Ref (used by Provider in app.dart)
+GoRouter buildAppRouter(Ref ref) {
   return GoRouter(
     initialLocation: AppRoutes.welcome,
     refreshListenable: GoRouterRefreshStream(_combinedStream()),
@@ -131,8 +132,17 @@ GoRouter buildAppRouter(WidgetRef ref) {
       }
 
       final userData = userDataValue.value;
+
+      // ✅ FIX: If user is authenticated but Firestore data hasn't arrived yet,
+
+      // wait instead of prematurely redirecting to /account-type.
+
+      if (userData == null) {
+        return null;
+      }
+
       final normalizedAccountType = AppRoutes.normalizeAccountType(
-        userData?['accountType']?.toString(),
+        userData['accountType']?.toString(),
       );
 
       if (normalizedAccountType == null) {
@@ -140,8 +150,8 @@ GoRouter buildAppRouter(WidgetRef ref) {
       }
 
       final profileComplete =
-          userData?['profileComplete'] == true ||
-          userData?['profileCompleted'] == true;
+          userData['profileComplete'] == true ||
+          userData['profileCompleted'] == true;
       final expectedSetupRoute = AppRoutes.setupForAccountType(
         normalizedAccountType,
       );

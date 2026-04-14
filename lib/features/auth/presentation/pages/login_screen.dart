@@ -56,29 +56,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     final loginState = ref.watch(loginControllerProvider);
 
+    // ✅ FIX: Just authenticate — don't manually navigate.
+
+    // GoRouter's redirect() will detect the auth state change and
+
+    // navigate to the correct role-based home screen automatically.
+
     Future<void> submit() async {
       if (!_formKey.currentState!.validate()) {
         return;
       }
 
-      final route = await ref
+      await ref
           .read(loginControllerProvider.notifier)
           .signIn(
             email: _emailController.text.trim(),
+
             password: _passwordController.text.trim(),
           );
-      if (context.mounted && route != null) {
-        context.go(route, extra: _emailController.text.trim());
-      }
+
+      // ✅ Removed: context.go(route) — GoRouter redirect handles this
     }
 
     Future<void> handleGoogleSignIn() async {
-      final route = await ref
-          .read(loginControllerProvider.notifier)
-          .signInWithGoogle();
-      if (context.mounted && route != null) {
-        context.go(route);
-      }
+      await ref.read(loginControllerProvider.notifier).signInWithGoogle();
+
+      // ✅ Removed: context.go(route) — GoRouter redirect handles this
     }
 
     return Scaffold(
