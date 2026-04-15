@@ -1,8 +1,11 @@
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+
+import 'package:flutter_application_1/services/location_permission_service.dart';
 
 class LocationLookupResult {
   const LocationLookupResult({required this.geoPoint, required this.address});
@@ -12,21 +15,22 @@ class LocationLookupResult {
 }
 
 class LocationLookupService {
-  static Future<LocationLookupResult> detectCurrentLocation() async {
+  static Future<LocationLookupResult?> detectCurrentLocation({
+    required BuildContext context,
+    Future<void> Function()? onRetry,
+  }) async {
     print('--- [LOCATION] Requesting current location');
-    final enabled = await Geolocator.isLocationServiceEnabled();
-    if (!enabled) {
-      throw Exception('Location services are disabled.');
-    }
-
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      throw Exception('Location permission is required to continue.');
+    final permissionResult =
+        await LocationPermissionService.ensureLocationWhenInUsePermission();
+    if (!permissionResult.isGranted) {
+      if (context.mounted) {
+        await LocationPermissionService.showPermissionFeedback(
+          context,
+          permissionResult,
+          onRetry: onRetry,
+        );
+      }
+      return null;
     }
 
     final position = await Geolocator.getCurrentPosition();
