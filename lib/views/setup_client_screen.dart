@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
+import 'package:flutter_application_1/routes/route_paths.dart';
 import 'package:image_picker/image_picker.dart';
 
 class SetupClientScreen extends StatefulWidget {
@@ -22,7 +24,9 @@ class _SetupClientScreenState extends State<SetupClientScreen> {
   bool _isLoading = false;
 
   Future<void> _pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedFile = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+    );
     if (pickedFile != null) {
       setState(() => _imageFile = File(pickedFile.path));
     }
@@ -38,23 +42,30 @@ class _SetupClientScreenState extends State<SetupClientScreen> {
 
       String? photoUrl;
       if (_imageFile != null) {
-        final ref = FirebaseStorage.instance.ref().child('avatars/${user.uid}/profile.jpg');
+        final ref = FirebaseStorage.instance.ref().child(
+          'avatars/${user.uid}/profile.jpg',
+        );
         await ref.putFile(_imageFile!);
         photoUrl = await ref.getDownloadURL();
       }
 
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-        'displayName': _displayNameController.text,
-        'city': _cityController.text,
-        'language': _preferredLanguage,
-        if (photoUrl != null) 'photoUrl': photoUrl,
-        'profileComplete': true,
-      });
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({
+            'displayName': _displayNameController.text,
+            'city': _cityController.text,
+            'language': _preferredLanguage,
+            if (photoUrl != null) 'photoUrl': photoUrl,
+            'profileComplete': true,
+          });
 
-      if (mounted) context.go('/home');
+      if (mounted) context.goNamed(AppRoutes.homeName);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -65,8 +76,8 @@ class _SetupClientScreenState extends State<SetupClientScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Complete Profile')),
-      body: _isLoading 
-          ? const Center(child: CircularProgressIndicator()) 
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Form(
@@ -77,14 +88,20 @@ class _SetupClientScreenState extends State<SetupClientScreen> {
                       onTap: _pickImage,
                       child: CircleAvatar(
                         radius: 50,
-                        backgroundImage: _imageFile != null ? FileImage(_imageFile!) : null,
-                        child: _imageFile == null ? const Icon(Icons.add_a_photo) : null,
+                        backgroundImage: _imageFile != null
+                            ? FileImage(_imageFile!)
+                            : null,
+                        child: _imageFile == null
+                            ? const Icon(Icons.add_a_photo)
+                            : null,
                       ),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _displayNameController,
-                      decoration: const InputDecoration(labelText: 'Display Name'),
+                      decoration: const InputDecoration(
+                        labelText: 'Display Name',
+                      ),
                       validator: (v) => v!.isEmpty ? 'Required' : null,
                     ),
                     TextFormField(
@@ -95,13 +112,20 @@ class _SetupClientScreenState extends State<SetupClientScreen> {
                     DropdownButtonFormField<String>(
                       value: _preferredLanguage,
                       items: ['Arabic', 'French', 'English']
-                          .map((l) => DropdownMenuItem(value: l, child: Text(l)))
+                          .map(
+                            (l) => DropdownMenuItem(value: l, child: Text(l)),
+                          )
                           .toList(),
                       onChanged: (v) => setState(() => _preferredLanguage = v!),
-                      decoration: const InputDecoration(labelText: 'Preferred Language'),
+                      decoration: const InputDecoration(
+                        labelText: 'Preferred Language',
+                      ),
                     ),
                     const SizedBox(height: 32),
-                    ElevatedButton(onPressed: _submit, child: const Text('Complete Profile')),
+                    ElevatedButton(
+                      onPressed: _submit,
+                      child: const Text('Complete Profile'),
+                    ),
                   ],
                 ),
               ),

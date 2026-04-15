@@ -70,7 +70,6 @@ class AuthService {
     final data = userModel.toJson()
       ..['updatedAt'] = FieldValue.serverTimestamp()
       ..['profileComplete'] = true
-      ..['profileCompleted'] = true
       ..['emailVerified'] = _authRepository.currentUser?.emailVerified ?? false;
 
     await _userRepository.updateUserDocument(uid, data);
@@ -89,7 +88,7 @@ class AuthService {
   }
 
   Future<bool> isAdminUser(String uid) async {
-    final adminDoc = await _firestore.collection('admins').doc(uid).get();
-    return adminDoc.exists;
+    final userDoc = await _firestore.collection('users').doc(uid).get();
+    return userDoc.data()?['accountType'] == 'admin';
   }
 }

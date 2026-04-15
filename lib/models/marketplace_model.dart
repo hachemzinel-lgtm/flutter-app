@@ -4,7 +4,8 @@ import 'package:flutter_application_1/models/user_model.dart';
 class MarketplaceModel extends UserModel {
   final String? businessName;
   final String? category;
-  @override final String? description;
+  @override
+  final String? description;
   final Map<String, dynamic>? openingHours;
   final List<String> photos;
 
@@ -45,8 +46,7 @@ class MarketplaceModel extends UserModel {
       reviewCount: data['reviewCount'] ?? 0,
       isBanned: data['isBanned'] ?? false,
       notificationsEnabled: data['notificationsEnabled'] ?? true,
-      profileCompleted:
-          data['profileComplete'] ?? data['profileCompleted'] ?? false,
+      profileCompleted: data['profileComplete'] ?? false,
       businessName: data['businessName'],
       category: data['category'],
       description: data['description'] ?? data['bio'], // Fallback if old code

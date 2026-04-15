@@ -125,7 +125,13 @@ class _WorkProviderProfileSetupScreenState
   Future<void> _useCurrentLocation() async {
     setState(() => _isDetectingLocation = true);
     try {
-      final result = await LocationLookupService.detectCurrentLocation();
+      final result = await LocationLookupService.detectCurrentLocation(
+        context: context,
+        onRetry: _useCurrentLocation,
+      );
+      if (result == null) {
+        return;
+      }
       setState(() {
         _location = result.geoPoint;
         _addressController.text = result.address;
@@ -234,18 +240,19 @@ class _WorkProviderProfileSetupScreenState
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => PopScope(
-        canPop: false,
-        child: AlertDialog(
-          content: Row(
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(width: AppSpacing.m),
-              Expanded(child: Text(_progressMessage)),
-            ],
+      builder:
+          (context) => PopScope(
+            canPop: false,
+            child: AlertDialog(
+              content: Row(
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(width: AppSpacing.m),
+                  Expanded(child: Text(_progressMessage)),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
     );
 
     try {
@@ -270,8 +277,9 @@ class _WorkProviderProfileSetupScreenState
       );
 
       setState(
-        () => _progressMessage =
-            'Verifying your documents... This may take a minute',
+        () =>
+            _progressMessage =
+                'Verifying your documents... This may take a minute',
       );
 
       final verification =
@@ -284,9 +292,10 @@ class _WorkProviderProfileSetupScreenState
         await ref.read(userRepositoryProvider).updateUserDocument(user.uid, {
           'name': _nameController.text.trim(),
           'phone': _phoneController.text.trim(),
-          'profession': _profession == 'Other'
-              ? _otherProfessionController.text.trim()
-              : _profession,
+          'profession':
+              _profession == 'Other'
+                  ? _otherProfessionController.text.trim()
+                  : _profession,
           'profilePicture': profileUrl,
           'documents': {'diplomaURL': diplomaUrl, 'idURL': idUrl},
           'verificationStatus': 'rejected',
@@ -300,16 +309,17 @@ class _WorkProviderProfileSetupScreenState
           Navigator.of(context, rootNavigator: true).pop();
           await showDialog<void>(
             context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Documents Rejected'),
-              content: Text(verification.reason),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Re-upload'),
+            builder:
+                (context) => AlertDialog(
+                  title: const Text('Documents Rejected'),
+                  content: Text(verification.reason),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Re-upload'),
+                    ),
+                  ],
                 ),
-              ],
-            ),
           );
         }
         return;
@@ -331,20 +341,22 @@ class _WorkProviderProfileSetupScreenState
         'name': _nameController.text.trim(),
         'phone': _phoneController.text.trim(),
         'profilePicture': profileUrl,
-        'profession': _profession == 'Other'
-            ? _otherProfessionController.text.trim()
-            : _profession,
+        'profession':
+            _profession == 'Other'
+                ? _otherProfessionController.text.trim()
+                : _profession,
         'yearsExperience': int.tryParse(_yearsController.text.trim()),
         'bio': _bioController.text.trim(),
         'hourlyRate': double.tryParse(_hourlyRateController.text.trim()),
-        'services': _services
-            .map(
-              (service) => {
-                'name': service['name'],
-                'price': double.tryParse(service['price'] ?? '') ?? 0,
-              },
-            )
-            .toList(),
+        'services':
+            _services
+                .map(
+                  (service) => {
+                    'name': service['name'],
+                    'price': double.tryParse(service['price'] ?? '') ?? 0,
+                  },
+                )
+                .toList(),
         'customQuoteEnabled': _customQuote,
         'documents': {'diplomaURL': diplomaUrl, 'idURL': idUrl},
         'verificationStatus': 'approved',
@@ -405,15 +417,17 @@ class _WorkProviderProfileSetupScreenState
                   child: CircleAvatar(
                     radius: 54,
                     backgroundColor: AppColors.backgroundSecondary,
-                    backgroundImage: _profileImage == null
-                        ? null
-                        : FileImage(_profileImage!),
-                    child: _profileImage == null
-                        ? const Icon(
-                            Icons.camera_alt_outlined,
-                            color: AppColors.accentBlue,
-                          )
-                        : null,
+                    backgroundImage:
+                        _profileImage == null
+                            ? null
+                            : FileImage(_profileImage!),
+                    child:
+                        _profileImage == null
+                            ? const Icon(
+                              Icons.camera_alt_outlined,
+                              color: AppColors.accentBlue,
+                            )
+                            : null,
                   ),
                 ),
               ),
@@ -425,9 +439,11 @@ class _WorkProviderProfileSetupScreenState
                   'Your full name',
                   Icons.person_outline,
                 ),
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? 'Full name is required'
-                    : null,
+                validator:
+                    (value) =>
+                        (value == null || value.trim().isEmpty)
+                            ? 'Full name is required'
+                            : null,
               ),
               const SizedBox(height: AppSpacing.l),
               _label('Phone Number'),
@@ -448,18 +464,20 @@ class _WorkProviderProfileSetupScreenState
               DropdownButtonFormField<String>(
                 initialValue: _profession,
                 decoration: _dropdownDecoration(),
-                items: MarketplaceTaxonomy.workProviderCategories
-                    .map(
-                      (category) => DropdownMenuItem(
-                        value: category,
-                        child: Text(category),
-                      ),
-                    )
-                    .toList(),
-                onChanged: _isSubmitting
-                    ? null
-                    : (value) =>
-                          setState(() => _profession = value ?? _profession),
+                items:
+                    MarketplaceTaxonomy.workProviderCategories
+                        .map(
+                          (category) => DropdownMenuItem(
+                            value: category,
+                            child: Text(category),
+                          ),
+                        )
+                        .toList(),
+                onChanged:
+                    _isSubmitting
+                        ? null
+                        : (value) =>
+                            setState(() => _profession = value ?? _profession),
               ),
               if (_profession == 'Other') ...[
                 const SizedBox(height: AppSpacing.m),
@@ -495,9 +513,11 @@ class _WorkProviderProfileSetupScreenState
                   'Describe your experience',
                   Icons.notes_outlined,
                 ),
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? 'Bio is required'
-                    : null,
+                validator:
+                    (value) =>
+                        (value == null || value.trim().isEmpty)
+                            ? 'Bio is required'
+                            : null,
               ),
               const SizedBox(height: AppSpacing.l),
               _label('Hourly Rate'),
@@ -516,9 +536,10 @@ class _WorkProviderProfileSetupScreenState
                 title: const Text('I prefer to quote per job'),
                 value: _customQuote,
                 activeThumbColor: AppColors.accentBlue,
-                onChanged: _isSubmitting
-                    ? null
-                    : (value) => setState(() => _customQuote = value),
+                onChanged:
+                    _isSubmitting
+                        ? null
+                        : (value) => setState(() => _customQuote = value),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -543,9 +564,11 @@ class _WorkProviderProfileSetupScreenState
                     title: Text(entry.value['name'] ?? ''),
                     subtitle: Text(entry.value['price'] ?? ''),
                     trailing: IconButton(
-                      onPressed: _isSubmitting
-                          ? null
-                          : () => setState(() => _services.removeAt(entry.key)),
+                      onPressed:
+                          _isSubmitting
+                              ? null
+                              : () =>
+                                  setState(() => _services.removeAt(entry.key)),
                       icon: const Icon(Icons.delete_outline),
                     ),
                   ),
@@ -582,16 +605,18 @@ class _WorkProviderProfileSetupScreenState
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: _isDetectingLocation || _isSubmitting
-                      ? null
-                      : _useCurrentLocation,
-                  icon: _isDetectingLocation
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.my_location_outlined),
+                  onPressed:
+                      _isDetectingLocation || _isSubmitting
+                          ? null
+                          : _useCurrentLocation,
+                  icon:
+                      _isDetectingLocation
+                          ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                          : const Icon(Icons.my_location_outlined),
                   label: const Text('Use My Current Location'),
                 ),
               ),
@@ -607,9 +632,10 @@ class _WorkProviderProfileSetupScreenState
                 title: const Text('Available Now'),
                 value: _availableNow,
                 activeThumbColor: AppColors.accentBlue,
-                onChanged: _isSubmitting
-                    ? null
-                    : (value) => setState(() => _availableNow = value),
+                onChanged:
+                    _isSubmitting
+                        ? null
+                        : (value) => setState(() => _availableNow = value),
               ),
               const SizedBox(height: AppSpacing.l),
               Row(
@@ -617,9 +643,10 @@ class _WorkProviderProfileSetupScreenState
                 children: [
                   Text('Portfolio Photos', style: AppTextStyles.headingSmall),
                   TextButton.icon(
-                    onPressed: _isSubmitting || _portfolioImages.length >= 10
-                        ? null
-                        : _pickPortfolioImages,
+                    onPressed:
+                        _isSubmitting || _portfolioImages.length >= 10
+                            ? null
+                            : _pickPortfolioImages,
                     icon: const Icon(Icons.add_photo_alternate_outlined),
                     label: Text('Add (${_portfolioImages.length}/10)'),
                   ),
@@ -651,11 +678,12 @@ class _WorkProviderProfileSetupScreenState
                           top: 4,
                           right: 4,
                           child: GestureDetector(
-                            onTap: _isSubmitting
-                                ? null
-                                : () => setState(
-                                    () => _portfolioImages.removeAt(index),
-                                  ),
+                            onTap:
+                                _isSubmitting
+                                    ? null
+                                    : () => setState(
+                                      () => _portfolioImages.removeAt(index),
+                                    ),
                             child: const CircleAvatar(
                               radius: 12,
                               backgroundColor: Colors.black54,
@@ -686,16 +714,17 @@ class _WorkProviderProfileSetupScreenState
                       ),
                     ),
                   ),
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('Save & Continue'),
+                  child:
+                      _isSubmitting
+                          ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              color: Colors.white,
+                            ),
+                          )
+                          : const Text('Save & Continue'),
                 ),
               ),
             ],
@@ -760,9 +789,10 @@ class _WorkProviderProfileSetupScreenState
           children: [
             Icon(
               file == null ? Icons.upload_file_outlined : Icons.check_circle,
-              color: file == null
-                  ? AppColors.accentBlue
-                  : AppColors.availableGreen,
+              color:
+                  file == null
+                      ? AppColors.accentBlue
+                      : AppColors.availableGreen,
             ),
             const SizedBox(width: AppSpacing.m),
             Expanded(

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_application_1/models/user_model.dart';
 import 'package:flutter_application_1/services/services_notification_service.dart';
 import 'package:flutter_application_1/providers/auth_provider.dart';
+import 'package:flutter_application_1/routes/route_paths.dart';
 
 final adminServiceProvider = Provider<AdminService>((ref) {
   return AdminService(
@@ -13,8 +14,12 @@ final adminServiceProvider = Provider<AdminService>((ref) {
 });
 
 final isAdminProvider = FutureProvider<bool>((ref) async {
-  final authUser = ref.watch(authStateProvider).value;
-  return ref.read(adminServiceProvider).isAdminUser(authUser);
+  try {
+    final userData = await ref.watch(currentUserDataProvider.future);
+    return AppRoutes.isAdminAccountType(userData?['accountType']?.toString());
+  } catch (error, stackTrace) {
+    Error.throwWithStackTrace(error, stackTrace);
+  }
 });
 
 class AdminService {
@@ -33,11 +38,11 @@ class AdminService {
     }
 
     try {
-      final adminDoc = await _firestore
-          .collection('admins')
-          .doc(authUser.uid)
-          .get();
-      return adminDoc.exists;
+      final userDoc =
+          await _firestore.collection('users').doc(authUser.uid).get();
+      return AppRoutes.isAdminAccountType(
+        userDoc.data()?['accountType']?.toString(),
+      );
     } catch (_) {
       return false;
     }
@@ -74,9 +79,8 @@ class AdminService {
 
   Future<Map<String, dynamic>> getPlatformStats() async {
     final usersSnapshot = await _firestore.collection('users').get();
-    final conversationsSnapshot = await _firestore
-        .collection('conversations')
-        .get();
+    final conversationsSnapshot =
+        await _firestore.collection('conversations').get();
     final reportsSnapshot = await _firestore.collection('reports').get();
     final reviewsSnapshot = await _firestore.collectionGroup('reviews').get();
 
@@ -179,9 +183,10 @@ class AdminService {
     await _notificationService.createNotification(
       userId: userId,
       title: isBanned ? 'Account restricted' : 'Account restored',
-      body: isBanned
-          ? 'Your account has been restricted. Reason: $reason'
-          : 'Your account access has been restored.',
+      body:
+          isBanned
+              ? 'Your account has been restricted. Reason: $reason'
+              : 'Your account access has been restored.',
       type: 'system',
       route: '/profile',
     );
@@ -202,9 +207,10 @@ class AdminService {
     await _notificationService.createNotification(
       userId: userId,
       title: approved ? 'Documents approved' : 'Documents need attention',
-      body: approved
-          ? 'Your verification documents were approved.'
-          : 'Your verification documents were rejected. $reason',
+      body:
+          approved
+              ? 'Your verification documents were approved.'
+              : 'Your verification documents were rejected. $reason',
       type: 'verification',
       route: '/profile',
     );

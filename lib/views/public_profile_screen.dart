@@ -1,54 +1,39 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:flutter_application_1/models/user_model.dart';
-import 'package:flutter_application_1/views/merchant_profile_screen.dart';
-import 'package:flutter_application_1/providers/screens_provider_profile_screen.dart';
+import 'package:flutter_application_1/providers/provider_profile_screen.dart';
+import 'package:flutter_application_1/providers/profile_provider.dart';
+import 'package:flutter_application_1/views/client_profile_screen.dart';
+import 'package:flutter_application_1/views/marketplace_profile_screen.dart';
 
-class PublicProfileScreen extends StatelessWidget {
+class PublicProfileScreen extends ConsumerWidget {
   const PublicProfileScreen({super.key, required this.userId});
 
   final String userId;
 
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      future: FirebaseFirestore.instance.collection('users').doc(userId).get(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(profileProvider(userId));
 
-        final data = snapshot.data!.data();
-        if (data == null) {
-          return const Scaffold(
-            body: Center(child: Text('Profile not found.')),
-          );
-        }
-
-        final type = UserModel.parseUserType(
-          data['accountType']?.toString() ??
-              data['userType']?.toString() ??
-              'client',
-        );
-
-        switch (type) {
+    return profile.when(
+      data: (user) {
+        switch (user.userType) {
           case UserType.workProvider:
-            return ProviderProfileScreen(uid: userId);
+            return ProviderProfileScreen(id: userId);
           case UserType.marketplace:
-            return MerchantProfileScreen(uid: userId);
+            return MarketplaceProfileScreen(id: userId);
           case UserType.client:
-            return const Scaffold(
-              body: Center(
-                child: Text(
-                  'Client profiles are only available to the account owner.',
-                ),
-              ),
-            );
+            return ClientProfileScreen(uid: userId);
         }
       },
+      loading:
+          () =>
+              const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error:
+          (e, _) => const Scaffold(
+            body: Center(child: Text('Could not load profile')),
+          ),
     );
   }
 }

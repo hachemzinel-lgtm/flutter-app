@@ -21,8 +21,10 @@ class ServicePrice {
 
 class WorkProviderModel extends UserModel {
   final String? profession;
-  @override final int? yearsExperience;
-  @override final String? bio;
+  @override
+  final int? yearsExperience;
+  @override
+  final String? bio;
   final double? hourlyRate;
   final List<ServicePrice> services;
   final bool isAvailableNow;
@@ -76,8 +78,7 @@ class WorkProviderModel extends UserModel {
       reviewCount: data['reviewCount'] ?? 0,
       isBanned: data['isBanned'] ?? false,
       notificationsEnabled: data['notificationsEnabled'] ?? true,
-      profileCompleted:
-          data['profileComplete'] ?? data['profileCompleted'] ?? false,
+      profileCompleted: data['profileComplete'] ?? false,
       profession: data['profession'],
       yearsExperience: data['yearsExperience'],
       bio: data['bio'],

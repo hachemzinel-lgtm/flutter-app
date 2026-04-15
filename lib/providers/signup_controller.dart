@@ -63,7 +63,6 @@ class SignupController extends StateNotifier<SignupState> {
           'emailVerified': false,
           'accountType': null,
           'profileComplete': false,
-          'profileCompleted': false,
           'notificationsEnabled': true,
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),

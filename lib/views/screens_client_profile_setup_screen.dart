@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -13,6 +12,7 @@ import 'package:flutter_application_1/views/app_text_styles.dart';
 import 'package:flutter_application_1/views/marketplace_taxonomy.dart';
 import 'package:flutter_application_1/models/client_model.dart';
 import 'package:flutter_application_1/views/map_preview_widget.dart';
+import 'package:flutter_application_1/services/location_service.dart';
 import 'package:flutter_application_1/services/storage_service.dart';
 import 'package:flutter_application_1/providers/auth_provider.dart';
 
@@ -59,21 +59,13 @@ class _ClientProfileSetupScreenState
   Future<void> _detectLocation() async {
     setState(() => _detectingLocation = true);
     try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        throw Exception('Location services are disabled.');
+      final position = await LocationService().getCurrentLocation(
+        context: context,
+        onRetry: _detectLocation,
+      );
+      if (position == null) {
+        return;
       }
-
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.deniedForever ||
-          permission == LocationPermission.denied) {
-        throw Exception('Location permission is required.');
-      }
-
-      final position = await Geolocator.getCurrentPosition();
       setState(() {
         _location = GeoPoint(position.latitude, position.longitude);
       });
@@ -120,9 +112,10 @@ class _ClientProfileSetupScreenState
         phone: _phoneController.text.trim(),
         photoUrl: photoUrl,
         location: _location,
-        address: _addressController.text.trim().isEmpty
-            ? null
-            : _addressController.text.trim(),
+        address:
+            _addressController.text.trim().isEmpty
+                ? null
+                : _addressController.text.trim(),
         language: _language,
         createdAt: DateTime.now(),
         notificationsEnabled: _notificationsEnabled,
@@ -178,16 +171,18 @@ class _ClientProfileSetupScreenState
                       backgroundColor: AppColors.accentBlue.withValues(
                         alpha: 0.12,
                       ),
-                      backgroundImage: _profileImage == null
-                          ? null
-                          : FileImage(_profileImage!),
-                      child: _profileImage == null
-                          ? const Icon(
-                              Icons.person_outline,
-                              size: 40,
-                              color: AppColors.accentBlue,
-                            )
-                          : null,
+                      backgroundImage:
+                          _profileImage == null
+                              ? null
+                              : FileImage(_profileImage!),
+                      child:
+                          _profileImage == null
+                              ? const Icon(
+                                Icons.person_outline,
+                                size: 40,
+                                color: AppColors.accentBlue,
+                              )
+                              : null,
                     ),
                   ),
                 ),
@@ -230,13 +225,14 @@ class _ClientProfileSetupScreenState
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: _detectingLocation ? null : _detectLocation,
-                    icon: _detectingLocation
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.my_location_outlined),
+                    icon:
+                        _detectingLocation
+                            ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Icon(Icons.my_location_outlined),
                     label: const Text('Use my current location'),
                   ),
                 ),
@@ -270,16 +266,17 @@ class _ClientProfileSetupScreenState
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 18),
                     ),
-                    child: _submitting
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.4,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text('Create account'),
+                    child:
+                        _submitting
+                            ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                color: Colors.white,
+                              ),
+                            )
+                            : const Text('Create account'),
                   ),
                 ),
               ],

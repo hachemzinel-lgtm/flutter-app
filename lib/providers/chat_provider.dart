@@ -12,21 +12,47 @@ final chatServiceProvider = Provider<ChatService>((ref) {
 
 final conversationsProvider =
     StreamProvider.family<List<ConversationSummary>, String>((ref, String uid) {
-      return ref.watch(chatServiceProvider).getConversations(uid);
+      final stream = ref.watch(chatServiceProvider).getConversations(uid);
+      return (() async* {
+        try {
+          await for (final conversations in stream) {
+            yield conversations;
+          }
+        } catch (error, stackTrace) {
+          Error.throwWithStackTrace(error, stackTrace);
+        }
+      })();
     });
 
-final conversationProvider =
-    StreamProvider.family<ConversationSummary?, String>((
-      ref,
-      String conversationId,
-    ) {
-      return ref.watch(chatServiceProvider).getConversation(conversationId);
-    });
+final conversationProvider = StreamProvider.family<
+  ConversationSummary?,
+  String
+>((ref, String conversationId) {
+  final stream = ref.watch(chatServiceProvider).getConversation(conversationId);
+  return (() async* {
+    try {
+      await for (final conversation in stream) {
+        yield conversation;
+      }
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+  })();
+});
 
 final messagesProvider =
     StreamProvider.family<List<MarketplaceChatMessage>, String>((
       ref,
       String conversationId,
     ) {
-      return ref.watch(chatServiceProvider).getMessages(conversationId);
+      final stream = ref.watch(chatServiceProvider).getMessages(conversationId);
+      return (() async* {
+        try {
+          await for (final messages in stream) {
+            yield messages;
+          }
+        } catch (error, stackTrace) {
+          Error.throwWithStackTrace(error, stackTrace);
+        }
+      })();
     });

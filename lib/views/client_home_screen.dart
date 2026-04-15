@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:flutter_application_1/core/services/app_error_handler.dart';
 import 'package:flutter_application_1/views/app_colors.dart';
 import 'package:flutter_application_1/models/user_model.dart';
 import 'package:flutter_application_1/providers/auth_providers.dart';
@@ -253,6 +254,13 @@ class _TopRatedPreviewList extends StatelessWidget {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: _buildQuery(targetType).snapshots(),
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          AppErrorHandler.showMessage(
+            'We could not load top rated listings right now.',
+          );
+          return const Text('We could not load top rated listings right now.');
+        }
+
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -261,75 +269,81 @@ class _TopRatedPreviewList extends StatelessWidget {
           return const Text('No top rated listings found yet.');
         }
 
-        final users = snapshot.data!.docs
-            .map(_userFromSnapshot)
-            .whereType<UserModel>()
-            .take(5)
-            .toList();
+        final users =
+            snapshot.data!.docs
+                .map(_userFromSnapshot)
+                .whereType<UserModel>()
+                .take(5)
+                .toList();
 
         return Column(
-          children: users.map((user) {
-            final isProvider = user.userType == UserType.workProvider;
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
-                onTap: () => context.push(
-                  isProvider
-                      ? '/provider-profile/${user.uid}'
-                      : '/marketplace-profile/${user.uid}',
-                ),
-                leading: CircleAvatar(
-                  backgroundImage:
-                      user.photoUrl != null && user.photoUrl!.isNotEmpty
-                      ? NetworkImage(user.photoUrl!)
-                      : null,
-                  child: user.photoUrl == null || user.photoUrl!.isEmpty
-                      ? Icon(isProvider ? Icons.handyman : Icons.storefront)
-                      : null,
-                ),
-                title: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        user.businessName ?? user.displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    if (isProvider && user.badgeVisible == true)
-                      const Padding(
-                        padding: EdgeInsetsDirectional.only(start: 6),
-                        child: Icon(
-                          Icons.verified_rounded,
-                          size: 18,
-                          color: AppColors.accentBlue,
+          children:
+              users.map((user) {
+                final isProvider = user.userType == UserType.workProvider;
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    onTap:
+                        () => context.push(
+                          isProvider
+                              ? '/provider-profile/${user.uid}'
+                              : '/marketplace-profile/${user.uid}',
                         ),
-                      ),
-                  ],
-                ),
-                subtitle: Row(
-                  children: [
-                    const Icon(
-                      Icons.star_rounded,
-                      size: 16,
-                      color: Colors.amber,
+                    leading: CircleAvatar(
+                      backgroundImage:
+                          user.photoUrl != null && user.photoUrl!.isNotEmpty
+                              ? NetworkImage(user.photoUrl!)
+                              : null,
+                      child:
+                          user.photoUrl == null || user.photoUrl!.isEmpty
+                              ? Icon(
+                                isProvider ? Icons.handyman : Icons.storefront,
+                              )
+                              : null,
                     ),
-                    const SizedBox(width: 4),
-                    Text(user.averageRating.toStringAsFixed(1)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        user.category ?? 'Uncategorized',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                    title: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            user.businessName ?? user.displayName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        if (isProvider && user.badgeVisible == true)
+                          const Padding(
+                            padding: EdgeInsetsDirectional.only(start: 6),
+                            child: Icon(
+                              Icons.verified_rounded,
+                              size: 18,
+                              color: AppColors.accentBlue,
+                            ),
+                          ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
+                    subtitle: Row(
+                      children: [
+                        const Icon(
+                          Icons.star_rounded,
+                          size: 16,
+                          color: Colors.amber,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(user.averageRating.toStringAsFixed(1)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            user.category ?? 'Uncategorized',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
         );
       },
     );

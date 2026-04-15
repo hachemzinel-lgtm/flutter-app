@@ -1,5 +1,7 @@
 import 'package:geolocator/geolocator.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+
+import 'package:flutter_application_1/services/location_permission_service.dart';
 
 class LocationService {
   static final LocationService _instance = LocationService._internal();
@@ -7,36 +9,24 @@ class LocationService {
   LocationService._internal();
 
   /// Gets the user's current GPS location. Requests permissions if needed.
-  Future<Position?> getCurrentLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
+  Future<Position?> getCurrentLocation({
+    BuildContext? context,
+    Future<void> Function()? onRetry,
+  }) async {
     try {
-      // Test if location services are enabled.
-      serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        debugPrint('Location services are disabled.');
-        return null; // Return null so the UI can show a retry/warning
-      }
-
-      permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          debugPrint('Location permissions are denied');
-          return null;
+      final permissionResult =
+          await LocationPermissionService.ensureLocationWhenInUsePermission();
+      if (!permissionResult.isGranted) {
+        debugPrint(permissionResult.message);
+        if (context != null && context.mounted) {
+          await LocationPermissionService.showPermissionFeedback(
+            context,
+            permissionResult,
+            onRetry: onRetry,
+          );
         }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        // Permissions are denied forever, handle appropriately.
-        debugPrint(
-          'Location permissions are permanently denied, we cannot request permissions.',
-        );
         return null;
       }
-
-      // When we reach here, permissions are granted and we can continue accessing the position of the device.
       return await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,

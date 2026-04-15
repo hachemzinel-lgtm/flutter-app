@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -11,12 +10,16 @@ import 'package:flutter_application_1/views/app_colors.dart';
 import 'package:flutter_application_1/views/app_spacing.dart';
 import 'package:flutter_application_1/views/app_text_styles.dart';
 import 'package:flutter_application_1/models/marketplace_model.dart';
+import 'package:flutter_application_1/providers/auth_providers.dart';
+import 'package:flutter_application_1/providers/profile_provider.dart';
+import 'package:flutter_application_1/services/location_service.dart';
 import 'package:flutter_application_1/services/storage_service.dart';
-import 'package:flutter_application_1/providers/auth_provider.dart';
 import 'package:flutter_application_1/views/reviews_screen.dart';
 
 class MarketplaceEditProfileScreen extends ConsumerStatefulWidget {
-  const MarketplaceEditProfileScreen({super.key});
+  const MarketplaceEditProfileScreen({super.key, required this.initialUser});
+
+  final MarketplaceModel initialUser;
 
   @override
   ConsumerState<MarketplaceEditProfileScreen> createState() =>
@@ -29,6 +32,7 @@ class _MarketplaceEditProfileScreenState
   final _addressController = TextEditingController();
   bool _initialized = false;
   bool _saving = false;
+  double? _uploadProgress;
   bool _alwaysOpen = false;
   String _language = 'en';
   GeoPoint? _location;
@@ -42,14 +46,14 @@ class _MarketplaceEditProfileScreenState
     super.dispose();
   }
 
-  void _hydrate(MarketplaceModel user) {
+  void _hydrate(EditProfileSeed seed) {
     if (_initialized) return;
     _initialized = true;
-    _descriptionController.text = user.description ?? '';
-    _addressController.text = user.address ?? '';
-    _alwaysOpen = user.openingHours?['alwaysOpen'] == true;
-    _language = user.language ?? 'en';
-    _location = user.location;
+    _descriptionController.text = seed.description;
+    _addressController.text = seed.address;
+    _alwaysOpen = seed.alwaysOpen;
+    _language = seed.language;
+    _location = seed.user.location;
   }
 
   Future<void> _pickProfileImage() async {
@@ -75,15 +79,13 @@ class _MarketplaceEditProfileScreenState
 
   Future<void> _useCurrentLocation() async {
     try {
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
+      final position = await LocationService().getCurrentLocation(
+        context: context,
+        onRetry: _useCurrentLocation,
+      );
+      if (position == null) {
+        return;
       }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        throw Exception('Location permission is required.');
-      }
-      final position = await Geolocator.getCurrentPosition();
       setState(() {
         _location = GeoPoint(position.latitude, position.longitude);
       });
@@ -103,9 +105,14 @@ class _MarketplaceEditProfileScreenState
     try {
       String? profileUrl = user.photoUrl;
       if (_newProfileImage != null) {
-        profileUrl = await StorageService.uploadProfilePicture(
+        profileUrl = await StorageService.uploadProfilePictureWithProgress(
           user.id,
           _newProfileImage!,
+          onProgress: (progress) {
+            if (mounted) {
+              setState(() => _uploadProgress = progress);
+            }
+          },
         );
       }
 
@@ -127,9 +134,10 @@ class _MarketplaceEditProfileScreenState
         photoUrl: profileUrl,
         createdAt: user.createdAt,
         location: _location,
-        address: _addressController.text.trim().isEmpty
-            ? null
-            : _addressController.text.trim(),
+        address:
+            _addressController.text.trim().isEmpty
+                ? null
+                : _addressController.text.trim(),
         language: _language,
         rating: user.rating,
         reviewCount: user.reviewCount,
@@ -143,6 +151,12 @@ class _MarketplaceEditProfileScreenState
       );
 
       await ref.read(authServiceProvider).setupProfile(updated);
+      ref.invalidate(currentUserDataProvider);
+      ref.invalidate(currentUserDocProvider);
+      ref.invalidate(currentProfileProvider);
+      ref.invalidate(profileProvider(user.id));
+      ref.invalidate(marketplaceProfileStatsProvider(user.id));
+      ref.invalidate(profileReviewsProvider(user.id));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -159,17 +173,20 @@ class _MarketplaceEditProfileScreenState
         ),
       );
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _uploadProgress = null;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserDocProvider).value;
-    if (user is! MarketplaceModel) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    _hydrate(user);
+    final seed = ref.watch(editProfileProvider(widget.initialUser));
+    _hydrate(seed);
+    final user = widget.initialUser;
 
     return Scaffold(
       appBar: AppBar(title: const Text('My Marketplace Profile')),
@@ -183,20 +200,34 @@ class _MarketplaceEditProfileScreenState
                 radius: 48,
                 backgroundColor: AppColors.accentBlue.withValues(alpha: 0.12),
                 backgroundImage: _profileImageProvider(user),
-                child: (_newProfileImage == null && user.photoUrl == null)
-                    ? Text(
-                        (user.businessName ?? user.name)
-                            .substring(0, 1)
-                            .toUpperCase(),
-                        style: AppTextStyles.headingSmall.copyWith(
-                          color: AppColors.accentBlue,
-                        ),
-                      )
-                    : null,
+                child:
+                    (_newProfileImage == null && user.photoUrl == null)
+                        ? Text(
+                          (user.businessName ?? user.name)
+                              .substring(0, 1)
+                              .toUpperCase(),
+                          style: AppTextStyles.headingSmall.copyWith(
+                            color: AppColors.accentBlue,
+                          ),
+                        )
+                        : null,
               ),
             ),
           ),
           const SizedBox(height: AppSpacing.xl),
+          if (_uploadProgress != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.m),
+              child: LinearProgressIndicator(value: _uploadProgress),
+            ),
+          if (_uploadProgress != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.s),
+              child: Text(
+                'Uploading photo... ${(_uploadProgress! * 100).round()}%',
+                style: AppTextStyles.bodyMedium,
+              ),
+            ),
           TextField(
             controller: _descriptionController,
             maxLines: 5,
@@ -283,24 +314,26 @@ class _MarketplaceEditProfileScreenState
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 18),
             ),
-            child: _saving
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.4,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Text('Save Changes'),
+            child:
+                _saving
+                    ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.4,
+                        color: Colors.white,
+                      ),
+                    )
+                    : const Text('Save Changes'),
           ),
           const SizedBox(height: AppSpacing.m),
           OutlinedButton(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => ReviewsScreen(providerId: user.id),
-              ),
-            ),
+            onPressed:
+                () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ReviewsScreen(providerId: user.id),
+                  ),
+                ),
             child: const Text('My Reviews'),
           ),
           const SizedBox(height: AppSpacing.s),

@@ -20,10 +20,8 @@ class ProviderProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .snapshots(),
+      stream:
+          FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Scaffold(
@@ -104,9 +102,10 @@ class ProviderProfileScreen extends ConsumerWidget {
                               children: [
                                 _InfoBadge(
                                   icon: Icons.star_rounded,
-                                  label: provider.rating == 0
-                                      ? 'New'
-                                      : '${provider.rating.toStringAsFixed(1)} (${provider.reviewCount})',
+                                  label:
+                                      provider.rating == 0
+                                          ? 'New'
+                                          : '${provider.rating.toStringAsFixed(1)} (${provider.reviewCount})',
                                   color: AppColors.starGold,
                                 ),
                                 if (shortLocation.isNotEmpty)
@@ -140,8 +139,8 @@ class ProviderProfileScreen extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: () =>
-                                  _startChat(context, ref, provider),
+                              onPressed:
+                                  () => _startChat(context, ref, provider),
                               icon: const Icon(
                                 Icons.chat_bubble_outline_rounded,
                               ),
@@ -163,8 +162,8 @@ class ProviderProfileScreen extends ConsumerWidget {
                           ),
                           const SizedBox(width: AppSpacing.s),
                           OutlinedButton.icon(
-                            onPressed: () =>
-                                _reportProfile(context, ref, provider.id),
+                            onPressed:
+                                () => _reportProfile(context, ref, provider.id),
                             icon: const Icon(Icons.flag_outlined),
                             label: const Text('Report'),
                           ),
@@ -200,9 +199,10 @@ class ProviderProfileScreen extends ConsumerWidget {
                                 ),
                                 _DetailTile(
                                   label: 'Location',
-                                  value: shortLocation.isEmpty
-                                      ? 'Not shared'
-                                      : shortLocation,
+                                  value:
+                                      shortLocation.isEmpty
+                                          ? 'Not shared'
+                                          : shortLocation,
                                 ),
                               ],
                             ),
@@ -248,48 +248,50 @@ class ProviderProfileScreen extends ConsumerWidget {
                       const SizedBox(height: AppSpacing.l),
                       _Section(
                         title: 'Portfolio',
-                        trailing: provider.portfolio.isNotEmpty
-                            ? Text(
-                                '${provider.portfolio.length} photos',
-                                style: AppTextStyles.caption,
-                              )
-                            : null,
-                        child: provider.portfolio.isEmpty
-                            ? Text(
-                                'No portfolio photos yet.',
-                                style: AppTextStyles.bodyMedium,
-                              )
-                            : GridView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: provider.portfolio.length,
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 3,
-                                      crossAxisSpacing: 10,
-                                      mainAxisSpacing: 10,
-                                    ),
-                                itemBuilder: (context, index) {
-                                  final image = provider.portfolio[index];
-                                  return InkWell(
-                                    onTap: () => _openGallery(context, image),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(14),
-                                      child: Image.network(
-                                        image,
-                                        fit: BoxFit.cover,
+                        trailing:
+                            provider.portfolio.isNotEmpty
+                                ? Text(
+                                  '${provider.portfolio.length} photos',
+                                  style: AppTextStyles.caption,
+                                )
+                                : null,
+                        child:
+                            provider.portfolio.isEmpty
+                                ? Text(
+                                  'No portfolio photos yet.',
+                                  style: AppTextStyles.bodyMedium,
+                                )
+                                : GridView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: provider.portfolio.length,
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: 3,
+                                        crossAxisSpacing: 10,
+                                        mainAxisSpacing: 10,
                                       ),
-                                    ),
-                                  );
-                                },
-                              ),
+                                  itemBuilder: (context, index) {
+                                    final image = provider.portfolio[index];
+                                    return InkWell(
+                                      onTap: () => _openGallery(context, image),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(14),
+                                        child: Image.network(
+                                          image,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
                       ),
                       const SizedBox(height: AppSpacing.l),
                       _Section(
                         title: 'Reviews',
                         trailing: TextButton(
-                          onPressed: () =>
-                              context.push('/reviews/${provider.id}'),
+                          onPressed:
+                              () => context.push('/reviews/${provider.id}'),
                           child: const Text('See all'),
                         ),
                         child: StreamBuilder(
@@ -309,20 +311,21 @@ class ProviderProfileScreen extends ConsumerWidget {
                             }
 
                             return Column(
-                              children: reviews.take(5).map((review) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(
-                                    bottom: AppSpacing.m,
-                                  ),
-                                  child: _ReviewCard(
-                                    name: review.reviewerName,
-                                    photoUrl: review.reviewerPhoto,
-                                    rating: review.rating,
-                                    text: review.text,
-                                    date: review.createdAt,
-                                  ),
-                                );
-                              }).toList(),
+                              children:
+                                  reviews.take(5).map((review) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: AppSpacing.m,
+                                      ),
+                                      child: _ReviewCard(
+                                        name: review.reviewerName,
+                                        photoUrl: review.reviewerPhoto,
+                                        rating: review.rating,
+                                        text: review.text,
+                                        date: review.createdAt,
+                                      ),
+                                    );
+                                  }).toList(),
                             );
                           },
                         ),
@@ -464,7 +467,7 @@ class _Section extends StatelessWidget {
           Row(
             children: [
               Expanded(child: Text(title, style: AppTextStyles.headingSmall)),
-              ?trailing,
+              if (trailing != null) trailing!,
             ],
           ),
           const SizedBox(height: AppSpacing.m),
@@ -602,18 +605,18 @@ class _ReviewCard extends StatelessWidget {
               CircleAvatar(
                 radius: 16,
                 backgroundColor: AppColors.accentBlue.withValues(alpha: 0.12),
-                backgroundImage: photoUrl.isEmpty
-                    ? null
-                    : NetworkImage(photoUrl),
-                child: photoUrl.isEmpty
-                    ? Text(
-                        name.substring(0, 1).toUpperCase(),
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.accentBlue,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      )
-                    : null,
+                backgroundImage:
+                    photoUrl.isEmpty ? null : NetworkImage(photoUrl),
+                child:
+                    photoUrl.isEmpty
+                        ? Text(
+                          name.substring(0, 1).toUpperCase(),
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.accentBlue,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        )
+                        : null,
               ),
               const SizedBox(width: AppSpacing.m),
               Expanded(

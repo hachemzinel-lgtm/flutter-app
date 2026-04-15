@@ -10,6 +10,29 @@ class StorageService {
     return await ref.getDownloadURL();
   }
 
+  static Future<String> uploadProfilePictureWithProgress(
+    String uid,
+    File file, {
+    void Function(double progress)? onProgress,
+  }) async {
+    final ref = _storage.ref('users/$uid/profile/profile.jpg');
+    final task = ref.putFile(file);
+    final subscription = task.snapshotEvents.listen((snapshot) {
+      if (snapshot.totalBytes <= 0) {
+        return;
+      }
+      onProgress?.call(snapshot.bytesTransferred / snapshot.totalBytes);
+    });
+
+    try {
+      final snapshot = await task;
+      onProgress?.call(1);
+      return await snapshot.ref.getDownloadURL();
+    } finally {
+      await subscription.cancel();
+    }
+  }
+
   static Future<String> uploadDocument(
     String uid,
     File file,

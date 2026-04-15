@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
 import 'package:flutter_application_1/models/client_model.dart';
 import 'package:flutter_application_1/models/marketplace_model.dart';
@@ -47,12 +50,54 @@ final authServiceProvider = Provider<AuthService>((ref) {
   );
 });
 
-final authStateProvider = StreamProvider<User?>((ref) {
-  return ref.watch(authRepositoryProvider).authStateChanges;
+class AuthController extends StateNotifier<AsyncValue<User?>> {
+  AuthController(this._auth) : super(AsyncData(_auth.currentUser)) {
+    _subscription = _auth.userChanges().listen(
+      (user) {
+        state = AsyncData(user);
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        state = AsyncError<User?>(error, stackTrace);
+      },
+    );
+  }
+
+  final FirebaseAuth _auth;
+  late final StreamSubscription<User?> _subscription;
+
+  Future<User?> refreshAuthState() async {
+    state = const AsyncLoading<User?>();
+    try {
+      await _auth.currentUser?.reload();
+      final refreshedUser = _auth.currentUser;
+      state = AsyncData(refreshedUser);
+      return refreshedUser;
+    } catch (error, stackTrace) {
+      state = AsyncError<User?>(error, stackTrace);
+      return null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
+
+final authProvider = StateNotifierProvider<AuthController, AsyncValue<User?>>((
+  ref,
+) {
+  return AuthController(ref.read(firebaseAuthProvider));
+});
+
+final authStateProvider = Provider<AsyncValue<User?>>((ref) {
+  return ref.watch(authProvider);
 });
 
 final currentUserProvider = Provider<User?>((ref) {
-  return ref.watch(authStateProvider).value;
+  final authState = ref.watch(authProvider);
+  return authState.asData?.value ?? ref.watch(firebaseAuthProvider).currentUser;
 });
 
 final currentUserDataProvider = StreamProvider<Map<String, dynamic>?>((ref) {
@@ -61,17 +106,34 @@ final currentUserDataProvider = StreamProvider<Map<String, dynamic>?>((ref) {
     return Stream.value(null);
   }
 
-  return ref
-      .watch(firestoreProvider)
-      .collection('users')
-      .doc(user.uid)
-      .snapshots()
-      .map((doc) => doc.data());
+  final snapshots =
+      ref
+          .watch(firestoreProvider)
+          .collection('users')
+          .doc(user.uid)
+          .snapshots();
+
+  return (() async* {
+    try {
+      await for (final doc in snapshots) {
+        yield doc.data();
+      }
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+  })();
 });
 
 final currentUserDocProvider = StreamProvider<UserModel?>((ref) {
   final user = ref.watch(currentUserProvider);
-  final userData = ref.watch(currentUserDataProvider).value;
+  final userDataState = ref.watch(currentUserDataProvider);
+
+  if (userDataState.hasError) {
+    final error = userDataState.asError!;
+    Error.throwWithStackTrace(error.error, error.stackTrace);
+  }
+
+  final userData = userDataState.asData?.value;
 
   if (user == null || userData == null) {
     return Stream.value(null);
@@ -99,16 +161,19 @@ final isEmailVerifiedProvider = Provider<bool>((ref) {
 
 final isProfileCompleteProvider = Provider<bool>((ref) {
   final userData = ref.watch(currentUserDataProvider).value;
-  return userData?['profileComplete'] == true ||
-      userData?['profileCompleted'] == true;
+  return userData?['profileComplete'] == true;
 });
 
 final userAccountTypeProvider = FutureProvider<UserType?>((ref) async {
-  final user = ref.watch(currentUserProvider);
-  if (user == null) {
-    return null;
+  try {
+    final user = ref.watch(currentUserProvider);
+    if (user == null) {
+      return null;
+    }
+    return ref.watch(authServiceProvider).getUserType(user.uid);
+  } catch (error, stackTrace) {
+    Error.throwWithStackTrace(error, stackTrace);
   }
-  return ref.watch(authServiceProvider).getUserType(user.uid);
 });
 
 final workProviderNeedsReviewProvider = Provider<bool>((ref) {

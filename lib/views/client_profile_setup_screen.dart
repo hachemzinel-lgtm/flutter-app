@@ -86,7 +86,13 @@ class _ClientProfileSetupScreenState
   Future<void> _useCurrentLocation() async {
     setState(() => _isDetectingLocation = true);
     try {
-      final result = await LocationLookupService.detectCurrentLocation();
+      final result = await LocationLookupService.detectCurrentLocation(
+        context: context,
+        onRetry: _useCurrentLocation,
+      );
+      if (result == null) {
+        return;
+      }
       setState(() {
         _location = result.geoPoint;
         _addressController.text = result.address;
@@ -203,16 +209,18 @@ class _ClientProfileSetupScreenState
                   child: CircleAvatar(
                     radius: 52,
                     backgroundColor: AppColors.backgroundSecondary,
-                    backgroundImage: _profileImage == null
-                        ? null
-                        : FileImage(_profileImage!),
-                    child: _profileImage == null
-                        ? const Icon(
-                            Icons.camera_alt_outlined,
-                            size: 28,
-                            color: AppColors.accentBlue,
-                          )
-                        : null,
+                    backgroundImage:
+                        _profileImage == null
+                            ? null
+                            : FileImage(_profileImage!),
+                    child:
+                        _profileImage == null
+                            ? const Icon(
+                              Icons.camera_alt_outlined,
+                              size: 28,
+                              color: AppColors.accentBlue,
+                            )
+                            : null,
                   ),
                 ),
               ),
@@ -269,16 +277,18 @@ class _ClientProfileSetupScreenState
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: _isDetectingLocation || _isSubmitting
-                      ? null
-                      : _useCurrentLocation,
-                  icon: _isDetectingLocation
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.my_location_outlined),
+                  onPressed:
+                      _isDetectingLocation || _isSubmitting
+                          ? null
+                          : _useCurrentLocation,
+                  icon:
+                      _isDetectingLocation
+                          ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                          : const Icon(Icons.my_location_outlined),
                   label: const Text('Use My Current Location'),
                 ),
               ),
@@ -299,9 +309,11 @@ class _ClientProfileSetupScreenState
                   DropdownMenuItem(value: 'French', child: Text('French')),
                   DropdownMenuItem(value: 'Arabic', child: Text('Arabic')),
                 ],
-                onChanged: _isSubmitting
-                    ? null
-                    : (value) => setState(() => _language = value ?? 'English'),
+                onChanged:
+                    _isSubmitting
+                        ? null
+                        : (value) =>
+                            setState(() => _language = value ?? 'English'),
               ),
               const SizedBox(height: AppSpacing.s),
               SwitchListTile(
@@ -309,9 +321,11 @@ class _ClientProfileSetupScreenState
                 title: const Text('Enable push notifications'),
                 value: _notificationsEnabled,
                 activeThumbColor: AppColors.accentBlue,
-                onChanged: _isSubmitting
-                    ? null
-                    : (value) => setState(() => _notificationsEnabled = value),
+                onChanged:
+                    _isSubmitting
+                        ? null
+                        : (value) =>
+                            setState(() => _notificationsEnabled = value),
               ),
               const SizedBox(height: AppSpacing.xl),
               SizedBox(
@@ -328,16 +342,17 @@ class _ClientProfileSetupScreenState
                       ),
                     ),
                   ),
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('Save & Continue'),
+                  child:
+                      _isSubmitting
+                          ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              color: Colors.white,
+                            ),
+                          )
+                          : const Text('Save & Continue'),
                 ),
               ),
             ],

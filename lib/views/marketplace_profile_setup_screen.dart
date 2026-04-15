@@ -112,7 +112,13 @@ class _MarketplaceProfileSetupScreenState
   Future<void> _useCurrentLocation() async {
     setState(() => _isDetectingLocation = true);
     try {
-      final result = await LocationLookupService.detectCurrentLocation();
+      final result = await LocationLookupService.detectCurrentLocation(
+        context: context,
+        onRetry: _useCurrentLocation,
+      );
+      if (result == null) {
+        return;
+      }
       setState(() {
         _location = result.geoPoint;
         _addressController.text = result.address;
@@ -142,9 +148,10 @@ class _MarketplaceProfileSetupScreenState
     }
     setState(() {
       final current = _schedule[day]!;
-      _schedule[day] = isOpen
-          ? TimeOfDayRange(open: time, close: current.close)
-          : TimeOfDayRange(open: current.open, close: time);
+      _schedule[day] =
+          isOpen
+              ? TimeOfDayRange(open: time, close: current.close)
+              : TimeOfDayRange(open: current.open, close: time);
     });
   }
 
@@ -197,9 +204,10 @@ class _MarketplaceProfileSetupScreenState
         imageUrls.add(url);
       }
 
-      final category = _category == 'Other'
-          ? _otherCategoryController.text.trim()
-          : _category;
+      final category =
+          _category == 'Other'
+              ? _otherCategoryController.text.trim()
+              : _category;
 
       await ref.read(userRepositoryProvider).updateUserDocument(user.uid, {
         'businessName': _businessNameController.text.trim(),
@@ -208,14 +216,15 @@ class _MarketplaceProfileSetupScreenState
         'profilePicture': storefrontUrl,
         'category': category,
         'description': _descriptionController.text.trim(),
-        'openingHours': _alwaysOpen
-            ? {'alwaysOpen': true}
-            : _schedule.map(
-                (key, value) => MapEntry(key, {
-                  'open': value.open.format(context),
-                  'close': value.close.format(context),
-                }),
-              ),
+        'openingHours':
+            _alwaysOpen
+                ? {'alwaysOpen': true}
+                : _schedule.map(
+                  (key, value) => MapEntry(key, {
+                    'open': value.open.format(context),
+                    'close': value.close.format(context),
+                  }),
+                ),
         'photos': [storefrontUrl, ...imageUrls],
         'location': _location,
         'address': _addressController.text.trim(),
@@ -275,30 +284,32 @@ class _MarketplaceProfileSetupScreenState
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
                     color: AppColors.backgroundSecondary,
-                    image: _storefrontImage == null
-                        ? null
-                        : DecorationImage(
-                            image: FileImage(_storefrontImage!),
-                            fit: BoxFit.cover,
-                          ),
+                    image:
+                        _storefrontImage == null
+                            ? null
+                            : DecorationImage(
+                              image: FileImage(_storefrontImage!),
+                              fit: BoxFit.cover,
+                            ),
                   ),
-                  child: _storefrontImage == null
-                      ? Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.storefront_outlined,
-                              color: AppColors.accentBlue,
-                              size: 36,
-                            ),
-                            const SizedBox(height: AppSpacing.s),
-                            Text(
-                              'Add Storefront Photo',
-                              style: AppTextStyles.headingSmall,
-                            ),
-                          ],
-                        )
-                      : null,
+                  child:
+                      _storefrontImage == null
+                          ? Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.storefront_outlined,
+                                color: AppColors.accentBlue,
+                                size: 36,
+                              ),
+                              const SizedBox(height: AppSpacing.s),
+                              Text(
+                                'Add Storefront Photo',
+                                style: AppTextStyles.headingSmall,
+                              ),
+                            ],
+                          )
+                          : null,
                 ),
               ),
               const SizedBox(height: AppSpacing.l),
@@ -309,9 +320,11 @@ class _MarketplaceProfileSetupScreenState
                   'Your business name',
                   Icons.badge_outlined,
                 ),
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? 'Business name is required'
-                    : null,
+                validator:
+                    (value) =>
+                        (value == null || value.trim().isEmpty)
+                            ? 'Business name is required'
+                            : null,
               ),
               const SizedBox(height: AppSpacing.l),
               _label('Business Phone'),
@@ -332,17 +345,20 @@ class _MarketplaceProfileSetupScreenState
               DropdownButtonFormField<String>(
                 initialValue: _category,
                 decoration: _dropdownDecoration(),
-                items: MarketplaceTaxonomy.marketplaceCategories
-                    .map(
-                      (category) => DropdownMenuItem(
-                        value: category,
-                        child: Text(category),
-                      ),
-                    )
-                    .toList(),
-                onChanged: _isSubmitting
-                    ? null
-                    : (value) => setState(() => _category = value ?? _category),
+                items:
+                    MarketplaceTaxonomy.marketplaceCategories
+                        .map(
+                          (category) => DropdownMenuItem(
+                            value: category,
+                            child: Text(category),
+                          ),
+                        )
+                        .toList(),
+                onChanged:
+                    _isSubmitting
+                        ? null
+                        : (value) =>
+                            setState(() => _category = value ?? _category),
               ),
               if (_category == 'Other') ...[
                 const SizedBox(height: AppSpacing.m),
@@ -371,9 +387,11 @@ class _MarketplaceProfileSetupScreenState
                   'Describe your business',
                   Icons.notes_outlined,
                 ),
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? 'Description is required'
-                    : null,
+                validator:
+                    (value) =>
+                        (value == null || value.trim().isEmpty)
+                            ? 'Description is required'
+                            : null,
               ),
               const SizedBox(height: AppSpacing.s),
               SwitchListTile(
@@ -381,9 +399,10 @@ class _MarketplaceProfileSetupScreenState
                 title: const Text('Open 24/7'),
                 value: _alwaysOpen,
                 activeThumbColor: AppColors.accentBlue,
-                onChanged: _isSubmitting
-                    ? null
-                    : (value) => setState(() => _alwaysOpen = value),
+                onChanged:
+                    _isSubmitting
+                        ? null
+                        : (value) => setState(() => _alwaysOpen = value),
               ),
               if (!_alwaysOpen)
                 ..._schedule.entries.map(
@@ -397,15 +416,17 @@ class _MarketplaceProfileSetupScreenState
                       spacing: 8,
                       children: [
                         TextButton(
-                          onPressed: _isSubmitting
-                              ? null
-                              : () => _pickTime(entry.key, true),
+                          onPressed:
+                              _isSubmitting
+                                  ? null
+                                  : () => _pickTime(entry.key, true),
                           child: const Text('Open'),
                         ),
                         TextButton(
-                          onPressed: _isSubmitting
-                              ? null
-                              : () => _pickTime(entry.key, false),
+                          onPressed:
+                              _isSubmitting
+                                  ? null
+                                  : () => _pickTime(entry.key, false),
                           child: const Text('Close'),
                         ),
                       ],
@@ -425,16 +446,18 @@ class _MarketplaceProfileSetupScreenState
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: _isDetectingLocation || _isSubmitting
-                      ? null
-                      : _useCurrentLocation,
-                  icon: _isDetectingLocation
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.my_location_outlined),
+                  onPressed:
+                      _isDetectingLocation || _isSubmitting
+                          ? null
+                          : _useCurrentLocation,
+                  icon:
+                      _isDetectingLocation
+                          ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                          : const Icon(Icons.my_location_outlined),
                   label: const Text('Use My Current Location'),
                 ),
               ),
@@ -451,9 +474,10 @@ class _MarketplaceProfileSetupScreenState
                 children: [
                   Text('Business Photos', style: AppTextStyles.headingSmall),
                   TextButton.icon(
-                    onPressed: _isSubmitting || _galleryImages.length >= 20
-                        ? null
-                        : _pickGalleryImages,
+                    onPressed:
+                        _isSubmitting || _galleryImages.length >= 20
+                            ? null
+                            : _pickGalleryImages,
                     icon: const Icon(Icons.add_photo_alternate_outlined),
                     label: Text('Add (${_galleryImages.length}/20)'),
                   ),
@@ -485,11 +509,12 @@ class _MarketplaceProfileSetupScreenState
                           right: 4,
                           top: 4,
                           child: GestureDetector(
-                            onTap: _isSubmitting
-                                ? null
-                                : () => setState(
-                                    () => _galleryImages.removeAt(index),
-                                  ),
+                            onTap:
+                                _isSubmitting
+                                    ? null
+                                    : () => setState(
+                                      () => _galleryImages.removeAt(index),
+                                    ),
                             child: const CircleAvatar(
                               radius: 12,
                               backgroundColor: Colors.black54,
@@ -520,16 +545,17 @@ class _MarketplaceProfileSetupScreenState
                       ),
                     ),
                   ),
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('Save & Continue'),
+                  child:
+                      _isSubmitting
+                          ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              color: Colors.white,
+                            ),
+                          )
+                          : const Text('Save & Continue'),
                 ),
               ),
             ],

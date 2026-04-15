@@ -25,12 +25,15 @@ class ReviewModel {
     final data = doc.data() as Map<String, dynamic>;
     return ReviewModel(
       id: doc.id,
-      reviewerId: data['reviewerId'] ?? '',
-      reviewerName: data['reviewerName'] ?? 'Anonymous',
-      reviewerPhoto: data['reviewerPhoto'] ?? '',
+      reviewerId: data['reviewerId'] ?? data['fromId'] ?? '',
+      reviewerName: data['reviewerName'] ?? data['fromName'] ?? 'Anonymous',
+      reviewerPhoto: data['reviewerPhoto'] ?? data['fromPhotoUrl'] ?? '',
       rating: (data['rating'] as num?)?.toDouble() ?? 0.0,
-      text: data['text'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      text: data['text'] ?? data['comment'] ?? data['reviewText'] ?? '',
+      createdAt:
+          (data['createdAt'] as Timestamp?)?.toDate() ??
+          (data['timestamp'] as Timestamp?)?.toDate() ??
+          DateTime.now(),
       response: data['response'],
     );
   }

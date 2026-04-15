@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>We need your location to show nearby service providers.</string>
+	<string>NearWork needs your location to find nearby services.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>We need your location to show nearby service providers.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
@@ -28,6 +28,19 @@
 	<string>6.0</string>
 	<key>CFBundleName</key>
 	<string>flutter_application_1</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>nearwork-auth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>nearwork</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

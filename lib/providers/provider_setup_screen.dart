@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -15,6 +14,7 @@ import 'package:flutter_application_1/views/marketplace_taxonomy.dart';
 import 'package:flutter_application_1/models/work_provider_model.dart';
 import 'package:flutter_application_1/views/map_preview_widget.dart';
 import 'package:flutter_application_1/services/document_verification_service.dart';
+import 'package:flutter_application_1/services/location_service.dart';
 import 'package:flutter_application_1/services/storage_service.dart';
 import 'package:flutter_application_1/models/user_model.dart';
 import 'package:flutter_application_1/providers/auth_provider.dart';
@@ -112,21 +112,13 @@ class _ProviderProfileSetupScreenState
   Future<void> _detectLocation() async {
     setState(() => _detectingLocation = true);
     try {
-      final enabled = await Geolocator.isLocationServiceEnabled();
-      if (!enabled) {
-        throw Exception('Location services are disabled.');
+      final position = await LocationService().getCurrentLocation(
+        context: context,
+        onRetry: _detectLocation,
+      );
+      if (position == null) {
+        return;
       }
-
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.deniedForever ||
-          permission == LocationPermission.denied) {
-        throw Exception('Location permission is required to use GPS.');
-      }
-
-      final position = await Geolocator.getCurrentPosition();
       setState(() {
         _location = GeoPoint(position.latitude, position.longitude);
       });
@@ -276,9 +268,10 @@ class _ProviderProfileSetupScreenState
         phone: _phoneController.text.trim(),
         photoUrl: profileUrl,
         location: _location,
-        address: _addressController.text.trim().isEmpty
-            ? null
-            : _addressController.text.trim(),
+        address:
+            _addressController.text.trim().isEmpty
+                ? null
+                : _addressController.text.trim(),
         language: _language,
         createdAt: DateTime.now(),
         notificationsEnabled: _notificationsEnabled,
@@ -353,16 +346,18 @@ class _ProviderProfileSetupScreenState
                       backgroundColor: AppColors.accentBlue.withValues(
                         alpha: 0.12,
                       ),
-                      backgroundImage: _profileImage == null
-                          ? null
-                          : FileImage(_profileImage!),
-                      child: _profileImage == null
-                          ? const Icon(
-                              Icons.person_outline,
-                              size: 42,
-                              color: AppColors.accentBlue,
-                            )
-                          : null,
+                      backgroundImage:
+                          _profileImage == null
+                              ? null
+                              : FileImage(_profileImage!),
+                      child:
+                          _profileImage == null
+                              ? const Icon(
+                                Icons.person_outline,
+                                size: 42,
+                                color: AppColors.accentBlue,
+                              )
+                              : null,
                     ),
                   ),
                 ),
@@ -425,8 +420,9 @@ class _ProviderProfileSetupScreenState
                 const SizedBox(height: AppSpacing.m),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  activeThumbColor: AppColors
-                      .accentBlue, // SwitchListTile uses activeColor for the switch itself, but let's check
+                  activeThumbColor:
+                      AppColors
+                          .accentBlue, // SwitchListTile uses activeColor for the switch itself, but let's check
                   title: const Text('I prefer to quote per job'),
                   value: _customQuoteEnabled,
                   onChanged: (value) {
@@ -470,11 +466,12 @@ class _ProviderProfileSetupScreenState
                 const SizedBox(height: AppSpacing.xl),
                 _label('PROFESSIONAL CERTIFICATE OR LICENSE (PDF)'),
                 _uploadTile(
-                  label: _professionalDocument == null
-                      ? 'Upload professional diploma, certificate, or work license'
-                      : _professionalDocument!.path
-                            .split(Platform.pathSeparator)
-                            .last,
+                  label:
+                      _professionalDocument == null
+                          ? 'Upload professional diploma, certificate, or work license'
+                          : _professionalDocument!.path
+                              .split(Platform.pathSeparator)
+                              .last,
                   icon: Icons.description_outlined,
                   selected: _professionalDocument != null,
                   onTap: () => _pickPdf(professional: true),
@@ -482,11 +479,12 @@ class _ProviderProfileSetupScreenState
                 const SizedBox(height: AppSpacing.l),
                 _label('ID CARD OR PASSPORT (PDF)'),
                 _uploadTile(
-                  label: _identityDocument == null
-                      ? 'Upload government-issued identity document'
-                      : _identityDocument!.path
-                            .split(Platform.pathSeparator)
-                            .last,
+                  label:
+                      _identityDocument == null
+                          ? 'Upload government-issued identity document'
+                          : _identityDocument!.path
+                              .split(Platform.pathSeparator)
+                              .last,
                   icon: Icons.badge_outlined,
                   selected: _identityDocument != null,
                   onTap: () => _pickPdf(professional: false),
@@ -506,15 +504,16 @@ class _ProviderProfileSetupScreenState
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: _detectingLocation ? null : _detectLocation,
-                        icon: _detectingLocation
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.my_location_outlined),
+                        icon:
+                            _detectingLocation
+                                ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                                : const Icon(Icons.my_location_outlined),
                         label: const Text('Use my current location'),
                       ),
                     ),
@@ -555,8 +554,9 @@ class _ProviderProfileSetupScreenState
                 const SizedBox(height: AppSpacing.m),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  activeThumbColor: AppColors
-                      .accentBlue, // SwitchListTile uses activeColor for the switch itself, but let's check
+                  activeThumbColor:
+                      AppColors
+                          .accentBlue, // SwitchListTile uses activeColor for the switch itself, but let's check
                   title: const Text('Enable push notifications'),
                   value: _notificationsEnabled,
                   onChanged: (value) {
@@ -569,9 +569,10 @@ class _ProviderProfileSetupScreenState
                   children: [
                     Text('Portfolio photos', style: AppTextStyles.headingSmall),
                     TextButton.icon(
-                      onPressed: _portfolioPhotos.length >= 10
-                          ? null
-                          : _pickPortfolioImages,
+                      onPressed:
+                          _portfolioPhotos.length >= 10
+                              ? null
+                              : _pickPortfolioImages,
                       icon: const Icon(Icons.add_photo_alternate_outlined),
                       label: Text('Add (${_portfolioPhotos.length}/10)'),
                     ),
@@ -634,16 +635,17 @@ class _ProviderProfileSetupScreenState
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 18),
                     ),
-                    child: _submitting
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.4,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text('Create account'),
+                    child:
+                        _submitting
+                            ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                color: Colors.white,
+                              ),
+                            )
+                            : const Text('Create account'),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xxl),
@@ -678,14 +680,15 @@ class _ProviderProfileSetupScreenState
         child: DropdownButton<T>(
           isExpanded: true,
           value: value,
-          items: items
-              .map(
-                (item) => DropdownMenuItem<T>(
-                  value: item,
-                  child: Text(itemLabel?.call(item) ?? item.toString()),
-                ),
-              )
-              .toList(),
+          items:
+              items
+                  .map(
+                    (item) => DropdownMenuItem<T>(
+                      value: item,
+                      child: Text(itemLabel?.call(item) ?? item.toString()),
+                    ),
+                  )
+                  .toList(),
           onChanged: onChanged,
         ),
       ),
@@ -704,9 +707,10 @@ class _ProviderProfileSetupScreenState
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.l),
         decoration: BoxDecoration(
-          color: selected
-              ? AppColors.availableGreen.withValues(alpha: 0.08)
-              : AppColors.softGray.withValues(alpha: 0.05),
+          color:
+              selected
+                  ? AppColors.availableGreen.withValues(alpha: 0.08)
+                  : AppColors.softGray.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: selected ? AppColors.availableGreen : AppColors.borderLight,

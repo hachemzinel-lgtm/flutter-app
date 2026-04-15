@@ -1,245 +1,304 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:geocoding/geocoding.dart';
-import 'package:intl/intl.dart';
-import 'package:flutter_application_1/providers/auth_providers.dart';
-import 'package:flutter_application_1/models/user_model.dart';
-import 'package:flutter_application_1/views/app_colors.dart';
 
-class ProviderProfileScreen extends ConsumerStatefulWidget {
-  final String id;
+import 'package:flutter_application_1/models/work_provider_model.dart';
+import 'package:flutter_application_1/providers/auth_providers.dart';
+import 'package:flutter_application_1/providers/chat_provider.dart';
+import 'package:flutter_application_1/providers/profile_provider.dart';
+import 'package:flutter_application_1/views/app_colors.dart';
+import 'package:flutter_application_1/views/reviews_screen.dart';
+
+class ProviderProfileScreen extends ConsumerWidget {
   const ProviderProfileScreen({super.key, required this.id});
 
-  @override
-  ConsumerState<ProviderProfileScreen> createState() => _ProviderProfileScreenState();
-}
-
-class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
-  String _cityName = 'Loading location...';
-  
-  double _haversineDistance(GeoPoint a, GeoPoint b) {
-    const R = 6371.0;
-    final lat1 = a.latitude * pi / 180;
-    final lat2 = b.latitude * pi / 180;
-    final dLat = (b.latitude - a.latitude) * pi / 180;
-    final dLon = (b.longitude - a.longitude) * pi / 180;
-    final x = sin(dLat/2)*sin(dLat/2) + cos(lat1)*cos(lat2)*sin(dLon/2)*sin(dLon/2);
-    final c = 2*atan2(sqrt(x), sqrt(1-x));
-    return R * c;
-  }
-
-  Future<void> _fetchCityName(GeoPoint location) async {
-    try {
-      List<Placemark> placemarks = await placemarkFromCoordinates(location.latitude, location.longitude);
-      if (placemarks.isNotEmpty) {
-        if (mounted) setState(() => _cityName = placemarks.first.locality ?? 'Unknown city');
-      }
-    } catch (e) {
-      if (mounted) setState(() => _cityName = 'Location available');
-    }
-  }
-
-  Future<void> _onMessageTap(String targetId) async {
-    final currentUserId = ref.read(currentUserDocProvider).value?.uid;
-    if (currentUserId == null) return;
-    
-    final query = await FirebaseFirestore.instance.collection('conversations')
-        .where('participants', arrayContains: currentUserId)
-        .get();
-        
-    String? conversationId;
-    for (var doc in query.docs) {
-      final parts = List<String>.from(doc['participants']);
-      if (parts.contains(targetId)) {
-        conversationId = doc.id;
-        break;
-      }
-    }
-    
-    if (conversationId == null) {
-      final docRef = await FirebaseFirestore.instance.collection('conversations').add({
-        'participants': [currentUserId, targetId],
-        'createdAt': Timestamp.now(),
-        'lastMessage': '',
-        'lastMessageTime': Timestamp.now(),
-      });
-      conversationId = docRef.id;
-    }
-    
-    if (mounted) context.push('/messages/$conversationId');
-  }
+  final String id;
 
   @override
-  Widget build(BuildContext context) {
-    final currentUserDoc = ref.watch(currentUserDocProvider).value;
-    
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(profileProvider(id));
+    final stats = ref.watch(workProviderProfileStatsProvider(id));
+    final reviews = ref.watch(profileReviewsProvider(id));
+    final currentUser = ref.watch(currentUserDocProvider).value;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
-      body: FutureBuilder<DocumentSnapshot>(
-        future: FirebaseFirestore.instance.collection('users').doc(widget.id).get(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-          final data = snapshot.data!.data() as Map<String, dynamic>;
-          final user = UserModel.fromJson(data);
-          
-          if (user.location != null && _cityName == 'Loading location...') {
-            _fetchCityName(user.location!);
+      appBar: AppBar(title: const Text('Work Provider')),
+      body: profile.when(
+        data: (user) {
+          if (user is! WorkProviderModel) {
+            return const Center(child: Text('Could not load profile'));
           }
 
-          double? distance;
-          if (currentUserDoc?.location != null && user.location != null) {
-            distance = _haversineDistance(currentUserDoc!.location!, user.location!);
-          }
-          
-          return CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
+          return stats.when(
+            data: (providerStats) {
+              return reviews.when(
+                data: (reviewItems) {
+                  return ListView(
+                    padding: const EdgeInsets.all(16),
                     children: [
                       CircleAvatar(
                         radius: 50,
-                        backgroundImage: user.photoUrl != null && user.photoUrl!.isNotEmpty ? NetworkImage(user.photoUrl!) : null,
-                        child: user.photoUrl == null || user.photoUrl!.isEmpty ? const Icon(Icons.person, size: 50) : null,
+                        backgroundImage:
+                            user.photoUrl != null && user.photoUrl!.isNotEmpty
+                                ? NetworkImage(user.photoUrl!)
+                                : null,
+                        child:
+                            user.photoUrl == null || user.photoUrl!.isEmpty
+                                ? Text(
+                                  user.name.substring(0, 1).toUpperCase(),
+                                  style: const TextStyle(fontSize: 28),
+                                )
+                                : null,
                       ),
                       const SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(user.displayName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                          if (user.badgeVisible == true) ...[
+                          Flexible(
+                            child: Text(
+                              user.name,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          if (user.verificationStatus == 'approved') ...[
                             const SizedBox(width: 8),
-                            const Icon(Icons.verified_user, color: AppColors.accentBlue),
-                            const SizedBox(width: 4),
-                            const Text('Verified', style: TextStyle(color: AppColors.accentBlue, fontWeight: FontWeight.bold)),
-                          ]
+                            const Icon(
+                              Icons.verified_rounded,
+                              color: AppColors.accentBlue,
+                            ),
+                          ],
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Chip(label: Text(user.category ?? 'General')),
-                      if (distance != null) Text('${distance.toStringAsFixed(1)} km away', style: const TextStyle(color: Colors.grey)),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(width: 12, height: 12, decoration: BoxDecoration(shape: BoxShape.circle, color: user.availabilityToggle == true ? Colors.green : Colors.grey)),
-                          const SizedBox(width: 8),
-                          Text(user.availabilityToggle == true ? 'Available' : 'Unavailable'),
-                        ],
+                      const SizedBox(height: 6),
+                      Text(
+                        user.profession ?? 'Work Provider',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: AppColors.softGray),
                       ),
-                      
-                      const Divider(height: 32),
+                      const SizedBox(height: 24),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          Column(children: [
-                            Row(children: [const Icon(Icons.star, color: Colors.amber), Text(user.averageRating.toStringAsFixed(1), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))]),
-                            const Text('Rating')
-                          ]),
-                          Column(children: [
-                            Text('${user.reviewCount}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                            const Text('Reviews')
-                          ]),
-                          Column(children: [
-                            Text('${user.yearsExperience ?? 0}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                            const Text('yrs exp')
-                          ]),
-                        ],
-                      ),
-                      
-                      const Divider(height: 32),
-                      const Align(alignment: AlignmentDirectional.centerStart, child: Text('About', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
-                      const SizedBox(height: 8),
-                      Align(alignment: AlignmentDirectional.centerStart, child: Text(user.bio ?? 'No bio provided.')),
-                      const SizedBox(height: 16),
-                      Align(alignment: AlignmentDirectional.centerStart, child: Text('Service radius: ${user.serviceRadius ?? 0} km')),
-                      Align(alignment: AlignmentDirectional.centerStart, child: Text('Location: $_cityName')),
-                      const SizedBox(height: 32),
-                      
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Reviews', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                          if (currentUserDoc?.accountType == 'client')
-                            TextButton(
-                              onPressed: () => context.push('/rate-service/${widget.id}'),
-                              child: const Text('Leave a Review'),
-                            )
+                          Expanded(
+                            child: _StatCard(
+                              label: 'Rating',
+                              value: user.rating.toStringAsFixed(1),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _StatCard(
+                              label: 'Completed Jobs',
+                              value: providerStats.completedJobs.toString(),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _StatCard(
+                              label: 'Portfolio',
+                              value: user.portfolio.length.toString(),
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 16),
+                      SwitchListTile(
+                        value: user.isAvailableNow,
+                        onChanged: null,
+                        title: const Text('Available Now'),
+                      ),
+                      Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.location_on_outlined),
+                          title: const Text('Location'),
+                          subtitle: Text(user.address ?? 'Location not shared'),
+                        ),
+                      ),
+                      Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.handyman_outlined),
+                          title: const Text('Skills'),
+                          subtitle: Text(user.profession ?? 'No skills listed'),
+                        ),
+                      ),
+                      if ((user.bio ?? '').trim().isNotEmpty)
+                        Card(
+                          child: ListTile(
+                            title: const Text('Bio'),
+                            subtitle: Text(user.bio!),
+                          ),
+                        ),
+                      if (user.portfolio.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Portfolio',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          height: 110,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: user.portfolio.length,
+                            separatorBuilder:
+                                (_, _) => const SizedBox(width: 10),
+                            itemBuilder: (context, index) {
+                              final image = user.portfolio[index];
+                              return ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: Image.network(
+                                  image,
+                                  width: 110,
+                                  height: 110,
+                                  fit: BoxFit.cover,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed:
+                                  currentUser == null
+                                      ? null
+                                      : () =>
+                                          _messageProvider(context, ref, user),
+                              icon: const Icon(Icons.chat_bubble_outline),
+                              label: const Text('Message'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          OutlinedButton(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => ReviewsScreen(providerId: id),
+                                ),
+                              );
+                            },
+                            child: const Text('Reviews'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      if (reviewItems.isEmpty)
+                        const Text('No reviews yet.')
+                      else
+                        ...reviewItems.map(
+                          (review) => ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: CircleAvatar(
+                              backgroundImage:
+                                  review.reviewerPhoto.isNotEmpty
+                                      ? NetworkImage(review.reviewerPhoto)
+                                      : null,
+                              child:
+                                  review.reviewerPhoto.isEmpty
+                                      ? const Icon(Icons.person)
+                                      : null,
+                            ),
+                            title: Text(review.reviewerName),
+                            subtitle: Text(
+                              review.text.isEmpty
+                                  ? 'No written review.'
+                                  : review.text,
+                            ),
+                            trailing: Text(
+                              review.rating.toStringAsFixed(1),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
-                  ),
-                ),
-              ),
-              FutureBuilder<QuerySnapshot>(
-                future: FirebaseFirestore.instance.collection('users').doc(widget.id).collection('reviews').orderBy('timestamp', descending: true).limit(5).get(),
-                builder: (context, reviewSnapshot) {
-                  if (!reviewSnapshot.hasData) return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()));
-                  final reviews = reviewSnapshot.data!.docs;
-                  if (reviews.isEmpty) return const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(16), child: Text('No reviews yet.')));
-                  
-                  return SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final rev = reviews[index].data() as Map<String, dynamic>;
-                        final date = rev['timestamp'] != null ? DateFormat.yMMMd().format((rev['timestamp'] as Timestamp).toDate()) : '';
-                        
-                        return ListTile(
-                          leading: CircleAvatar(
-                            backgroundImage: rev['fromPhotoUrl'] != null && rev['fromPhotoUrl'].toString().isNotEmpty ? NetworkImage(rev['fromPhotoUrl']) : null, 
-                            child: rev['fromPhotoUrl'] == null || rev['fromPhotoUrl'].toString().isEmpty ? const Icon(Icons.person) : null
-                          ),
-                          title: Row(
-                            children: [
-                              Expanded(child: Text(rev['fromName'] ?? 'Anonymous')),
-                              Row(children: List.generate(5, (i) => Icon(Icons.star, size: 14, color: i < (rev['rating'] ?? 0) ? Colors.amber : Colors.grey))),
-                            ],
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(date, style: const TextStyle(fontSize: 12)),
-                              if (rev['comment'] != null && rev['comment'].toString().isNotEmpty) ...[
-                                const SizedBox(height: 4),
-                                Text(rev['comment']),
-                              ]
-                            ],
-                          ),
-                        );
-                      },
-                      childCount: reviews.length,
-                    ),
                   );
                 },
-              ),
-              if (user.reviewCount > 5)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Center(child: TextButton(onPressed: () {}, child: Text('See all ${user.reviewCount} reviews'))),
-                  ),
-                ),
-            ],
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error:
+                    (e, _) =>
+                        const Center(child: Text('Could not load profile')),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error:
+                (e, _) => const Center(child: Text('Could not load profile')),
           );
         },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => const Center(child: Text('Could not load profile')),
       ),
-      bottomNavigationBar: widget.id == currentUserDoc?.uid
-          ? null
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: FilledButton(
-                onPressed: () => _onMessageTap(widget.id),
-                child: const Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Text('Message', style: TextStyle(fontSize: 18)),
-                ),
-              ),
-            ),
+    );
+  }
+
+  Future<void> _messageProvider(
+    BuildContext context,
+    WidgetRef ref,
+    WorkProviderModel provider,
+  ) async {
+    final currentUser = ref.read(currentUserDocProvider).value;
+    if (currentUser == null) {
+      return;
+    }
+
+    try {
+      final conversation = await ref
+          .read(chatServiceProvider)
+          .getOrCreateConversation(
+            currentUser: currentUser,
+            otherUser: provider,
+          );
+      if (!context.mounted) {
+        return;
+      }
+      context.push(
+        '/messages/${conversation.id}?otherName=${Uri.encodeComponent(provider.name)}',
+      );
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  const _StatCard({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(label, textAlign: TextAlign.center),
+        ],
+      ),
     );
   }
 }

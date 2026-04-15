@@ -14,11 +14,20 @@ final chatSessionRepositoryProvider = Provider<ChatSessionRepository>((ref) {
 final userChatSessionsProvider = StreamProvider.autoDispose<List<ChatSession>>((
   ref,
 ) {
-  final user = ref.watch(authStateProvider).value;
+  final user = ref.watch(currentUserProvider);
   if (user == null) return const Stream.empty();
 
   final repository = ref.watch(chatSessionRepositoryProvider);
-  return repository.getUserChatSessions(user.uid);
+  final stream = repository.getUserChatSessions(user.uid);
+  return (() async* {
+    try {
+      await for (final sessions in stream) {
+        yield sessions;
+      }
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+  })();
 });
 
 class ActiveChatSessionIdNotifier extends Notifier<String?> {
@@ -35,11 +44,20 @@ final activeChatSessionIdProvider =
 // Stream of messages for the currently active session
 final activeSessionMessagesProvider =
     StreamProvider.autoDispose<List<ChatMessage>>((ref) {
-      final user = ref.watch(authStateProvider).value;
+      final user = ref.watch(currentUserProvider);
       final sessionId = ref.watch(activeChatSessionIdProvider);
 
       if (user == null || sessionId == null) return const Stream.empty();
 
       final repository = ref.watch(chatSessionRepositoryProvider);
-      return repository.watchSessionMessages(user.uid, sessionId);
+      final stream = repository.watchSessionMessages(user.uid, sessionId);
+      return (() async* {
+        try {
+          await for (final messages in stream) {
+            yield messages;
+          }
+        } catch (error, stackTrace) {
+          Error.throwWithStackTrace(error, stackTrace);
+        }
+      })();
     });

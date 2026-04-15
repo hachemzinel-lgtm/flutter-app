@@ -15,9 +15,9 @@ class GoogleAuthService {
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
     GoogleSignIn? googleSignIn,
-  })  : _auth = auth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn();
+  }) : _auth = auth ?? FirebaseAuth.instance,
+       _firestore = firestore ?? FirebaseFirestore.instance,
+       _googleSignIn = googleSignIn ?? GoogleSignIn();
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
@@ -55,7 +55,6 @@ class GoogleAuthService {
             'emailVerified': user.emailVerified,
             'accountType': null,
             'profileComplete': false,
-            'profileCompleted': false,
             'notificationsEnabled': true,
             'createdAt': FieldValue.serverTimestamp(),
             'updatedAt': FieldValue.serverTimestamp(),
@@ -69,9 +68,7 @@ class GoogleAuthService {
         e.message ?? 'Google sign-in failed. Please try again.',
       );
     } catch (e) {
-      throw GoogleAuthException(
-        'Google sign-in failed: ${e.toString()}',
-      );
+      throw GoogleAuthException('Google sign-in failed: ${e.toString()}');
     }
   }
 

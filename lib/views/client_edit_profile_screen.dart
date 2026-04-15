@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -13,11 +12,15 @@ import 'package:flutter_application_1/views/app_colors.dart';
 import 'package:flutter_application_1/views/app_spacing.dart';
 import 'package:flutter_application_1/views/app_text_styles.dart';
 import 'package:flutter_application_1/models/client_model.dart';
+import 'package:flutter_application_1/providers/auth_providers.dart';
+import 'package:flutter_application_1/providers/profile_provider.dart';
+import 'package:flutter_application_1/services/location_service.dart';
 import 'package:flutter_application_1/services/storage_service.dart';
-import 'package:flutter_application_1/providers/auth_provider.dart';
 
 class ClientEditProfileScreen extends ConsumerStatefulWidget {
-  const ClientEditProfileScreen({super.key});
+  const ClientEditProfileScreen({super.key, required this.initialUser});
+
+  final ClientModel initialUser;
 
   @override
   ConsumerState<ClientEditProfileScreen> createState() =>
@@ -32,6 +35,7 @@ class _ClientEditProfileScreenState
   bool _initialized = false;
   bool _notificationsEnabled = true;
   bool _saving = false;
+  double? _uploadProgress;
   String _language = 'en';
   GeoPoint? _location;
   File? _newImage;
@@ -44,15 +48,15 @@ class _ClientEditProfileScreenState
     super.dispose();
   }
 
-  void _hydrate(ClientModel user) {
+  void _hydrate(EditProfileSeed seed) {
     if (_initialized) return;
     _initialized = true;
-    _nameController.text = user.name;
-    _phoneController.text = user.phone;
-    _addressController.text = user.address ?? '';
-    _language = user.language ?? 'en';
-    _notificationsEnabled = user.notificationsEnabled;
-    _location = user.location;
+    _nameController.text = seed.name;
+    _phoneController.text = seed.phone;
+    _addressController.text = seed.address;
+    _language = seed.language;
+    _notificationsEnabled = seed.notificationsEnabled;
+    _location = seed.user.location;
   }
 
   Future<void> _pickImage() async {
@@ -67,15 +71,13 @@ class _ClientEditProfileScreenState
 
   Future<void> _useCurrentLocation() async {
     try {
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
+      final position = await LocationService().getCurrentLocation(
+        context: context,
+        onRetry: _useCurrentLocation,
+      );
+      if (position == null) {
+        return;
       }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        throw Exception('Location permission is required.');
-      }
-      final position = await Geolocator.getCurrentPosition();
       setState(() {
         _location = GeoPoint(position.latitude, position.longitude);
       });
@@ -96,7 +98,15 @@ class _ClientEditProfileScreenState
       final uid = user.id;
       String? photoUrl = user.photoUrl;
       if (_newImage != null) {
-        photoUrl = await StorageService.uploadProfilePicture(uid, _newImage!);
+        photoUrl = await StorageService.uploadProfilePictureWithProgress(
+          uid,
+          _newImage!,
+          onProgress: (progress) {
+            if (mounted) {
+              setState(() => _uploadProgress = progress);
+            }
+          },
+        );
       }
 
       final updated = ClientModel(
@@ -106,9 +116,10 @@ class _ClientEditProfileScreenState
         phone: _phoneController.text.trim(),
         photoUrl: photoUrl,
         location: _location,
-        address: _addressController.text.trim().isEmpty
-            ? null
-            : _addressController.text.trim(),
+        address:
+            _addressController.text.trim().isEmpty
+                ? null
+                : _addressController.text.trim(),
         language: _language,
         createdAt: user.createdAt,
         notificationsEnabled: _notificationsEnabled,
@@ -118,6 +129,11 @@ class _ClientEditProfileScreenState
       );
 
       await ref.read(authServiceProvider).setupProfile(updated);
+      ref.invalidate(currentUserDataProvider);
+      ref.invalidate(currentUserDocProvider);
+      ref.invalidate(currentProfileProvider);
+      ref.invalidate(profileProvider(user.id));
+      ref.invalidate(clientProfileStatsProvider(user.id));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -134,17 +150,20 @@ class _ClientEditProfileScreenState
         ),
       );
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _uploadProgress = null;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserDocProvider).value;
-    if (user is! ClientModel) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    _hydrate(user);
+    final seed = ref.watch(editProfileProvider(widget.initialUser));
+    _hydrate(seed);
+    final user = widget.initialUser;
 
     return Scaffold(
       appBar: AppBar(title: const Text('My Profile')),
@@ -158,18 +177,32 @@ class _ClientEditProfileScreenState
                 radius: 46,
                 backgroundColor: AppColors.accentBlue.withValues(alpha: 0.12),
                 backgroundImage: _profileImageProvider(user),
-                child: (_newImage == null && user.photoUrl == null)
-                    ? Text(
-                        user.name.substring(0, 1).toUpperCase(),
-                        style: AppTextStyles.headingSmall.copyWith(
-                          color: AppColors.accentBlue,
-                        ),
-                      )
-                    : null,
+                child:
+                    (_newImage == null && user.photoUrl == null)
+                        ? Text(
+                          user.name.substring(0, 1).toUpperCase(),
+                          style: AppTextStyles.headingSmall.copyWith(
+                            color: AppColors.accentBlue,
+                          ),
+                        )
+                        : null,
               ),
             ),
           ),
           const SizedBox(height: AppSpacing.m),
+          if (_uploadProgress != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.m),
+              child: LinearProgressIndicator(value: _uploadProgress),
+            ),
+          if (_uploadProgress != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.s),
+              child: Text(
+                'Uploading photo... ${(_uploadProgress! * 100).round()}%',
+                style: AppTextStyles.bodyMedium,
+              ),
+            ),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -181,7 +214,9 @@ class _ClientEditProfileScreenState
               ),
               Text(
                 '(${user.reviewCount ?? 0} reviews)',
-                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.softGray),
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.softGray,
+                ),
               ),
             ],
           ),
@@ -236,13 +271,14 @@ class _ClientEditProfileScreenState
           Text('Reviews Received', style: AppTextStyles.headingSmall),
           const SizedBox(height: AppSpacing.m),
           StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.id)
-                .collection('reviews')
-                .orderBy('timestamp', descending: true)
-                .limit(5)
-                .snapshots(),
+            stream:
+                FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(user.id)
+                    .collection('reviews')
+                    .orderBy('timestamp', descending: true)
+                    .limit(5)
+                    .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -251,38 +287,63 @@ class _ClientEditProfileScreenState
                 return const Text('No reviews received yet.');
               }
               return Column(
-                children: snapshot.data!.docs.map((doc) {
-                  final rev = doc.data() as Map<String, dynamic>;
-                  final date = rev['timestamp'] != null 
-                    ? DateFormat.yMMMd().format((rev['timestamp'] as Timestamp).toDate()) 
-                    : '';
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: CircleAvatar(
-                      backgroundImage: rev['fromPhotoUrl'] != null && rev['fromPhotoUrl'].toString().isNotEmpty 
-                        ? NetworkImage(rev['fromPhotoUrl']) : null,
-                      child: rev['fromPhotoUrl'] == null || rev['fromPhotoUrl'].toString().isEmpty 
-                        ? const Icon(Icons.person) : null,
-                    ),
-                    title: Row(
-                      children: [
-                        Expanded(child: Text(rev['fromName'] ?? 'Anonymous')),
-                        Row(children: List.generate(5, (i) => Icon(Icons.star, size: 14, color: i < (rev['rating'] ?? 0) ? Colors.amber : Colors.grey))),
-                      ],
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(date, style: const TextStyle(fontSize: 12)),
-                        if (rev['comment'] != null && rev['comment'].toString().isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(rev['comment']),
-                          ),
-                      ],
-                    ),
-                  );
-                }).toList(),
+                children:
+                    snapshot.data!.docs.map((doc) {
+                      final rev = doc.data() as Map<String, dynamic>;
+                      final date =
+                          rev['timestamp'] != null
+                              ? DateFormat.yMMMd().format(
+                                (rev['timestamp'] as Timestamp).toDate(),
+                              )
+                              : '';
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          backgroundImage:
+                              rev['fromPhotoUrl'] != null &&
+                                      rev['fromPhotoUrl'].toString().isNotEmpty
+                                  ? NetworkImage(rev['fromPhotoUrl'])
+                                  : null,
+                          child:
+                              rev['fromPhotoUrl'] == null ||
+                                      rev['fromPhotoUrl'].toString().isEmpty
+                                  ? const Icon(Icons.person)
+                                  : null,
+                        ),
+                        title: Row(
+                          children: [
+                            Expanded(
+                              child: Text(rev['fromName'] ?? 'Anonymous'),
+                            ),
+                            Row(
+                              children: List.generate(
+                                5,
+                                (i) => Icon(
+                                  Icons.star,
+                                  size: 14,
+                                  color:
+                                      i < (rev['rating'] ?? 0)
+                                          ? Colors.amber
+                                          : Colors.grey,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(date, style: const TextStyle(fontSize: 12)),
+                            if (rev['comment'] != null &&
+                                rev['comment'].toString().isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(rev['comment']),
+                              ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
               );
             },
           ),
@@ -294,16 +355,17 @@ class _ClientEditProfileScreenState
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 18),
             ),
-            child: _saving
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.4,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Text('Save Changes'),
+            child:
+                _saving
+                    ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.4,
+                        color: Colors.white,
+                      ),
+                    )
+                    : const Text('Save Changes'),
           ),
           const SizedBox(height: AppSpacing.m),
           OutlinedButton(

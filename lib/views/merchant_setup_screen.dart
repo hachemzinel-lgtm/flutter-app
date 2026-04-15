@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -13,6 +12,7 @@ import 'package:flutter_application_1/views/app_text_styles.dart';
 import 'package:flutter_application_1/views/marketplace_taxonomy.dart';
 import 'package:flutter_application_1/models/marketplace_model.dart';
 import 'package:flutter_application_1/views/map_preview_widget.dart';
+import 'package:flutter_application_1/services/location_service.dart';
 import 'package:flutter_application_1/services/storage_service.dart';
 import 'package:flutter_application_1/providers/auth_provider.dart';
 
@@ -90,21 +90,13 @@ class _MarketplaceProfileSetupScreenState
   Future<void> _detectLocation() async {
     setState(() => _detectingLocation = true);
     try {
-      final enabled = await Geolocator.isLocationServiceEnabled();
-      if (!enabled) {
-        throw Exception('Location services are disabled.');
+      final position = await LocationService().getCurrentLocation(
+        context: context,
+        onRetry: _detectLocation,
+      );
+      if (position == null) {
+        return;
       }
-
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        throw Exception('Location permission is required.');
-      }
-
-      final position = await Geolocator.getCurrentPosition();
       setState(() {
         _location = GeoPoint(position.latitude, position.longitude);
       });
@@ -167,9 +159,10 @@ class _MarketplaceProfileSetupScreenState
         phone: _phoneController.text.trim(),
         photoUrl: storefrontUrl,
         location: _location,
-        address: _addressController.text.trim().isEmpty
-            ? null
-            : _addressController.text.trim(),
+        address:
+            _addressController.text.trim().isEmpty
+                ? null
+                : _addressController.text.trim(),
         language: _language,
         createdAt: DateTime.now(),
         notificationsEnabled: _notificationsEnabled,
@@ -229,32 +222,34 @@ class _MarketplaceProfileSetupScreenState
                     decoration: BoxDecoration(
                       color: AppColors.softGray.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(20),
-                      image: _storefrontImage == null
-                          ? null
-                          : DecorationImage(
-                              image: FileImage(_storefrontImage!),
-                              fit: BoxFit.cover,
-                            ),
-                    ),
-                    child: _storefrontImage == null
-                        ? Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.storefront_outlined,
-                                size: 42,
-                                color: AppColors.accentBlue,
+                      image:
+                          _storefrontImage == null
+                              ? null
+                              : DecorationImage(
+                                image: FileImage(_storefrontImage!),
+                                fit: BoxFit.cover,
                               ),
-                              const SizedBox(height: AppSpacing.s),
-                              Text(
-                                'Add storefront photo',
-                                style: AppTextStyles.bodyMedium.copyWith(
+                    ),
+                    child:
+                        _storefrontImage == null
+                            ? Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.storefront_outlined,
+                                  size: 42,
                                   color: AppColors.accentBlue,
                                 ),
-                              ),
-                            ],
-                          )
-                        : null,
+                                const SizedBox(height: AppSpacing.s),
+                                Text(
+                                  'Add storefront photo',
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    color: AppColors.accentBlue,
+                                  ),
+                                ),
+                              ],
+                            )
+                            : null,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xl),
@@ -328,13 +323,14 @@ class _MarketplaceProfileSetupScreenState
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: _detectingLocation ? null : _detectLocation,
-                    icon: _detectingLocation
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.my_location_outlined),
+                    icon:
+                        _detectingLocation
+                            ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Icon(Icons.my_location_outlined),
                     label: const Text('Use my current location'),
                   ),
                 ),
@@ -367,9 +363,8 @@ class _MarketplaceProfileSetupScreenState
                       style: AppTextStyles.headingSmall,
                     ),
                     TextButton.icon(
-                      onPressed: _photos.length >= 20
-                          ? null
-                          : _pickAdditionalPhotos,
+                      onPressed:
+                          _photos.length >= 20 ? null : _pickAdditionalPhotos,
                       icon: const Icon(Icons.add_photo_alternate_outlined),
                       label: Text('Add (${_photos.length}/20)'),
                     ),
@@ -402,8 +397,8 @@ class _MarketplaceProfileSetupScreenState
                             top: 6,
                             right: 6,
                             child: InkWell(
-                              onTap: () =>
-                                  setState(() => _photos.removeAt(index)),
+                              onTap:
+                                  () => setState(() => _photos.removeAt(index)),
                               child: const CircleAvatar(
                                 radius: 12,
                                 backgroundColor: Colors.black54,
@@ -429,16 +424,17 @@ class _MarketplaceProfileSetupScreenState
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 18),
                     ),
-                    child: _submitting
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.4,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text('Create account'),
+                    child:
+                        _submitting
+                            ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                color: Colors.white,
+                              ),
+                            )
+                            : const Text('Create account'),
                   ),
                 ),
               ],
@@ -460,12 +456,15 @@ class _MarketplaceProfileSetupScreenState
         child: DropdownButton<String>(
           isExpanded: true,
           value: _category,
-          items: MarketplaceTaxonomy.marketplaceCategories
-              .map(
-                (category) =>
-                    DropdownMenuItem(value: category, child: Text(category)),
-              )
-              .toList(),
+          items:
+              MarketplaceTaxonomy.marketplaceCategories
+                  .map(
+                    (category) => DropdownMenuItem(
+                      value: category,
+                      child: Text(category),
+                    ),
+                  )
+                  .toList(),
           onChanged: (value) => setState(() => _category = value!),
         ),
       ),

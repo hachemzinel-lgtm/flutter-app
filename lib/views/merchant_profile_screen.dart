@@ -20,10 +20,8 @@ class MerchantProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .snapshots(),
+      stream:
+          FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Scaffold(
@@ -94,9 +92,10 @@ class MerchantProfileScreen extends ConsumerWidget {
                               children: [
                                 _Pill(
                                   icon: Icons.star_rounded,
-                                  label: marketplace.rating == 0
-                                      ? 'New'
-                                      : '${marketplace.rating.toStringAsFixed(1)} (${marketplace.reviewCount})',
+                                  label:
+                                      marketplace.rating == 0
+                                          ? 'New'
+                                          : '${marketplace.rating.toStringAsFixed(1)} (${marketplace.reviewCount})',
                                   color: AppColors.starGold,
                                 ),
                                 if (_shortLocation(
@@ -133,8 +132,8 @@ class MerchantProfileScreen extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: () =>
-                                  _startChat(context, ref, marketplace),
+                              onPressed:
+                                  () => _startChat(context, ref, marketplace),
                               icon: const Icon(
                                 Icons.chat_bubble_outline_rounded,
                               ),
@@ -150,15 +149,19 @@ class MerchantProfileScreen extends ConsumerWidget {
                           ),
                           const SizedBox(width: AppSpacing.m),
                           OutlinedButton.icon(
-                            onPressed: () =>
-                                _shareProfile(context, marketplace),
+                            onPressed:
+                                () => _shareProfile(context, marketplace),
                             icon: const Icon(Icons.share_outlined),
                             label: const Text('Share'),
                           ),
                           const SizedBox(width: AppSpacing.s),
                           OutlinedButton.icon(
-                            onPressed: () =>
-                                _reportProfile(context, ref, marketplace.id),
+                            onPressed:
+                                () => _reportProfile(
+                                  context,
+                                  ref,
+                                  marketplace.id,
+                                ),
                             icon: const Icon(Icons.flag_outlined),
                             label: const Text('Report'),
                           ),
@@ -191,10 +194,10 @@ class MerchantProfileScreen extends ConsumerWidget {
                                   label: 'Location',
                                   value:
                                       _shortLocation(
-                                        marketplace.address,
-                                      ).isEmpty
-                                      ? 'Not shared'
-                                      : _shortLocation(marketplace.address),
+                                            marketplace.address,
+                                          ).isEmpty
+                                          ? 'Not shared'
+                                          : _shortLocation(marketplace.address),
                                 ),
                                 _DetailTile(
                                   label: 'Hours',
@@ -210,48 +213,50 @@ class MerchantProfileScreen extends ConsumerWidget {
                       const SizedBox(height: AppSpacing.l),
                       _Section(
                         title: 'Photos',
-                        trailing: marketplace.photos.isNotEmpty
-                            ? Text(
-                                '${marketplace.photos.length} photos',
-                                style: AppTextStyles.caption,
-                              )
-                            : null,
-                        child: marketplace.photos.isEmpty
-                            ? Text(
-                                'No photos uploaded yet.',
-                                style: AppTextStyles.bodyMedium,
-                              )
-                            : GridView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: marketplace.photos.length,
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 3,
-                                      crossAxisSpacing: 10,
-                                      mainAxisSpacing: 10,
-                                    ),
-                                itemBuilder: (context, index) {
-                                  final image = marketplace.photos[index];
-                                  return InkWell(
-                                    onTap: () => _openGallery(context, image),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(14),
-                                      child: Image.network(
-                                        image,
-                                        fit: BoxFit.cover,
+                        trailing:
+                            marketplace.photos.isNotEmpty
+                                ? Text(
+                                  '${marketplace.photos.length} photos',
+                                  style: AppTextStyles.caption,
+                                )
+                                : null,
+                        child:
+                            marketplace.photos.isEmpty
+                                ? Text(
+                                  'No photos uploaded yet.',
+                                  style: AppTextStyles.bodyMedium,
+                                )
+                                : GridView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: marketplace.photos.length,
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: 3,
+                                        crossAxisSpacing: 10,
+                                        mainAxisSpacing: 10,
                                       ),
-                                    ),
-                                  );
-                                },
-                              ),
+                                  itemBuilder: (context, index) {
+                                    final image = marketplace.photos[index];
+                                    return InkWell(
+                                      onTap: () => _openGallery(context, image),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(14),
+                                        child: Image.network(
+                                          image,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
                       ),
                       const SizedBox(height: AppSpacing.l),
                       _Section(
                         title: 'Reviews',
                         trailing: TextButton(
-                          onPressed: () =>
-                              context.push('/reviews/${marketplace.id}'),
+                          onPressed:
+                              () => context.push('/reviews/${marketplace.id}'),
                           child: const Text('See all'),
                         ),
                         child: StreamBuilder(
@@ -270,20 +275,21 @@ class MerchantProfileScreen extends ConsumerWidget {
                               );
                             }
                             return Column(
-                              children: reviews.take(5).map((review) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(
-                                    bottom: AppSpacing.m,
-                                  ),
-                                  child: _ReviewCard(
-                                    name: review.reviewerName,
-                                    photoUrl: review.reviewerPhoto,
-                                    rating: review.rating,
-                                    text: review.text,
-                                    date: review.createdAt,
-                                  ),
-                                );
-                              }).toList(),
+                              children:
+                                  reviews.take(5).map((review) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: AppSpacing.m,
+                                      ),
+                                      child: _ReviewCard(
+                                        name: review.reviewerName,
+                                        photoUrl: review.reviewerPhoto,
+                                        rating: review.rating,
+                                        text: review.text,
+                                        date: review.createdAt,
+                                      ),
+                                    );
+                                  }).toList(),
                             );
                           },
                         ),
@@ -426,7 +432,7 @@ class _Section extends StatelessWidget {
           Row(
             children: [
               Expanded(child: Text(title, style: AppTextStyles.headingSmall)),
-              ?trailing,
+              if (trailing != null) trailing!,
             ],
           ),
           const SizedBox(height: AppSpacing.m),
@@ -533,18 +539,18 @@ class _ReviewCard extends StatelessWidget {
               CircleAvatar(
                 radius: 16,
                 backgroundColor: AppColors.accentBlue.withValues(alpha: 0.12),
-                backgroundImage: photoUrl.isEmpty
-                    ? null
-                    : NetworkImage(photoUrl),
-                child: photoUrl.isEmpty
-                    ? Text(
-                        name.substring(0, 1).toUpperCase(),
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.accentBlue,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      )
-                    : null,
+                backgroundImage:
+                    photoUrl.isEmpty ? null : NetworkImage(photoUrl),
+                child:
+                    photoUrl.isEmpty
+                        ? Text(
+                          name.substring(0, 1).toUpperCase(),
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.accentBlue,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        )
+                        : null,
               ),
               const SizedBox(width: AppSpacing.m),
               Expanded(

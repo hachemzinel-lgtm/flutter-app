@@ -34,8 +34,7 @@ class ClientModel extends UserModel {
       reviewCount: data['reviewCount'] ?? 0,
       isBanned: data['isBanned'] ?? false,
       notificationsEnabled: data['notificationsEnabled'] ?? true,
-      profileCompleted:
-          data['profileComplete'] ?? data['profileCompleted'] ?? false,
+      profileCompleted: data['profileComplete'] ?? false,
     );
   }
 }

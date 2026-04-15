@@ -36,12 +36,12 @@ class UserModel {
   final String? photoUrl;
   final DateTime? createdAt;
   final bool isEmailVerified;
-  
+
   // Role & Profile Status
   final UserType userType; // Replaces redundant role strings
   final String role; // System role, e.g. "user" or "admin"
   final bool profileCompleted;
-  
+
   // User Data
   final String? phone;
   final GeoPoint? location;
@@ -53,7 +53,8 @@ class UserModel {
   final bool notificationsEnabled;
 
   // Work Provider / Marketplace specific fields
-  final String? verificationStatus; // "unverified", "ai_verified", "admin_verified", "rejected"
+  final String?
+  verificationStatus; // "unverified", "ai_verified", "admin_verified", "rejected"
   final int verificationAttempts;
   final bool availabilityToggle;
   final bool openStatus;
@@ -134,24 +135,25 @@ class UserModel {
       email: json['email'] as String? ?? '',
       name: json['name'] as String? ?? json['displayName'] as String? ?? '',
       photoUrl: json['photoUrl'] as String?,
-      createdAt: json['createdAt'] is Timestamp 
-          ? (json['createdAt'] as Timestamp).toDate() 
+      createdAt: json['createdAt'] is Timestamp
+          ? (json['createdAt'] as Timestamp).toDate()
           : (json['createdAt'] as DateTime?),
       isEmailVerified: json['isEmailVerified'] as bool? ?? false,
       userType: parseUserType(
         json['userType']?.toString() ??
-        json['accountType']?.toString() ??
-        'client',
+            json['accountType']?.toString() ??
+            'client',
       ),
       role: json['role'] as String? ?? 'user',
-      profileCompleted: json['profileCompleted'] as bool? ??
-          json['profileComplete'] as bool? ?? false,
+      profileCompleted: json['profileComplete'] as bool? ?? false,
       phone: json['phone'] as String?,
       location: json['location'] as GeoPoint?,
       address: json['address'] as String?,
       language: json['language'] as String? ?? 'en',
-      rating: (json['rating'] as num?)?.toDouble() ??
-          (json['averageRating'] as num?)?.toDouble() ?? 0.0,
+      rating:
+          (json['rating'] as num?)?.toDouble() ??
+          (json['averageRating'] as num?)?.toDouble() ??
+          0.0,
       reviewCount: json['reviewCount'] as int? ?? 0,
       isBanned: json['isBanned'] as bool? ?? false,
       notificationsEnabled: json['notificationsEnabled'] as bool? ?? true,
@@ -170,8 +172,8 @@ class UserModel {
       documentUrl: json['documentUrl'] as String?,
       verificationReason: json['verificationReason'] as String?,
       verificationConfidence: json['verificationConfidence'] as String?,
-      verificationTimestamp: json['verificationTimestamp'] is Timestamp 
-          ? (json['verificationTimestamp'] as Timestamp).toDate() 
+      verificationTimestamp: json['verificationTimestamp'] is Timestamp
+          ? (json['verificationTimestamp'] as Timestamp).toDate()
           : (json['verificationTimestamp'] as DateTime?),
     );
   }
@@ -186,11 +188,11 @@ class UserModel {
       'photoUrl': photoUrl,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : null,
       'isEmailVerified': isEmailVerified,
-      'accountType': userType.stringValue, // Standardized string field for the DB
+      'accountType':
+          userType.stringValue, // Standardized string field for the DB
       'userType': userType.stringValue, // Standardized string field for the DB
       'role': role,
-      'profileComplete': profileCompleted, // Write both for compatibility
-      'profileCompleted': profileCompleted,
+      'profileComplete': profileCompleted,
       'phone': phone,
       'location': location,
       'address': address,
@@ -215,7 +217,9 @@ class UserModel {
       'documentUrl': documentUrl,
       'verificationReason': verificationReason,
       'verificationConfidence': verificationConfidence,
-      'verificationTimestamp': verificationTimestamp != null ? Timestamp.fromDate(verificationTimestamp!) : null,
+      'verificationTimestamp': verificationTimestamp != null
+          ? Timestamp.fromDate(verificationTimestamp!)
+          : null,
     };
   }
 
@@ -266,9 +270,14 @@ class UserModel {
       photoUrl: photoUrl ?? this.photoUrl,
       createdAt: createdAt ?? this.createdAt,
       isEmailVerified: isEmailVerified ?? this.isEmailVerified,
-      userType: userType ?? (accountType != null ? UserModel.parseUserType(accountType) : this.userType),
+      userType:
+          userType ??
+          (accountType != null
+              ? UserModel.parseUserType(accountType)
+              : this.userType),
       role: role ?? this.role,
-      profileCompleted: profileCompleted ?? profileComplete ?? this.profileCompleted,
+      profileCompleted:
+          profileCompleted ?? profileComplete ?? this.profileCompleted,
       phone: phone ?? this.phone,
       location: location ?? this.location,
       address: address ?? this.address,
@@ -291,8 +300,10 @@ class UserModel {
       yearsExperience: yearsExperience ?? this.yearsExperience,
       documentUrl: documentUrl ?? this.documentUrl,
       verificationReason: verificationReason ?? this.verificationReason,
-      verificationConfidence: verificationConfidence ?? this.verificationConfidence,
-      verificationTimestamp: verificationTimestamp ?? this.verificationTimestamp,
+      verificationConfidence:
+          verificationConfidence ?? this.verificationConfidence,
+      verificationTimestamp:
+          verificationTimestamp ?? this.verificationTimestamp,
     );
   }
 
@@ -317,18 +328,18 @@ class UserModel {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        email,
-        name,
-        photoUrl,
-        userType,
-        profileCompleted,
-        rating,
-        reviewCount,
-        isBanned,
-        verificationStatus,
-        availabilityToggle,
-        openStatus,
-        badgeVisible,
-      );
+    id,
+    email,
+    name,
+    photoUrl,
+    userType,
+    profileCompleted,
+    rating,
+    reviewCount,
+    isBanned,
+    verificationStatus,
+    availabilityToggle,
+    openStatus,
+    badgeVisible,
+  );
 }

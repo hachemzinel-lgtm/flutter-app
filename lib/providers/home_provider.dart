@@ -12,13 +12,17 @@ final discoveryServiceProvider = Provider<DiscoveryService>((ref) {
 final topRatedProvidersProvider = FutureProvider<List<DiscoverySearchResult>>((
   ref,
 ) async {
-  final user = ref.watch(currentUserDocProvider).value;
-  return ref
-      .read(discoveryServiceProvider)
-      .topRatedProviders(
-        savedLocation: user?.location,
-        savedAddress: user?.address,
-      );
+  try {
+    final user = ref.watch(currentUserDocProvider).asData?.value;
+    return ref
+        .read(discoveryServiceProvider)
+        .topRatedProviders(
+          savedLocation: user?.location,
+          savedAddress: user?.address,
+        );
+  } catch (error, stackTrace) {
+    Error.throwWithStackTrace(error, stackTrace);
+  }
 });
 
 final searchResultsProvider = FutureProvider.family
@@ -26,7 +30,11 @@ final searchResultsProvider = FutureProvider.family
       ref,
       request,
     ) async {
-      return ref.read(discoveryServiceProvider).search(request);
+      try {
+        return ref.read(discoveryServiceProvider).search(request);
+      } catch (error, stackTrace) {
+        Error.throwWithStackTrace(error, stackTrace);
+      }
     });
 
 final selectedRadiusProvider = StateProvider<double>((ref) => 10);
@@ -37,5 +45,16 @@ final manualSearchAddressProvider = StateProvider<String>((ref) => '');
 
 final providersStreamProvider = StreamProvider.family
     .autoDispose<List<DiscoverySearchResult>, DiscoverySearchType>((ref, type) {
-      return ref.read(discoveryServiceProvider).streamProviders(type: type);
+      final stream = ref
+          .read(discoveryServiceProvider)
+          .streamProviders(type: type);
+      return (() async* {
+        try {
+          await for (final results in stream) {
+            yield results;
+          }
+        } catch (error, stackTrace) {
+          Error.throwWithStackTrace(error, stackTrace);
+        }
+      })();
     });

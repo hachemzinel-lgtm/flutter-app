@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_application_1/views/app_colors.dart';
-import 'package:flutter_application_1/models/user_model.dart';
-import 'package:flutter_application_1/providers/auth_provider.dart';
+import 'package:flutter_application_1/models/client_model.dart';
+import 'package:flutter_application_1/models/marketplace_model.dart';
+import 'package:flutter_application_1/models/work_provider_model.dart';
+import 'package:flutter_application_1/providers/profile_provider.dart';
 import 'package:flutter_application_1/views/client_edit_profile_screen.dart';
 import 'package:flutter_application_1/providers/provider_edit_profile_screen.dart';
 import 'package:flutter_application_1/views/marketplace_edit_profile_screen.dart';
@@ -12,25 +14,29 @@ class EditProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final userTypeAsync = ref.watch(userAccountTypeProvider);
+    final profileAsync = ref.watch(currentProfileProvider);
 
     return Scaffold(
-      body: userTypeAsync.when(
-        data: (userType) {
-          if (userType == UserType.client) {
-            return const ClientEditProfileScreen();
-          } else if (userType == UserType.workProvider) {
-            return const ProviderEditProfileScreen();
-          } else if (userType == UserType.marketplace) {
-            return const MarketplaceEditProfileScreen();
+      body: profileAsync.when(
+        data: (user) {
+          ref.watch(editProfileProvider(user));
+
+          if (user is ClientModel) {
+            return ClientEditProfileScreen(initialUser: user);
           }
-          return const Center(child: Text("Unknown account type"));
+          if (user is WorkProviderModel) {
+            return ProviderEditProfileScreen(initialUser: user);
+          }
+          if (user is MarketplaceModel) {
+            return MarketplaceEditProfileScreen(initialUser: user);
+          }
+          return const Center(child: Text('Unknown account type'));
         },
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.accentBlue),
-        ),
-        error: (e, st) =>
-            Center(child: Text('Error resolving profile type: $e')),
+        loading:
+            () => const Center(
+              child: CircularProgressIndicator(color: AppColors.accentBlue),
+            ),
+        error: (e, st) => const Center(child: Text('Could not load profile')),
       ),
     );
   }

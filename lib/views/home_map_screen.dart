@@ -56,12 +56,16 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
     super.dispose();
   }
 
-  LatLng get _activeLocation => _useCustomLocation && _selectedLocation != null
-      ? _selectedLocation!
-      : _currentGpsLocation;
+  LatLng get _activeLocation =>
+      _useCustomLocation && _selectedLocation != null
+          ? _selectedLocation!
+          : _currentGpsLocation;
 
   Future<void> _determinePosition() async {
-    final position = await LocationService().getCurrentLocation();
+    final position = await LocationService().getCurrentLocation(
+      context: context,
+      onRetry: _determinePosition,
+    );
     if (position != null && mounted) {
       setState(() {
         _currentGpsLocation = LatLng(position.latitude, position.longitude);
@@ -126,65 +130,66 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(AppSpacing.l),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.softGray.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.l),
-            const Icon(
-              Icons.location_on,
-              color: AppColors.accentBlue,
-              size: 48,
-            ),
-            const SizedBox(height: 8),
-            Text('Location Selected', style: AppTextStyles.headingSmall),
-            const SizedBox(height: 4),
-            Text(
-              '${point.latitude.toStringAsFixed(4)}, ${point.longitude.toStringAsFixed(4)}',
-              style: AppTextStyles.bodyMedium,
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            Row(
+      builder:
+          (ctx) => Padding(
+            padding: const EdgeInsets.all(AppSpacing.l),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      setState(() {
-                        _selectedLocation = null;
-                        _useCustomLocation = false;
-                      });
-                      Navigator.pop(ctx);
-                    },
-                    child: const Text('Cancel'),
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.softGray.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.m),
-                Expanded(
-                  child: PrimaryButton(
-                    text: 'Confirm',
-                    onPressed: () {
-                      setState(() => _useCustomLocation = true);
-                      Navigator.pop(ctx);
-                    },
-                  ),
+                const SizedBox(height: AppSpacing.l),
+                const Icon(
+                  Icons.location_on,
+                  color: AppColors.accentBlue,
+                  size: 48,
                 ),
+                const SizedBox(height: 8),
+                Text('Location Selected', style: AppTextStyles.headingSmall),
+                const SizedBox(height: 4),
+                Text(
+                  '${point.latitude.toStringAsFixed(4)}, ${point.longitude.toStringAsFixed(4)}',
+                  style: AppTextStyles.bodyMedium,
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          setState(() {
+                            _selectedLocation = null;
+                            _useCustomLocation = false;
+                          });
+                          Navigator.pop(ctx);
+                        },
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.m),
+                    Expanded(
+                      child: PrimaryButton(
+                        text: 'Confirm',
+                        onPressed: () {
+                          setState(() => _useCustomLocation = true);
+                          Navigator.pop(ctx);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.m),
               ],
             ),
-            const SizedBox(height: AppSpacing.m),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
@@ -195,54 +200,55 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(AppSpacing.l),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.softGray.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
+      builder:
+          (ctx) => Padding(
+            padding: const EdgeInsets.all(AppSpacing.l),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.softGray.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.l),
-            Text(
-              'What are you looking for?',
-              style: AppTextStyles.headingMedium,
-            ),
-            const SizedBox(height: AppSpacing.l),
+                const SizedBox(height: AppSpacing.l),
+                Text(
+                  'What are you looking for?',
+                  style: AppTextStyles.headingMedium,
+                ),
+                const SizedBox(height: AppSpacing.l),
 
-            _intentOption(
-              icon: Icons.handyman_outlined,
-              title: 'Find a Service Provider',
-              subtitle: 'Search for plumbers, electricians, etc.',
-              onTap: () {
-                Navigator.pop(ctx);
-                context.push('/search-results');
-              },
+                _intentOption(
+                  icon: Icons.handyman_outlined,
+                  title: 'Find a Service Provider',
+                  subtitle: 'Search for plumbers, electricians, etc.',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    context.push('/search-results');
+                  },
+                ),
+                const SizedBox(height: AppSpacing.m),
+                _intentOption(
+                  icon: Icons.storefront_outlined,
+                  title: 'Search Marketplace',
+                  subtitle: 'Browse products and supplies',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Marketplace coming soon!')),
+                    );
+                  },
+                ),
+                const SizedBox(height: AppSpacing.l),
+              ],
             ),
-            const SizedBox(height: AppSpacing.m),
-            _intentOption(
-              icon: Icons.storefront_outlined,
-              title: 'Search Marketplace',
-              subtitle: 'Browse products and supplies',
-              onTap: () {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Marketplace coming soon!')),
-                );
-              },
-            ),
-            const SizedBox(height: AppSpacing.l),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
@@ -338,42 +344,48 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
               // Providers markers
               providersAsync.when(
                 data: (allResults) {
-                  final filtered = _selectedCategory == 'All'
-                      ? allResults
-                      : allResults.where((r) {
-                          final user = r.user;
-                          final category = user is WorkProviderModel
-                              ? user.profession
-                              : (user is MarketplaceModel ? user.category : '');
-                          return category == _selectedCategory;
-                        }).toList();
+                  final filtered =
+                      _selectedCategory == 'All'
+                          ? allResults
+                          : allResults.where((r) {
+                            final user = r.user;
+                            final category =
+                                user is WorkProviderModel
+                                    ? user.profession
+                                    : (user is MarketplaceModel
+                                        ? user.category
+                                        : '');
+                            return category == _selectedCategory;
+                          }).toList();
 
                   return MarkerLayer(
-                    markers: filtered.where((r) => r.user.location != null).map(
-                      (result) {
-                        final user = result.user;
-                        final lat = user.location!.latitude;
-                        final lng = user.location!.longitude;
+                    markers:
+                        filtered.where((r) => r.user.location != null).map((
+                          result,
+                        ) {
+                          final user = result.user;
+                          final lat = user.location!.latitude;
+                          final lng = user.location!.longitude;
 
-                        return Marker(
-                          point: LatLng(lat, lng),
-                          width: 60,
-                          height: 60,
-                          child: MapMarkerWidget(
-                            imageUrl: user.photoUrl,
-                            rating: user.rating,
-                            category: user is WorkProviderModel
-                                ? user.profession ?? ''
-                                : '',
-                            isVerified:
-                                user is WorkProviderModel &&
-                                user.verificationStatus ==
-                                    VerificationStatus.approved.name,
-                            onTap: () => _showProviderPopup(context, user),
-                          ),
-                        );
-                      },
-                    ).toList(),
+                          return Marker(
+                            point: LatLng(lat, lng),
+                            width: 60,
+                            height: 60,
+                            child: MapMarkerWidget(
+                              imageUrl: user.photoUrl,
+                              rating: user.rating,
+                              category:
+                                  user is WorkProviderModel
+                                      ? user.profession ?? ''
+                                      : '',
+                              isVerified:
+                                  user is WorkProviderModel &&
+                                  user.verificationStatus ==
+                                      VerificationStatus.approved.name,
+                              onTap: () => _showProviderPopup(context, user),
+                            ),
+                          );
+                        }).toList(),
                   );
                 },
                 loading: () => const MarkerLayer(markers: []),
@@ -486,9 +498,10 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
                     children: [
                       _mapActionButton(
                         icon: Icons.tune,
-                        onTap: () => context.push(
-                          '/search-results',
-                        ), // In real app, this opens filter sheet
+                        onTap:
+                            () => context.push(
+                              '/search-results',
+                            ), // In real app, this opens filter sheet
                       ),
                     ],
                   ),
@@ -505,18 +518,20 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
               children: [
                 _mapActionButton(
                   icon: Icons.add,
-                  onTap: () => _mapController.move(
-                    _mapController.camera.center,
-                    _mapController.camera.zoom + 1,
-                  ),
+                  onTap:
+                      () => _mapController.move(
+                        _mapController.camera.center,
+                        _mapController.camera.zoom + 1,
+                      ),
                 ),
                 const SizedBox(height: 8),
                 _mapActionButton(
                   icon: Icons.remove,
-                  onTap: () => _mapController.move(
-                    _mapController.camera.center,
-                    _mapController.camera.zoom - 1,
-                  ),
+                  onTap:
+                      () => _mapController.move(
+                        _mapController.camera.center,
+                        _mapController.camera.zoom - 1,
+                      ),
                 ),
               ],
             ),
@@ -541,7 +556,9 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
           });
           _determinePosition();
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Ã°Å¸â€œÂ Centered on your location')),
+            const SnackBar(
+              content: Text('Ã°Å¸â€œÂ Centered on your location'),
+            ),
           );
         },
         backgroundColor: AppColors.accentBlue,
@@ -620,19 +637,23 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
                   color: isSelected ? AppColors.accentBlue : Colors.white,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: isSelected
-                        ? AppColors.accentBlue
-                        : AppColors.borderLight,
+                    color:
+                        isSelected
+                            ? AppColors.accentBlue
+                            : AppColors.borderLight,
                   ),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: AppColors.accentBlue.withValues(alpha: 0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ]
-                      : null,
+                  boxShadow:
+                      isSelected
+                          ? [
+                            BoxShadow(
+                              color: AppColors.accentBlue.withValues(
+                                alpha: 0.3,
+                              ),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ]
+                          : null,
                 ),
                 child: Row(
                   children: [
@@ -646,9 +667,8 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
                       cat,
                       style: TextStyle(
                         color: isSelected ? Colors.white : AppColors.textDark,
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.normal,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.normal,
                         fontSize: 13,
                       ),
                     ),
