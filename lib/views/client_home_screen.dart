@@ -79,7 +79,7 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
                               ),
                               SizedBox(height: 4),
                               Text(
-                                'Describe what you need and we will help you find the right local service.',
+                                'Describe your problem and get friendly help deciding whether you can handle it safely or need a professional.',
                                 style: TextStyle(color: Colors.white70),
                               ),
                             ],

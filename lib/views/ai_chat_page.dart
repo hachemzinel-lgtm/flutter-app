@@ -1,17 +1,19 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:flutter_application_1/views/search_params.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:flutter_application_1/views/app_colors.dart';
-import 'package:flutter_application_1/views/app_text_styles.dart';
-import 'package:flutter_application_1/views/app_spacing.dart';
+import 'package:record/record.dart';
+
 import 'package:flutter_application_1/providers/chat_controller.dart';
 import 'package:flutter_application_1/providers/chat_session_provider.dart';
+import 'package:flutter_application_1/views/app_colors.dart';
+import 'package:flutter_application_1/views/app_spacing.dart';
+import 'package:flutter_application_1/views/app_text_styles.dart';
 import 'package:flutter_application_1/views/chat_message.dart';
+import 'package:flutter_application_1/views/search_params.dart';
 
 class AIChatPage extends ConsumerStatefulWidget {
   const AIChatPage({super.key});
@@ -45,24 +47,27 @@ class _AIChatPageState extends ConsumerState<AIChatPage> {
   }
 
   void _handleSend() {
-    if (_msgController.text.trim().isEmpty) return;
+    if (_msgController.text.trim().isEmpty) {
+      return;
+    }
 
     final text = _msgController.text.trim();
     _msgController.clear();
 
     ref.read(chatControllerProvider.notifier).sendMessage(text);
-
     Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
   }
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      final file = File(pickedFile.path);
-      ref.read(chatControllerProvider.notifier).sendImageMessage(file);
-      Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
+    if (pickedFile == null) {
+      return;
     }
+
+    final file = File(pickedFile.path);
+    ref.read(chatControllerProvider.notifier).sendImageMessage(file);
+    Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
   }
 
   Future<void> _toggleRecording() async {
@@ -71,28 +76,37 @@ class _AIChatPageState extends ConsumerState<AIChatPage> {
         final path = await _audioRecorder.stop();
         setState(() => _isRecording = false);
         if (path != null) {
-          ref
-              .read(chatControllerProvider.notifier)
-              .sendVoiceMessage(File(path));
+          ref.read(chatControllerProvider.notifier).sendVoiceMessage(File(path));
           Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
         }
-      } else {
-        if (await _audioRecorder.hasPermission()) {
-          final tempDir = await getTemporaryDirectory();
-          final path =
-              '${tempDir.path}/voice_msg_${DateTime.now().millisecondsSinceEpoch}.m4a';
-          await _audioRecorder.start(
-            const RecordConfig(encoder: AudioEncoder.aacLc),
-            path: path,
-          );
-          setState(() => _isRecording = true);
-        }
+        return;
       }
-    } catch (e) {
-      if (!mounted) return;
+
+      if (await _audioRecorder.hasPermission()) {
+        final tempDir = await getTemporaryDirectory();
+        final path =
+            '${tempDir.path}/voice_msg_${DateTime.now().millisecondsSinceEpoch}.m4a';
+        await _audioRecorder.start(
+          const RecordConfig(encoder: AudioEncoder.aacLc),
+          path: path,
+        );
+        setState(() => _isRecording = true);
+        return;
+      }
+
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Microphone permission is required.')),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Recording failed')));
+      ).showSnackBar(const SnackBar(content: Text('Recording failed.')));
     }
   }
 
@@ -101,9 +115,8 @@ class _AIChatPageState extends ConsumerState<AIChatPage> {
     final chatState = ref.watch(chatControllerProvider);
     final messagesAsync = ref.watch(activeSessionMessagesProvider);
 
-    // Listen to changes for error handling
     ref.listen<ChatState>(chatControllerProvider, (prev, next) {
-      if (next.error != null && (prev?.error != next.error)) {
+      if (next.error != null && prev?.error != next.error) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.error!),
@@ -115,7 +128,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('FixIt AI'),
+        title: const Text('NearWork Assistant'),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -135,7 +148,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage> {
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.xl),
                       child: Text(
-                        "Hi there! 👋 I'm FixIt AI, your home repair assistant!\nYou can describe your problem, send a photo, or record a voice note.",
+                        "Hi there. I'm your NearWork Assistant.\nDescribe the problem, send a photo, or record a voice note, and I'll help you decide whether you can handle it safely yourself or whether it's time to contact a professional.",
                         textAlign: TextAlign.center,
                         style: AppTextStyles.bodyLarge.copyWith(
                           color: AppColors.softGray,
@@ -160,13 +173,14 @@ class _AIChatPageState extends ConsumerState<AIChatPage> {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, st) =>
-                  Center(child: Text('Failed to load messages: $e')),
+              error: (error, _) => const Center(
+                child: Text('Failed to load messages. Please try again.'),
+              ),
             ),
           ),
           if (chatState.isLoading)
             const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8.0),
+              padding: EdgeInsets.symmetric(vertical: 8),
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
           _buildInputArea(),
@@ -210,7 +224,9 @@ class _AIChatPageState extends ConsumerState<AIChatPage> {
             child: TextField(
               controller: _msgController,
               decoration: InputDecoration(
-                hintText: _isRecording ? 'Recording...' : 'Type a message...',
+                hintText: _isRecording
+                    ? 'Recording...'
+                    : 'Describe your problem...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
@@ -236,9 +252,9 @@ class _AIChatPageState extends ConsumerState<AIChatPage> {
 }
 
 class _MessageBubble extends StatelessWidget {
-  final ChatMessage message;
-
   const _MessageBubble({required this.message});
+
+  final ChatMessage message;
 
   @override
   Widget build(BuildContext context) {
@@ -267,21 +283,27 @@ class _MessageBubble extends StatelessWidget {
       );
     }
 
-    // AI Message handling
-    String? matchedCategory;
     final lowerContent = message.content.toLowerCase();
-    final categories = [
+    final encouragesProfessionalHelp =
+        lowerContent.contains('you should contact a professional') ||
+        lowerContent.contains('call a professional') ||
+        lowerContent.contains('hire a professional') ||
+        lowerContent.contains('qualified professional');
+
+    String? matchedCategory;
+    const categories = [
       'Plumbing',
       'Electrical',
       'Cleaning',
       'Painting',
       'Carpentry',
       'HVAC',
-      'Landscaping'
+      'Landscaping',
     ];
-    for (var cat in categories) {
-      if (lowerContent.contains(cat.toLowerCase())) {
-        matchedCategory = cat;
+
+    for (final category in categories) {
+      if (lowerContent.contains(category.toLowerCase())) {
+        matchedCategory = category;
         break;
       }
     }
@@ -311,20 +333,22 @@ class _MessageBubble extends StatelessWidget {
               style: const TextStyle(color: AppColors.textDark),
             ),
           ),
-          if (matchedCategory != null)
+          if (matchedCategory != null && encouragesProfessionalHelp)
             Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
+              padding: const EdgeInsets.only(bottom: 12),
               child: ActionChip(
-                label: Text('Search $matchedCategory'),
+                label: Text('Find a $matchedCategory professional'),
                 avatar: const Icon(Icons.search, size: 16),
                 onPressed: () {
-                  context.push('/search-results',
-                      extra: SearchParams(
-                        targetType: 'work_provider',
-                        presetCategory: matchedCategory,
-                        radius: 10,
-                        verifiedOnly: false,
-                      ));
+                  context.push(
+                    '/search-results',
+                    extra: SearchParams(
+                      targetType: 'work_provider',
+                      presetCategory: matchedCategory,
+                      radius: 10,
+                      verifiedOnly: false,
+                    ),
+                  );
                 },
               ),
             ),

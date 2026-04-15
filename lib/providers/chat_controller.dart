@@ -52,7 +52,7 @@ class ChatController extends Notifier<ChatState> {
       ref.read(groqChatServiceProvider).setHistory(history);
       ref.read(activeChatSessionIdProvider.notifier).setId(sessionId);
     } catch (e) {
-      state = state.copyWith(error: 'Failed to load session');
+      state = state.copyWith(error: 'Failed to load your chat history.');
     } finally {
       state = state.copyWith(isLoading: false);
     }
@@ -122,7 +122,7 @@ class ChatController extends Notifier<ChatState> {
       );
       await repo.saveMessage(user.uid, sessionId, aiMsg);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: _friendlyError(e));
     } finally {
       state = state.copyWith(isLoading: false);
     }
@@ -167,7 +167,7 @@ class ChatController extends Notifier<ChatState> {
       );
       await repo.saveMessage(user.uid, sessionId, aiMsg);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: _friendlyError(e));
     } finally {
       state = state.copyWith(isLoading: false);
     }
@@ -186,7 +186,6 @@ class ChatController extends Notifier<ChatState> {
 
       // Step 1: Transcribe audio
       final transcription = await groq.transcribeAudio(audioFile);
-      if (transcription.startsWith('Error')) throw Exception(transcription);
 
       // Save user transcription
       final userMsg = ChatMessage(
@@ -220,10 +219,18 @@ class ChatController extends Notifier<ChatState> {
       );
       await repo.saveMessage(user.uid, sessionId, aiMsg);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: _friendlyError(e));
     } finally {
       state = state.copyWith(isLoading: false);
     }
+  }
+
+  String _friendlyError(Object error) {
+    final message = error.toString().replaceFirst('Exception: ', '').trim();
+    if (message.isEmpty) {
+      return 'Something went wrong while talking to the AI assistant.';
+    }
+    return message;
   }
 }
 
