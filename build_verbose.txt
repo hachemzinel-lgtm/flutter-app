@@ -1,0 +1,129 @@
+﻿Running Gradle task 'assembleDebug'...                          
+flutter : /C:/Users/Shi
+nQy/AppData/Local/Pub/C
+ache/hosted/pub.dev/rec
+ord_linux-0.7.2/lib/rec
+ord_linux.dart:12:7: 
+Error: The 
+non-abstract class 
+'RecordLinux' is 
+missing 
+implementations for 
+these members:
+At line:1 char:1
++ flutter build apk 
+--debug 2>&1 | 
+Out-File -Encoding 
+utf8 build_verbos ...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (/C:/Users/Shi   
+ nQ... these member    
+s::String) [], Rem    
+oteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+ - RecordMethodChannelP
+latformInterface.startS
+tream
+Try to either
+ - provide an 
+implementation,
+ - inherit an 
+implementation from a 
+superclass or mixin,
+ - mark the class as 
+abstract, or
+ - provide a 
+'noSuchMethod' 
+implementation.
+class RecordLinux 
+extends RecordPlatform 
+{
+      ^^^^^^^^^^^
+/C:/Users/ShinQy/AppDat
+a/Local/Pub/Cache/hoste
+d/pub.dev/record_platfo
+rm_interface-1.5.0/lib/
+src/record_platform_int
+erface.dart:46:29: 
+Context: 'RecordMethodC
+hannelPlatformInterface
+.startStream' is 
+defined here.
+  Future<Stream<Uint8Li
+st>> 
+startStream(String 
+recorderId, 
+RecordConfig config);
+                       
+     ^^^^^^^^^^^
+/C:/Users/ShinQy/AppDat
+a/Local/Pub/Cache/hoste
+d/pub.dev/record_linux-
+0.7.2/lib/record_linux.
+dart:36:16: Error: The 
+method 'RecordLinux.has
+Permission' has fewer 
+named arguments than 
+those of overridden 
+method 'RecordMethodCha
+nnelPlatformInterface.h
+asPermission'.
+  Future<bool> 
+hasPermission(String 
+recorderId) {
+               ^
+/C:/Users/ShinQy/AppDat
+a/Local/Pub/Cache/hoste
+d/pub.dev/record_platfo
+rm_interface-1.5.0/lib/
+src/record_platform_int
+erface.dart:74:16: 
+Context: This is the 
+overridden method 
+('hasPermission').
+  Future<bool> 
+hasPermission(String 
+recorderId, {bool 
+request = true});
+               ^
+Target kernel_snapshot_
+program failed: 
+Exception
+
+
+FAILURE: Build failed 
+with an exception.
+
+* What went wrong:
+Execution failed for 
+task ':app:compileFlutt
+erBuildDebug'.
+> Process 'command 'C:\
+Users\ShinQy\develop\fl
+utter\bin\flutter.bat''
+ finished with 
+non-zero exit value 1
+
+* Try:
+> Run with 
+--stacktrace option to 
+get the stack trace.
+> Run with --info or 
+--debug option to get 
+more log output.
+> Run with --scan to 
+get full insights.
+> Get more help at http
+s://help.gradle.org.
+
+BUILD FAILED in 20s
+Running Gradle task 'assembleDebug'...                             21.2s
+Gradle task 
+assembleDebug failed 
+with exit code 1

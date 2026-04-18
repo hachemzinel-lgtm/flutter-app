@@ -1,0 +1,11 @@
+﻿Analyzing flutter_application_1...                              
+
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\auth\screens\account_type_screen.dart:170:15 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\features\auth\screens\account_type_screen.dart:171:15 - deprecated_member_use
+   info - The private field _searchRadiusKm could be 'final' - lib\features\home\screens\home_map_screen.dart:31:10 - prefer_final_fields
+warning - A value for optional parameter 'textColor' isn't ever given - lib\features\home\widgets\provider_popup_card.dart:119:57 - unused_element_parameter
+   info - Unnecessary braces in a string interpolation - lib\features\search\screens\results_list_screen.dart:252:66 - unnecessary_brace_in_string_interps
+  error - The argument type 'AndroidProvider' can't be assigned to the parameter type 'AndroidAppCheckProvider'.  - lib\main.dart:26:9 - argument_type_not_assignable
+  error - The argument type 'AppleProvider' can't be assigned to the parameter type 'AppleAppCheckProvider'.  - lib\main.dart:27:20 - argument_type_not_assignable
+   info - Don't invoke 'print' in production code - lib\test_latlong.dart:5:3 - avoid_print
+

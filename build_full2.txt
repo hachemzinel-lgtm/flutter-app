@@ -1,0 +1,78 @@
+﻿Running Gradle task 'assembleDebug'...                          
+flutter : 
+At line:1 char:1
++ flutter build apk 
+--debug 2>&1 | 
+Out-File -Encoding 
+utf8 build_full2. ...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (:String) [],    
+ RemoteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+FAILURE: Build failed 
+with an exception.
+
+* What went wrong:
+A problem occurred 
+configuring project 
+':record'.
+> Could not create an 
+instance of type com.an
+droid.build.api.variant
+.impl.LibraryVariantBui
+lderImpl.
+   > Namespace not 
+specified. Specify a 
+namespace in the 
+module's build file: C:
+\Users\ShinQy\AppData\L
+ocal\Pub\Cache\hosted\p
+ub.dev\record-4.4.4\and
+roid\build.gradle. See 
+https://d.android.com/r
+/tools/upgrade-assistan
+t/set-namespace for 
+information about 
+setting the namespace.
+
+     If you've 
+specified the package 
+attribute in the 
+source 
+AndroidManifest.xml, 
+you can use the AGP 
+Upgrade Assistant to 
+migrate to the 
+namespace value in the 
+build file. Refer to ht
+tps://d.android.com/r/t
+ools/upgrade-assistant/
+agp-upgrade-assistant 
+for general 
+information about 
+using the AGP Upgrade 
+Assistant.
+
+* Try:
+> Run with 
+--stacktrace option to 
+get the stack trace.
+> Run with --info or 
+--debug option to get 
+more log output.
+> Run with --scan to 
+get full insights.
+> Get more help at http
+s://help.gradle.org.
+
+BUILD FAILED in 4s
+Running Gradle task 'assembleDebug'...                              4.7s
+Gradle task 
+assembleDebug failed 
+with exit code 1
