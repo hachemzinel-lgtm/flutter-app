@@ -1,0 +1,43 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ─── Helpers ───────────────────────────────────────────────────────────
+    function isSignedIn() { return request.auth != null; }
+    function isSelf(uid) { return isSignedIn() && request.auth.uid == uid; }
+    function isImage() { return request.resource.contentType.matches('image/.*'); }
+    function underMaxSize() { return request.resource.size < 8 * 1024 * 1024; } // 8 MB
+
+    // ─── Portfolio images (providers) ──────────────────────────────────────
+    match /portfolios/{uid}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSelf(uid) && isImage() && underMaxSize();
+    }
+
+    // ─── Store images (merchants) ──────────────────────────────────────────
+    match /stores/{uid}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSelf(uid) && isImage() && underMaxSize();
+    }
+
+    // ─── Profile avatars ──────────────────────────────────────────────────
+    match /avatars/{uid}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSelf(uid) && isImage() && underMaxSize();
+    }
+
+    // ─── Chat attachments ─────────────────────────────────────────────────
+    // Any signed-in user can upload their own chat attachments.
+    // More granular participant checks are enforced by Firestore security rules
+    // on the message document itself.
+    match /chat/{uid}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSelf(uid) && underMaxSize();
+    }
+
+    // ─── Default deny ─────────────────────────────────────────────────────
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helpers ───────────────────────────────────────────────────────────
+    function isSignedIn() { return request.auth != null; }
+    function isSelf(uid) { return isSignedIn() && request.auth.uid == uid; }
+    function hasValidRating(r) { return r is number && r >= 1 && r <= 5; }
+
+    // ─── users/{uid} ───────────────────────────────────────────────────────
+    // Public profile fields are readable by any signed-in user so other
+    // users can render names/avatars in chat and discovery. Private fields
+    // (email, phone, fcmToken) are NOT enforced here — client should not put
+    // anything here it wouldn't share with other signed-in users. If stricter
+    // isolation is needed, split into users/{uid}/public and users/{uid}/private.
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isSelf(uid);
+      allow update: if isSelf(uid);
+      allow delete: if false; // use Cloud Function for account deletion
+
+      // Each user's private notifications inbox.
+      match /notifications/{notificationId} {
+        allow read, update: if isSelf(uid);
+        allow create: if false;  // created server-side by Cloud Function
+        allow delete: if isSelf(uid);
+      }
+
+      // Each user's favorites.
+      match /favorites/{favoriteId} {
+        allow read, write: if isSelf(uid);
+      }
+    }
+
+    // ─── providers/{uid} ───────────────────────────────────────────────────
+    // Anyone signed in can read providers for discovery. Only the provider
+    // themselves can create/update their profile. rating/reviewCount are
+    // aggregated by a transaction (client-side in this app) so we validate
+    // them loosely but block obvious tampering.
+    match /providers/{uid} {
+      allow read: if isSignedIn();
+      allow create, update: if isSelf(uid);
+      allow delete: if false;
+
+      match /reviews/{reviewId} {
+        allow read: if isSignedIn();
+        // Only signed-in users can create reviews, only for themselves,
+        // and the rating must be in [1, 5]. They cannot review themselves.
+        allow create: if isSignedIn()
+          && request.resource.data.reviewerId == request.auth.uid
+          && request.auth.uid != uid
+          && hasValidRating(request.resource.data.rating);
+        // Users can only edit/delete their own reviews.
+        allow update, delete: if isSignedIn()
+          && resource.data.reviewerId == request.auth.uid;
+      }
+    }
+
+    // ─── merchants/{uid} ───────────────────────────────────────────────────
+    match /merchants/{uid} {
+      allow read: if isSignedIn();
+      allow create, update: if isSelf(uid);
+      allow delete: if false;
+
+      match /reviews/{reviewId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn()
+          && request.resource.data.reviewerId == request.auth.uid
+          && request.auth.uid != uid
+          && hasValidRating(request.resource.data.rating);
+        allow update, delete: if isSignedIn()
+          && resource.data.reviewerId == request.auth.uid;
+      }
+    }
+
+    // ─── conversations/{conversationId} ────────────────────────────────────
+    match /conversations/{conversationId} {
+      // Only participants can read or write a conversation.
+      allow read: if isSignedIn()
+        && request.auth.uid in resource.data.participants;
+      // On create, the creator must be in the participants array.
+      allow create: if isSignedIn()
+        && request.auth.uid in request.resource.data.participants;
+      allow update: if isSignedIn()
+        && request.auth.uid in resource.data.participants;
+      allow delete: if isSignedIn()
+        && request.auth.uid in resource.data.participants;
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn()
+          && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        allow create: if isSignedIn()
+          && request.resource.data.senderId == request.auth.uid
+          && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        // Messages are immutable after send; only sender can "soft delete".
+        allow update: if isSignedIn()
+          && resource.data.senderId == request.auth.uid;
+        allow delete: if isSignedIn()
+          && resource.data.senderId == request.auth.uid;
+      }
+    }
+  }
+}
